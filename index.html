@@ -29,7 +29,8 @@
         .search-bar { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; width: 250px; outline: none;}
         .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; border: 1px solid var(--border-color); background: white; }
         .btn-primary { background: black; color: white; border: none; }
-        .btn-bill { background: #2563eb; color: white; border: none; font-weight: bold; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+        .btn-bill { background: #10b981; color: white; border: none; font-weight: bold; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s;}
+        .btn-bill:hover { background: #059669; }
 
         .dashboard-padding { padding: 20px 30px; }
         .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 25px; }
@@ -43,14 +44,7 @@
         .form-group label { font-size: 0.85rem; color: #4b5563; margin-bottom: 8px; font-weight: 500;}
         .form-group label span { color: #ef4444; }
         .form-group input { padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; background: #fdfdfd; }
-        
-        /* Readonly input styling */
         input[readonly] { background-color: #f3f4f6 !important; color: #6b7280; font-weight: bold; cursor: not-allowed; }
-
-        .segmented-input { display: flex; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; background: #fdfdfd; }
-        .segmented-input input { flex: 1; border: none; border-radius: 0; padding: 10px 12px; outline: none; background: transparent;}
-        .segmented-input .toggle-btn { border: none; background: transparent; color: #4b5563; padding: 0 15px; cursor: pointer; border-left: 1px solid var(--border-color); font-weight: bold; font-size: 0.85rem; transition: background 0.2s, color 0.2s; }
-        .segmented-input .toggle-btn.active { background: #111827; color: white; }
 
         .table-card { background: white; border-radius: 8px; border: 1px solid var(--border-color); overflow-x: auto; margin-bottom: 50px;}
         table { width: 100%; border-collapse: collapse; text-align: left; }
@@ -64,7 +58,7 @@
         .modal-subtitle { font-size: 0.85rem; color: #6b7280; margin: 0 0 20px 0; padding-bottom: 15px; border-bottom: 1px solid #e5e7eb;}
         .billing-row { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
         .billing-row label { font-weight: bold; color: #374151; font-size: 0.9rem;}
-        .billing-row input { text-align: right; width: 120px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-weight: bold;}
+        .billing-row input { text-align: right; width: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-weight: bold;}
         .payment-toggle { display: flex; gap: 10px; margin-top: 5px; }
         .pay-btn { padding: 8px 16px; border-radius: 6px; border: 1px solid #d1d5db; background: white; color: #374151; cursor: pointer; font-size: 0.85rem; font-weight: bold; flex: 1; }
         .pay-btn.active { background: #111827; color: white; border-color: #111827; }
@@ -87,8 +81,15 @@
     <a href="profit.html" class="nav-item admin-only" style="display: none;">📈 Profit Book</a>
     <a href="users.html" class="nav-item admin-only" style="display: none; color: #2563eb; font-weight:bold;">👥 Manage Users</a>
     <div style="flex-grow: 1;"></div> 
-    <div class="nav-item" onclick="logOut()" style="color: black !important; font-weight: bold; cursor: pointer; border-top: 1px solid var(--border-color); padding-top: 15px; margin: 10px 20px;">
-        <span id="userNameDisplay">User</span> (Logout)
+    
+    <!-- Redesigned Logout -->
+    <div class="nav-item" onclick="logOut()" style="color: black !important; font-weight: bold; cursor: pointer; border-top: 1px solid var(--border-color); padding-top: 15px; margin: 10px 20px; display: flex; justify-content: space-between; align-items: center;">
+        <span id="userNameDisplay">User</span> 
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
     </div>
 </div>    
 <div class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">⋮</div>
@@ -127,17 +128,13 @@
                 
                 <div class="form-group">
                     <label>Job Number <span>(Auto-Generated)</span></label>
-                    <!-- Readonly to prevent user editing -->
                     <input type="text" id="jobNo" readonly placeholder="Generating...">
                 </div>
                 
+                <!-- Replaced Advance Paid with Password -->
                 <div class="form-group">
-                    <label>Advance Paid (₹)</label>
-                    <div class="segmented-input">
-                        <input type="number" id="advancePaid" placeholder="0">
-                        <button type="button" class="toggle-btn active" id="formPayCash" onclick="setFormPaymentMode('Cash')">Cash</button>
-                        <button type="button" class="toggle-btn" id="formPayUPI" onclick="setFormPaymentMode('UPI')">UPI</button>
-                    </div>
+                    <label>Device Password</label>
+                    <input type="text" id="devicePassword" placeholder="e.g. 1234 or Pattern">
                 </div>
 
                 <div class="form-group" style="grid-column: 1 / -1;">
@@ -159,7 +156,7 @@
                         <th>Job No.</th>
                         <th>Customer</th>
                         <th>Model / Problem</th>
-                        <th>Advance (₹)</th>
+                        <th>Password</th>
                         <th style="text-align: center;">Action</th>
                     </tr>
                 </thead>
@@ -169,27 +166,26 @@
     </div>
 </div>
 
-<!-- BILLING MODAL -->
+<!-- BILLING / REPAIR COMPLETE MODAL -->
 <div class="modal-overlay" id="modalBilling">
     <div class="modal-container">
-        <h2 class="modal-title">Bill Order</h2>
+        <h2 class="modal-title">Complete Repair</h2>
         <p class="modal-subtitle" id="billingSubtitle">Job No: GSM00 | Customer</p>
+        
         <div class="modal-body">
+            <!-- Added Estimate Amount Field -->
             <div class="billing-row">
-                <label>Total Bill Amount (₹)</label>
-                <input type="number" id="billTotalAmount" onkeyup="calculateBalance()">
+                <label style="color: #6b7280;">Estimated Amount (₹)</label>
+                <input type="number" id="billEstimateAmount" placeholder="0">
             </div>
-            <div class="billing-row" style="color: #059669;">
-                <label>Advance Paid (₹)</label>
-                <span id="billAdvance" style="font-weight:bold; font-size:1.1rem;">0</span>
-            </div>
+            
             <div class="billing-row" style="border-top: 2px dashed #e5e7eb; padding-top: 15px;">
-                <label style="color: #ef4444;">Balance to Collect (₹)</label>
-                <span id="billBalance" style="font-weight:bold; font-size:1.2rem; color: #ef4444;">0</span>
+                <label style="color: #059669; font-size: 1.05rem;">Final Bill Amount (₹)</label>
+                <input type="number" id="billTotalAmount" placeholder="0" style="border-color: #10b981;">
             </div>
 
             <div id="balancePaymentSection" style="margin-top: 20px;">
-                <label style="font-size: 0.8rem; color: #6b7280; font-weight:bold;">BALANCE PAYMENT METHOD</label>
+                <label style="font-size: 0.8rem; color: #6b7280; font-weight:bold;">PAYMENT METHOD</label>
                 <div class="payment-toggle">
                     <button class="pay-btn active" id="btnBillCash" onclick="setBillingMode('Cash')">Cash</button>
                     <button class="pay-btn" id="btnBillUPI" onclick="setBillingMode('UPI')">UPI</button>
@@ -209,14 +205,12 @@
     const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
     const ADMIN_EMAIL = 'faizan@gsmsolution.com';
     let currentUserEmail = '';
-    let formSelectedPaymentMode = 'Cash';
     
     // Application Data State
     let allPendingOrders = [];
     
     // Billing State
     let billingOrderId = null;
-    let billingAdvance = 0;
     let billingJobNo = '';
     let billingCustomer = '';
     let billingPaymentMode = 'Cash';
@@ -226,14 +220,13 @@
         document.getElementById('sidebarToggle').classList.toggle('sidebar-collapsed-btn');
     }
 
-    // Opens the form and automatically generates the next Job No.
     window.toggleForm = async function() {
         const form = document.getElementById('orderFormCard');
         if (form.style.display === 'block') {
             form.style.display = 'none';
         } else {
             form.style.display = 'block';
-            await generateNextJobNo(); // Auto-generate the locked job number
+            await generateNextJobNo(); 
             document.getElementById('customerName').focus();
         }
     }
@@ -292,52 +285,41 @@
         tbody.innerHTML = '';
 
         dataToRender.forEach(order => {
-            const adv = parseFloat(order.advancePaid) || 0;
             tbody.innerHTML += `
                 <tr>
                     <td>${order.date}</td>
                     <td><strong>${order.jobNo}</strong></td>
                     <td>${order.customerName}<br><small style="color:gray;">${order.contactNo}</small></td>
                     <td>${order.problemDesc || '-'}</td>
-                    <td style="color:#10b981; font-weight:bold;">₹${adv} <br><small style="color:gray;">${order.payment_method || 'Cash'}</small></td>
+                    <td style="color:#ef4444; font-weight:bold; letter-spacing:1px;">${order.devicePassword || '-'}</td>
                     <td style="text-align: center;">
-                        <button class="btn-bill" onclick="openBillingModal('${order.id}', '${order.jobNo}', '${order.customerName}', ${adv})">Bill Order</button>
+                        <button class="btn-bill" onclick="openBillingModal('${order.id}', '${order.jobNo}', '${order.customerName}')">Repair Complete ✓</button>
                     </td>
                 </tr>`;
         });
     }
 
-    // The Search Function that was previously missing
     window.searchTable = function() {
         const input = document.getElementById("searchInput").value.toLowerCase();
         const filtered = allPendingOrders.filter(order => {
-            const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc}`.toLowerCase();
+            const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc} ${order.devicePassword}`.toLowerCase();
             return combinedString.includes(input);
         });
         renderOrdersTable(filtered);
     };
 
-    window.setFormPaymentMode = function(mode) { 
-        formSelectedPaymentMode = mode; 
-        document.getElementById('formPayCash').className = mode === 'Cash' ? 'toggle-btn active' : 'toggle-btn';
-        document.getElementById('formPayUPI').className = mode === 'UPI' ? 'toggle-btn active' : 'toggle-btn';
-    }
-
-    // Saving Order Logic with Mandatory Field checks
     window.saveOrder = async function() {
         let custName = document.getElementById('customerName').value.trim();
         let contactNo = document.getElementById('contactNo').value.trim();
         let jobNoVal = document.getElementById('jobNo').value.trim();
-        let advanceAmt = parseFloat(document.getElementById('advancePaid').value) || 0;
         let problemDesc = document.getElementById('problemDesc').value.trim();
+        let devicePassword = document.getElementById('devicePassword').value.trim();
         let currentDate = new Date().toISOString().split('T')[0];
 
-        // 1. Enforce Mandatory Fields
         if(!custName || !contactNo) {
             return alert("Error: Customer Name and Contact Number are mandatory fields.");
         }
         
-        // Ensure Job No loaded properly
         if(!jobNoVal) {
             return alert("Job Number is missing. Please close and reopen the form.");
         }
@@ -347,8 +329,7 @@
             contactNo: contactNo,
             jobNo: jobNoVal,
             problemDesc: problemDesc,
-            advancePaid: advanceAmt,
-            payment_method: formSelectedPaymentMode, 
+            devicePassword: devicePassword, // Ensure your DB table has this column
             date: currentDate,
             status: "Pending",
             createdBy: currentUserEmail.split('@')[0]
@@ -358,30 +339,13 @@
             const { error: orderError } = await supabaseClient.from('repairOrders').insert([orderData]);
             if (orderError) throw orderError;
             
-            // Advance payment ledger logic
-            if (advanceAmt > 0) {
-                const desc = `Advance - Job ${jobNoVal} (${custName})`;
-                if (formSelectedPaymentMode === 'Cash') {
-                    await supabaseClient.from('cashbook_entries').insert([{
-                        description: desc, category: 'Advances', amount: advanceAmt, type: 'in', 
-                        date: currentDate, created_by: currentUserEmail
-                    }]);
-                } else if (formSelectedPaymentMode === 'UPI') {
-                    await supabaseClient.from('upi_transactions').insert([{
-                        date: currentDate,
-                        time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' }),
-                        description: desc, source: 'Advance Towards Repair', amount: advanceAmt,
-                        created_by: currentUserEmail
-                    }]);
-                }
-            }
-
             alert("Repair order added successfully!");
-            // Clear the form fields
+            
             document.getElementById('customerName').value = '';
             document.getElementById('contactNo').value = '';
             document.getElementById('problemDesc').value = '';
-            document.getElementById('advancePaid').value = '';
+            document.getElementById('devicePassword').value = '';
+            
             toggleForm();
             fetchOrders();
         } catch (error) { 
@@ -389,28 +353,19 @@
         }
     };
 
-
-    // --- BILLING LOGIC ---
-    window.openBillingModal = function(id, jobNo, customer, advance) {
+    // --- REPAIR COMPLETE / BILLING LOGIC ---
+    window.openBillingModal = function(id, jobNo, customer) {
         billingOrderId = id;
         billingJobNo = jobNo;
         billingCustomer = customer;
-        billingAdvance = advance;
         
         document.getElementById('billingSubtitle').innerText = `Job No: ${jobNo} | Customer: ${customer}`;
-        document.getElementById('billAdvance').innerText = advance;
+        document.getElementById('billEstimateAmount').value = '';
         document.getElementById('billTotalAmount').value = '';
-        document.getElementById('billBalance').innerText = '0';
         setBillingMode('Cash');
         
         document.getElementById('modalBilling').style.display = 'flex';
         document.getElementById('billTotalAmount').focus();
-    }
-
-    window.calculateBalance = function() {
-        const total = parseFloat(document.getElementById('billTotalAmount').value) || 0;
-        const balance = total - billingAdvance;
-        document.getElementById('billBalance').innerText = balance >= 0 ? balance : 0;
     }
 
     window.setBillingMode = function(mode) {
@@ -424,43 +379,43 @@
     }
 
     window.confirmBilling = async function() {
+        const estimateAmount = parseFloat(document.getElementById('billEstimateAmount').value) || 0;
         const totalAmount = parseFloat(document.getElementById('billTotalAmount').value) || 0;
-        if(totalAmount <= 0) return alert("Please enter a valid total amount.");
         
-        const balance = totalAmount - billingAdvance;
-        if(balance < 0) return alert("Total bill cannot be less than advance paid!");
+        if(totalAmount <= 0) return alert("Please enter a valid final bill amount.");
 
         try {
+            // Ensure your repairOrders table has a column for 'estimateAmount' if you wish to store it
             await supabaseClient.from('repairOrders').update({ 
                 status: 'Repair Completed', 
+                estimateAmount: estimateAmount,
                 finalAmount: totalAmount,
-                finalPaymentMethod: balance > 0 ? billingPaymentMode : 'None'
+                finalPaymentMethod: billingPaymentMode
             }).eq('id', billingOrderId);
 
-            if(balance > 0) {
-                const currentDate = new Date().toISOString().split('T')[0];
-                const desc = `Final Bill - Job ${billingJobNo} (${billingCustomer})`;
-                
-                if(billingPaymentMode === 'Cash') {
-                    await supabaseClient.from('cashbook_entries').insert([{
-                        description: desc, category: 'Repair Sales', amount: balance, type: 'in', 
-                        date: currentDate, created_by: currentUserEmail
-                    }]);
-                } else {
-                    await supabaseClient.from('upi_transactions').insert([{
-                        description: desc, source: 'Repair Final Payment', amount: balance, 
-                        date: currentDate, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' }),
-                        created_by: currentUserEmail
-                    }]);
-                }
+            // Send Full Bill Amount to Ledger
+            const currentDate = new Date().toISOString().split('T')[0];
+            const desc = `Final Bill - Job ${billingJobNo} (${billingCustomer})`;
+            
+            if(billingPaymentMode === 'Cash') {
+                await supabaseClient.from('cashbook_entries').insert([{
+                    description: desc, category: 'Repair Sales', amount: totalAmount, type: 'in', 
+                    date: currentDate, created_by: currentUserEmail
+                }]);
+            } else {
+                await supabaseClient.from('upi_transactions').insert([{
+                    description: desc, source: 'Repair Payment', amount: totalAmount, 
+                    date: currentDate, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' }),
+                    created_by: currentUserEmail
+                }]);
             }
 
             closeBillingModal();
             fetchOrders(); 
-            alert("Order billed successfully and moved to Repair Completed!");
+            alert("Order completed successfully and moved to Repair Completed!");
 
         } catch (err) {
-            alert("Error processing bill: " + err.message);
+            alert("Error completing repair: " + err.message);
         }
     }
 
