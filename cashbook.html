@@ -1,12 +1,3 @@
-Here is the regenerated code with your requested changes.
-
-**What has been changed:**
-1.  **Scroll Added to Ledger:** The red box area (Ledger table) now has a fixed height and a scrollbar (`max-height: 350px` with `overflow-y: auto`). The table header (`<thead>`) and footer (`<tfoot>`) are now **sticky**, meaning they will stay fixed at the top and bottom while you scroll through the rows in the middle. I used `position: sticky` with specific `z-index` and background colors to make it look seamless.
-2.  **Admin Delete Action:** The delete button (🗑️) for cash-out entries was previously hidden due to an incorrect CSS condition (`style="${isAdmin ? '' : 'display:none;'}"` inside a template literal). I replaced it with a standard JS conditional check (`isAdmin ? ... : ''`) and a CSS `display: flex` rule for the `admin-col` class to ensure it shows up correctly for the admin.
-
-Here is the complete, standalone code:
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -82,7 +73,7 @@ Here is the complete, standalone code:
         .card-header { padding: 15px 20px; font-weight: bold; font-size: 0.95rem; border-bottom: 1px solid var(--border-color); background: #f9fafb; display: flex; flex-direction: column;}
         .card-header span { font-size: 0.75rem; color: #6b7280; font-weight: normal; margin-top: 2px;}
         
-        /* SCROLLABLE TABLE WRAPPER (UPDATED) */
+        /* SCROLLABLE TABLE WRAPPER */
         .ledger-wrapper {
             max-height: 350px; /* Fixed height to force vertical scroll */
             overflow-y: auto;
@@ -217,12 +208,12 @@ Here is the complete, standalone code:
 
     <!-- Daily Ledger -->
     <div class="card-container">
+        <!-- UPDATED HEADER TO ENSURE ELEMENT ID EXISTS -->
         <div class="card-header">
-            Ledger
-            <span id="ledgerSubtitle">Business day</span>
+            <div>Ledger <span id="ledgerSubtitle">Business day</span></div>
         </div>
         
-        <!-- SCROLLABLE WRAPPER (UPDATED) -->
+        <!-- SCROLLABLE WRAPPER -->
         <div class="ledger-wrapper">
             <table>
                 <thead>
@@ -496,7 +487,12 @@ Here is the complete, standalone code:
                 toDate = document.getElementById('toDate').value;
                 subtitleText = `Period: ${fromDate || 'Start'} to ${toDate || 'End'}`;
             }
-            document.getElementById('ledgerSubtitle').innerText = subtitleText;
+            
+            // FIXED: Safety check to prevent null error
+            const ledgerSubtitleEl = document.getElementById('ledgerSubtitle');
+            if (ledgerSubtitleEl) {
+                ledgerSubtitleEl.innerText = subtitleText;
+            }
 
             allEntries.forEach(row => {
                 const rowDate = row.date || new Date(row.created_at).toISOString().split('T')[0];
@@ -667,4 +663,3 @@ Here is the complete, standalone code:
 </script>
 </body>
 </html>
-```
