@@ -40,6 +40,9 @@
         .btn-icon { background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; padding: 5px; border-radius: 4px; transition: 0.2s; }
         .btn-icon:hover { background: #fef2f2; transform: scale(1.1); }
 
+        /* Pagination Styles */
+        .pagination { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: white; border-top: 1px solid var(--border-color); }
+
         /* Modals */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(2px); }
         .modal-container { background: white; padding: 25px; border-radius: 12px; width: 450px; max-width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
@@ -55,7 +58,7 @@
         .pay-btn.active { background: #111827; color: white; border-color: #111827; }
         
         .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-        .btn { padding: 10px 20px; border-radius: 6px; border: 1px solid var(--border-color); background: white; cursor: pointer; font-weight: bold; }
+        .btn { padding: 10px 20px; border-radius: 6px; border: 1px solid var(--border-color); background: white; cursor: pointer; font-weight: bold; color: #374151;}
         .btn-confirm { padding: 10px 20px; border-radius: 6px; border: none; background: #10b981; color: white; cursor: pointer; font-weight: bold; transition:0.2s;}
         .btn-confirm:hover { background: #059669; }
     </style>
@@ -114,6 +117,12 @@
                 </thead>
                 <tbody id="completedTableBody"></tbody>
             </table>
+            <!-- Pagination Section -->
+            <div class="pagination">
+                <button class="btn" onclick="prevPage()">Previous</button>
+                <span id="pageInfo" style="font-size:0.9rem; font-weight:bold;">Page 1</span>
+                <button class="btn" onclick="nextPage()">Next</button>
+            </div>
         </div>
     </div>
 </div>
@@ -167,6 +176,11 @@
     let currentUserEmail = '';
     let isAdmin = false;
     
+    // Pagination and App State Variables
+    let allCompletedOrders = [];
+    let currentPage = 1;
+    const rowsPerPage = 10;
+    
     // Delivery State Variables
     let deliveryOrderId = null;
     let deliveryJobNo = '';
@@ -205,7 +219,6 @@
         else {
             currentUserEmail = data.session.user.email;
             document.getElementById('userNameDisplay').innerText = currentUserEmail.split('@')[0];
-            
             if (currentUserEmail.toLowerCase() === ADMIN_EMAIL) {
                 isAdmin = true;
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
@@ -214,6 +227,7 @@
     }
     async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
 
+    // --- FETCH DATA ---
     async function fetchCompletedOrders() {
         // Fetch orders that are Repair Completed OR Goods Delivered
         const { data, error } = await supabaseClient
@@ -224,15 +238,26 @@
 
         if (error) return console.error(error);
         
+        allCompletedOrders = data || [];
+        currentPage = 1; // Reset to page 1 on new fetch
+        renderCompletedTable();
+    }
+
+    // --- RENDER TABLE WITH PAGINATION ---
+    function renderCompletedTable() {
         const tbody = document.getElementById('completedTableBody');
         tbody.innerHTML = '';
 
-        if(data.length === 0) {
+        if(allCompletedOrders.length === 0) {
             tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: gray;">No completed orders found.</td></tr>`;
+            document.getElementById('pageInfo').innerText = `Page 1 of 1`;
             return;
         }
 
-        data.forEach(order => {
+        const start = (currentPage - 1) * rowsPerPage;
+        const paginatedItems = allCompletedOrders.slice(start, start + rowsPerPage);
+
+        paginatedItems.forEach(order => {
             const isDelivered = order.status === 'Goods Delivered';
             const btnClass = isDelivered ? 'status-delivered' : 'status-completed';
             
@@ -266,6 +291,22 @@
                     </td>
                 </tr>`;
         });
+
+        document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(allCompletedOrders.length / rowsPerPage) || 1}`;
+    }
+
+    // --- PAGINATION CONTROLS ---
+    window.prevPage = function() { 
+        if (currentPage > 1) { 
+            currentPage--; 
+            renderCompletedTable(); 
+        } 
+    }
+    window.nextPage = function() { 
+        if (currentPage < Math.ceil(allCompletedOrders.length / rowsPerPage)) { 
+            currentPage++; 
+            renderCompletedTable(); 
+        } 
     }
 
     // --- DELETE ORDER LOGIC (ADMIN ONLY) ---
