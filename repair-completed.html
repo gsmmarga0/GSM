@@ -37,6 +37,9 @@
         .status-completed { background-color: #3b82f6; }
         .status-delivered { background-color: #22c55e; cursor: default; }
 
+        .btn-icon { background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; padding: 5px; border-radius: 4px; transition: 0.2s; }
+        .btn-icon:hover { background: #fef2f2; transform: scale(1.1); }
+
         /* Modals */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(2px); }
         .modal-container { background: white; padding: 25px; border-radius: 12px; width: 450px; max-width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
@@ -59,7 +62,7 @@
 </head>
 <body>
 
-<!-- Sidebar with Timers Re-added -->
+<!-- Sidebar with Timers -->
 <div class="sidebar" id="sidebar" onmouseenter="clearSidebarTimer()" onmouseleave="resetSidebarTimer()">
     <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
     <a href="index.html" class="nav-item">⏳ Pending Orders</a>
@@ -106,7 +109,7 @@
                         <th>Password</th>
                         <th>Repair Notes</th>
                         <th>Est. Bill (₹)</th>
-                        <th style="text-align: center;">Delivery Status</th>
+                        <th style="text-align: center;">Delivery Status / Action</th>
                     </tr>
                 </thead>
                 <tbody id="completedTableBody"></tbody>
@@ -162,6 +165,7 @@
     const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
     const ADMIN_EMAIL = 'faizan@gsmsolution.com';
     let currentUserEmail = '';
+    let isAdmin = false;
     
     // Delivery State Variables
     let deliveryOrderId = null;
@@ -201,7 +205,9 @@
         else {
             currentUserEmail = data.session.user.email;
             document.getElementById('userNameDisplay').innerText = currentUserEmail.split('@')[0];
+            
             if (currentUserEmail.toLowerCase() === ADMIN_EMAIL) {
+                isAdmin = true;
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
             }
         }
@@ -230,10 +236,18 @@
             const isDelivered = order.status === 'Goods Delivered';
             const btnClass = isDelivered ? 'status-delivered' : 'status-completed';
             
-            // If already delivered, show a static label. If not, make it a clickable button.
-            const actionHtml = isDelivered 
-                ? `<button class="status-btn ${btnClass}" disabled>✓ Delivered</button>`
+            // Generate delivery status button. Shows payment method natively if delivered.
+            const actionBtnHtml = isDelivered 
+                ? `<button class="status-btn ${btnClass}" disabled style="display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.3; padding: 6px 16px;">
+                        <span>✓ Delivered</span>
+                        <span style="font-size: 0.65rem; font-weight: normal; margin-top: 2px;">Paid via ${order.finalPaymentMethod || 'Cash'}</span>
+                   </button>`
                 : `<button class="status-btn ${btnClass}" onclick="openDeliveryModal('${order.id}', '${order.jobNo}', '${order.customerName}', '${order.estimateAmount || 0}')">Deliver Device</button>`;
+
+            // Add Admin Delete Button
+            const deleteBtnHtml = isAdmin 
+                ? `<button class="btn-icon" onclick="deleteOrder('${order.id}', '${order.jobNo}')" title="Delete Order">🗑️</button>` 
+                : '';
 
             tbody.innerHTML += `
                 <tr>
@@ -244,9 +258,28 @@
                     <td style="color:#ef4444; font-weight:bold; letter-spacing:1px;">${order.devicePassword || '-'}</td>
                     <td style="color:#4b5563;">${order.repairNotes || '-'}</td>
                     <td style="font-weight:bold; color:#059669;">₹${order.estimateAmount || 0}</td>
-                    <td style="text-align: center;">${actionHtml}</td>
+                    <td style="text-align: center;">
+                        <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
+                            ${actionBtnHtml}
+                            ${deleteBtnHtml}
+                        </div>
+                    </td>
                 </tr>`;
         });
+    }
+
+    // --- DELETE ORDER LOGIC (ADMIN ONLY) ---
+    window.deleteOrder = async function(id, jobNo) {
+        if (!confirm(`Are you sure you want to completely delete Job No: ${jobNo}? This cannot be undone.`)) return;
+        
+        try {
+            const { error } = await supabaseClient.from('repairOrders').delete().eq('id', id);
+            if (error) throw error;
+            
+            fetchCompletedOrders();
+        } catch (err) {
+            alert("Error deleting order: " + err.message);
+        }
     }
 
     // --- DELIVERY LOGIC ---
