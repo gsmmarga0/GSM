@@ -31,6 +31,8 @@
         .btn-primary { background: black; color: white; border: none; }
         .btn-bill { background: #10b981; color: white; border: none; font-weight: bold; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s;}
         .btn-bill:hover { background: #059669; }
+        .btn-icon { background: transparent; border: none; cursor: pointer; font-size: 1.1rem; vertical-align: middle; transition: 0.2s; padding: 4px; }
+        .btn-icon:hover { opacity: 0.7; transform: scale(1.1); }
 
         .dashboard-padding { padding: 20px 30px; }
         .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 25px; }
@@ -58,9 +60,14 @@
         .modal-subtitle { font-size: 0.85rem; color: #6b7280; margin: 0 0 20px 0; padding-bottom: 15px; border-bottom: 1px solid #e5e7eb;}
         .billing-row { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
         .billing-row label { font-weight: bold; color: #374151; font-size: 0.9rem;}
-        .billing-row input { text-align: right; width: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-weight: bold;}
+        .billing-row input { text-align: right; width: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-weight: bold; outline: none;}
+        
+        .notes-input { width: 100%; box-sizing: border-box; padding: 10px; margin-top: 8px; border: 1px solid #d1d5db; border-radius: 6px; outline: none; font-family: inherit;}
+        .notes-input:focus { border-color: #9ca3af; }
+
         .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         .btn-confirm { padding: 10px 20px; border-radius: 6px; border: none; background: #10b981; color: white; cursor: pointer; font-weight: bold; }
+        .btn-save { padding: 10px 20px; border-radius: 6px; border: none; background: #2563eb; color: white; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -162,7 +169,7 @@
     </div>
 </div>
 
-<!-- REPAIR COMPLETE MODAL (Only asks for Estimate) -->
+<!-- REPAIR COMPLETE MODAL -->
 <div class="modal-overlay" id="modalBilling">
     <div class="modal-container">
         <h2 class="modal-title">Complete Repair</h2>
@@ -173,6 +180,11 @@
                 <label style="color: #6b7280;">Estimated Amount (₹)</label>
                 <input type="number" id="billEstimateAmount" placeholder="0">
             </div>
+            
+            <div style="margin-top: 15px;">
+                <label style="font-weight: bold; color: #374151; font-size: 0.9rem;">Repair Notes</label>
+                <textarea id="billRepairNotes" class="notes-input" rows="2" placeholder="e.g. Display and Battery replaced."></textarea>
+            </div>
         </div>
         
         <div class="modal-footer">
@@ -182,19 +194,43 @@
     </div>
 </div>
 
+<!-- EDIT MODAL (ADMIN ONLY) -->
+<div class="modal-overlay" id="modalEdit">
+    <div class="modal-container">
+        <h2 class="modal-title">Edit Order Details</h2>
+        <p class="modal-subtitle" id="editSubtitle">Editing details for Job No</p>
+        
+        <div class="modal-body">
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label style="font-weight:bold; color: #374151;">Model & Problem Description</label>
+                <input type="text" id="editProblemDesc" class="notes-input" style="margin-top: 5px;">
+            </div>
+            <div class="form-group">
+                <label style="font-weight:bold; color: #374151;">Device Password</label>
+                <input type="text" id="editDevicePassword" class="notes-input" style="margin-top: 5px;">
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button class="btn" onclick="closeEditModal()">Cancel</button>
+            <button class="btn-save" onclick="saveEditOrder()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
     const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
     const ADMIN_EMAIL = 'faizan@gsmsolution.com';
     let currentUserEmail = '';
+    let isAdmin = false;
     
     // Application Data State
     let allPendingOrders = [];
     
-    // Billing State
+    // Modal State
     let billingOrderId = null;
-    let billingJobNo = '';
-    let billingCustomer = '';
+    let editOrderId = null;
 
     window.toggleSidebar = function() {
         document.getElementById('sidebar').classList.toggle('collapsed');
@@ -245,7 +281,9 @@
         else {
             currentUserEmail = data.session.user.email;
             document.getElementById('userNameDisplay').innerText = currentUserEmail.split('@')[0];
+            
             if (currentUserEmail.toLowerCase() === ADMIN_EMAIL) {
+                isAdmin = true;
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
             }
         }
@@ -266,6 +304,20 @@
         tbody.innerHTML = '';
 
         dataToRender.forEach(order => {
+            // Escape quotes securely for the onclick string parameters
+            const problemSafe = order.problemDesc ? order.problemDesc.replace(/'/g, "\\'") : '';
+            const passwordSafe = order.devicePassword ? order.devicePassword.replace(/'/g, "\\'") : '';
+            
+            // Build Action Buttons based on Admin Status
+            let actionHtml = `<button class="btn-bill" onclick="openBillingModal('${order.id}', '${order.jobNo}', '${order.customerName}')">Repair Complete ✓</button>`;
+            
+            if (isAdmin) {
+                actionHtml += `
+                    <button class="btn-icon" style="color:#2563eb; margin-left: 10px;" onclick="openEditModal('${order.id}', '${order.jobNo}', '${problemSafe}', '${passwordSafe}')" title="Edit Problem/Password">✏️</button>
+                    <button class="btn-icon" style="color:#ef4444;" onclick="deleteOrder('${order.id}', '${order.jobNo}')" title="Delete Order">🗑️</button>
+                `;
+            }
+
             tbody.innerHTML += `
                 <tr>
                     <td>${order.date}</td>
@@ -273,8 +325,8 @@
                     <td>${order.customerName}<br><small style="color:gray;">${order.contactNo}</small></td>
                     <td>${order.problemDesc || '-'}</td>
                     <td style="color:#ef4444; font-weight:bold; letter-spacing:1px;">${order.devicePassword || '-'}</td>
-                    <td style="text-align: center;">
-                        <button class="btn-bill" onclick="openBillingModal('${order.id}', '${order.jobNo}', '${order.customerName}')">Repair Complete ✓</button>
+                    <td style="text-align: center; white-space: nowrap;">
+                        ${actionHtml}
                     </td>
                 </tr>`;
         });
@@ -337,11 +389,10 @@
     // --- REPAIR COMPLETE LOGIC ---
     window.openBillingModal = function(id, jobNo, customer) {
         billingOrderId = id;
-        billingJobNo = jobNo;
-        billingCustomer = customer;
         
         document.getElementById('billingSubtitle').innerText = `Job No: ${jobNo} | Customer: ${customer}`;
         document.getElementById('billEstimateAmount').value = '';
+        document.getElementById('billRepairNotes').value = '';
         
         document.getElementById('modalBilling').style.display = 'flex';
         document.getElementById('billEstimateAmount').focus();
@@ -353,12 +404,13 @@
 
     window.confirmBilling = async function() {
         const estimateAmount = parseFloat(document.getElementById('billEstimateAmount').value) || 0;
+        const notes = document.getElementById('billRepairNotes').value.trim();
 
         try {
-            // Only update the status and estimate amount. Final bill and ledger entries are deferred.
             await supabaseClient.from('repairOrders').update({ 
                 status: 'Repair Completed', 
-                estimateAmount: estimateAmount
+                estimateAmount: estimateAmount,
+                repairNotes: notes
             }).eq('id', billingOrderId);
 
             closeBillingModal();
@@ -367,6 +419,53 @@
 
         } catch (err) {
             alert("Error completing repair: " + err.message);
+        }
+    }
+
+    // --- ADMIN ACTIONS (EDIT & DELETE) ---
+    window.deleteOrder = async function(id, jobNo) {
+        if(!confirm(`Are you sure you want to completely delete Job No: ${jobNo}? This cannot be undone.`)) return;
+        
+        try {
+            const { error } = await supabaseClient.from('repairOrders').delete().eq('id', id);
+            if (error) throw error;
+            
+            fetchOrders();
+        } catch (err) {
+            alert("Error deleting order: " + err.message);
+        }
+    }
+
+    window.openEditModal = function(id, jobNo, currentProblem, currentPassword) {
+        editOrderId = id;
+        
+        document.getElementById('editSubtitle').innerText = `Editing details for Job No: ${jobNo}`;
+        document.getElementById('editProblemDesc').value = currentProblem;
+        document.getElementById('editDevicePassword').value = currentPassword;
+        
+        document.getElementById('modalEdit').style.display = 'flex';
+    }
+
+    window.closeEditModal = function() {
+        document.getElementById('modalEdit').style.display = 'none';
+    }
+
+    window.saveEditOrder = async function() {
+        const newProblem = document.getElementById('editProblemDesc').value.trim();
+        const newPassword = document.getElementById('editDevicePassword').value.trim();
+
+        try {
+            const { error } = await supabaseClient.from('repairOrders').update({ 
+                problemDesc: newProblem,
+                devicePassword: newPassword
+            }).eq('id', editOrderId);
+
+            if (error) throw error;
+
+            closeEditModal();
+            fetchOrders(); 
+        } catch (err) {
+            alert("Error updating order: " + err.message);
         }
     }
 
