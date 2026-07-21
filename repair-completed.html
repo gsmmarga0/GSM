@@ -10,14 +10,15 @@
         :root { --bg-color: #f4f5f7; --sidebar-width: 250px; --border-color: #e5e7eb; }
         body { margin: 0; font-family: -apple-system, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; }
         
-        .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; transition: width 0.4s ease; overflow: hidden; white-space: nowrap; z-index: 40; }
-        .sidebar.collapsed { width: 0; padding: 0; border-right: none; }
+        /* Sidebar Styling with transitions */
+        .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; transition: width 0.4s ease, padding 0.4s ease; overflow: hidden; white-space: nowrap; z-index: 40; }
+        .sidebar.collapsed { width: 0; padding-left: 0; padding-right: 0; border-right: none; }
         .logo-area { display: flex; align-items: center; padding: 0 20px 20px 20px; font-weight: bold; font-size: 1.2rem; }
         .logo-icon { background: black; color: white; padding: 5px 10px; border-radius: 4px; margin-right: 10px; font-size: 0.9rem; }
         .nav-item { padding: 12px 20px; color: #4b5563 !important; text-decoration: none; display: flex; align-items: center; font-size: 0.95rem; cursor: pointer; }
         .nav-item.active { background: black !important; color: white !important; border-radius: 0 20px 20px 0; margin-right: 20px; }
         .nav-item:hover:not(.active) { background: #f3f4f6; }
-        .sidebar-toggle-btn { position: absolute; left: var(--sidebar-width); top: 50%; transform: translateY(-50%); background: black; color: white; width: 20px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; border-radius: 0 8px 8px 0; font-weight: bold;}
+        .sidebar-toggle-btn { position: absolute; left: var(--sidebar-width); top: 50%; transform: translateY(-50%); background: black; color: white; width: 20px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; border-radius: 0 8px 8px 0; transition: left 0.4s ease; font-weight: bold; box-shadow: 2px 0 5px rgba(0,0,0,0.2);}
         .sidebar-collapsed-btn { left: 0 !important; }
         
         .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg-color); }
@@ -44,9 +45,12 @@
         .billing-row { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
         .billing-row label { font-weight: bold; color: #374151; font-size: 0.9rem;}
         .billing-row input { text-align: right; width: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-weight: bold; outline:none;}
+        .billing-row input:focus { border-color: #9ca3af; }
+        
         .payment-toggle { display: flex; gap: 10px; margin-top: 5px; }
         .pay-btn { padding: 8px 16px; border-radius: 6px; border: 1px solid #d1d5db; background: white; color: #374151; cursor: pointer; font-size: 0.85rem; font-weight: bold; flex: 1; transition: 0.2s;}
         .pay-btn.active { background: #111827; color: white; border-color: #111827; }
+        
         .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         .btn { padding: 10px 20px; border-radius: 6px; border: 1px solid var(--border-color); background: white; cursor: pointer; font-weight: bold; }
         .btn-confirm { padding: 10px 20px; border-radius: 6px; border: none; background: #10b981; color: white; cursor: pointer; font-weight: bold; transition:0.2s;}
@@ -55,7 +59,8 @@
 </head>
 <body>
 
-<div class="sidebar" id="sidebar">
+<!-- Sidebar with Timers Re-added -->
+<div class="sidebar" id="sidebar" onmouseenter="clearSidebarTimer()" onmouseleave="resetSidebarTimer()">
     <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
     <a href="index.html" class="nav-item">⏳ Pending Orders</a>
     <a href="repair-completed.html" class="nav-item active">✅ Repair Completed</a>
@@ -99,6 +104,7 @@
                         <th>Customer</th>
                         <th>Model / Problem</th>
                         <th>Password</th>
+                        <th>Repair Notes</th>
                         <th>Est. Bill (₹)</th>
                         <th style="text-align: center;">Delivery Status</th>
                     </tr>
@@ -128,14 +134,19 @@
                 <input type="number" id="deliveryTotalAmount" placeholder="0" style="border-color: #10b981;">
             </div>
 
-            <!-- Payment Mode Selection -->
-            <div id="paymentSection" style="margin-top: 20px;">
+            <!-- Payment Mode Selection (Card Removed) -->
+            <div id="paymentSection" style="margin-top: 15px;">
                 <label style="font-size: 0.8rem; color: #6b7280; font-weight:bold;">PAYMENT METHOD</label>
                 <div class="payment-toggle">
                     <button class="pay-btn active" id="btnDelCash" onclick="setDeliveryMode('Cash')">Cash</button>
                     <button class="pay-btn" id="btnDelUPI" onclick="setDeliveryMode('UPI')">UPI</button>
-                    <button class="pay-btn" id="btnDelCard" onclick="setDeliveryMode('Card')">Card</button>
                 </div>
+            </div>
+            
+            <!-- Dynamic UPI Notes (Hidden by default) -->
+            <div class="billing-row" id="upiNotesRow" style="display: none; flex-direction: column; align-items: flex-start; margin-top: 15px;">
+                <label style="color: #4b5563; margin-bottom: 5px;">UPI Account Details / Notes</label>
+                <input type="text" id="upiAccountNotes" placeholder="e.g. Paid to GPay / Personal Acct" style="width: 100%; font-weight: normal; text-align: left;">
             </div>
         </div>
         
@@ -158,9 +169,30 @@
     let deliveryCustomer = '';
     let deliveryPaymentMode = 'Cash';
     
+    // --- Sidebar Glitch Fix (Hover Timers) ---
+    let sidebarTimer;
+    window.resetSidebarTimer = function() {
+        clearTimeout(sidebarTimer);
+        sidebarTimer = setTimeout(() => {
+            const sb = document.getElementById('sidebar');
+            const btn = document.getElementById('sidebarToggle');
+            if(sb && btn) {
+                sb.classList.add('collapsed');
+                btn.classList.add('sidebar-collapsed-btn');
+            }
+        }, 5000);
+    }
+    window.clearSidebarTimer = function() { clearTimeout(sidebarTimer); }
+    
     window.toggleSidebar = function() {
-        document.getElementById('sidebar').classList.toggle('collapsed');
-        document.getElementById('sidebarToggle').classList.toggle('sidebar-collapsed-btn');
+        const sb = document.getElementById('sidebar');
+        const btn = document.getElementById('sidebarToggle');
+        if(sb && btn) {
+            sb.classList.toggle('collapsed');
+            btn.classList.toggle('sidebar-collapsed-btn');
+            if(!sb.classList.contains('collapsed')) resetSidebarTimer();
+            else clearSidebarTimer();
+        }
     }
 
     async function checkAuth() {
@@ -190,7 +222,7 @@
         tbody.innerHTML = '';
 
         if(data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: gray;">No completed orders found.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: gray;">No completed orders found.</td></tr>`;
             return;
         }
 
@@ -210,6 +242,7 @@
                     <td>${order.customerName}<br><small style="color:gray;">${order.contactNo}</small></td>
                     <td>${order.problemDesc || '-'}</td>
                     <td style="color:#ef4444; font-weight:bold; letter-spacing:1px;">${order.devicePassword || '-'}</td>
+                    <td style="color:#4b5563;">${order.repairNotes || '-'}</td>
                     <td style="font-weight:bold; color:#059669;">₹${order.estimateAmount || 0}</td>
                     <td style="text-align: center;">${actionHtml}</td>
                 </tr>`;
@@ -223,14 +256,11 @@
         deliveryCustomer = customer;
         
         document.getElementById('deliverySubtitle').innerText = `Job No: ${jobNo} | Customer: ${customer}`;
-        
-        // Show the previously entered estimate amount
         document.getElementById('deliveryEstimateAmount').innerText = estimateAmount;
-        
-        // Pre-fill the final amount with the estimate for convenience (user can overwrite)
         document.getElementById('deliveryTotalAmount').value = estimateAmount;
+        document.getElementById('upiAccountNotes').value = '';
         
-        setDeliveryMode('Cash');
+        setDeliveryMode('Cash'); // Default to cash
         document.getElementById('modalDelivery').style.display = 'flex';
         document.getElementById('deliveryTotalAmount').focus();
     }
@@ -239,6 +269,13 @@
         deliveryPaymentMode = mode;
         document.querySelectorAll('.pay-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById(`btnDel${mode}`).classList.add('active');
+        
+        // Show/Hide UPI notes based on selection
+        if (mode === 'UPI') {
+            document.getElementById('upiNotesRow').style.display = 'flex';
+        } else {
+            document.getElementById('upiNotesRow').style.display = 'none';
+        }
     }
 
     window.closeDeliveryModal = function() {
@@ -263,16 +300,19 @@
             // 2. Add the revenue to the respective ledger
             if(finalAmount > 0) {
                 const currentDate = new Date().toISOString().split('T')[0];
-                const desc = `Final Bill - Job ${deliveryJobNo} (${deliveryCustomer})`;
+                const baseDesc = `Final Bill - Job ${deliveryJobNo} (${deliveryCustomer})`;
                 
                 if(deliveryPaymentMode === 'Cash') {
                     await supabaseClient.from('cashbook_entries').insert([{
-                        description: desc, category: 'Repair Sales', amount: finalAmount, type: 'in', 
+                        description: baseDesc, category: 'Repair Sales', amount: finalAmount, type: 'in', 
                         date: currentDate, created_by: currentUserEmail
                     }]);
-                } else {
+                } else if (deliveryPaymentMode === 'UPI') {
+                    let upiNotes = document.getElementById('upiAccountNotes').value.trim();
+                    let finalDesc = upiNotes ? `${baseDesc} - Acct: ${upiNotes}` : baseDesc;
+                    
                     await supabaseClient.from('upi_transactions').insert([{
-                        description: desc, source: 'Repair Payment', amount: finalAmount, 
+                        description: finalDesc, source: 'Repair Payment', amount: finalAmount, 
                         date: currentDate, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' }),
                         created_by: currentUserEmail
                     }]);
@@ -290,6 +330,7 @@
 
     document.addEventListener("DOMContentLoaded", async () => {
         await checkAuth();
+        resetSidebarTimer();
         fetchCompletedOrders();
     });
 </script>
