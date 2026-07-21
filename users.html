@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GSM Solution - Manage Users</title>
+    <link rel="icon" href="data:,">
+    <style>
+        :root { 
+            --bg-color: #f4f5f7; 
+            --border-color: #e5e7eb; 
+            --sidebar-width: 250px;
+        }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; position: relative; }
+        
+        /* Auto-Collapsing Sidebar CSS */
+        .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; transition: width 0.4s ease, padding 0.4s ease; overflow: hidden; white-space: nowrap; z-index: 40; }
+        .sidebar.collapsed { width: 0; padding-left: 0; padding-right: 0; border-right: none; }
+        
+        .logo-area { display: flex; align-items: center; padding: 0 20px 20px 20px; font-weight: bold; font-size: 1.2rem; }
+        .logo-icon { background: black; color: white; padding: 5px 10px; border-radius: 4px; margin-right: 10px; font-size: 0.9rem; }
+        .nav-item { padding: 12px 20px; color: #4b5563 !important; text-decoration: none; display: flex; align-items: center; font-size: 0.95rem; cursor: pointer; }
+        .nav-item.active { background: black !important; color: white !important; border-radius: 0 20px 20px 0; margin-right: 20px; }
+        .nav-item:hover:not(.active) { background: #f3f4f6; }
+
+        /* Sidebar Toggle Button */
+        .sidebar-toggle-btn { position: absolute; left: var(--sidebar-width); top: 50%; transform: translateY(-50%); background: black; color: white; width: 20px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; border-radius: 0 8px 8px 0; box-shadow: 2px 0 5px rgba(0,0,0,0.2); transition: left 0.4s ease; font-weight: bold; }
+        .sidebar-collapsed-btn { left: 0 !important; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg-color); z-index: 10;}
+        .header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
+        .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; border: 1px solid var(--border-color); background: white; color: #374151;}
+        .btn:hover { background: #f9fafb; }
+        .btn-primary { background: black; color: white; border: none; }
+        .btn-primary:hover { opacity: 0.8; }
+        .dashboard-padding { padding: 20px 30px; }
+
+        .form-card { background: white; border-radius: 8px; border: 1px solid var(--border-color); padding: 25px; margin-bottom: 25px; display: none; }
+        .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 15px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 0.85rem; color: #374151; margin-bottom: 8px; font-weight: 600;}
+        .form-group input, .form-group select { padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.95rem; outline: none; background: #fdfdfd; }
+        .form-group input:focus, .form-group select:focus { border-color: #9ca3af; background: white;}
+
+        .table-card { background: white; border-radius: 8px; border: 1px solid var(--border-color); padding: 0; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { padding: 15px; background: #f9fafb; font-size: 0.85rem; color: #4b5563; border-bottom: 1px solid var(--border-color); }
+        td { padding: 15px; font-size: 0.9rem; border-bottom: 1px solid var(--border-color); color: #111827; }
+        
+        .action-delete { background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold;}
+        .action-delete:hover { background: #fef2f2; }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar" onmouseenter="clearSidebarTimer()" onmouseleave="resetSidebarTimer()">
+        <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTION</div>
+        <a href="index.html" class="nav-item">📋 Order Details</a>
+        <a href="estimate.html" class="nav-item">🧾 Estimate Letter</a>
+        <a href="billing.html" class="nav-item">💳 Billing</a>
+        <a href="store-plus.html" class="nav-item">📦 Store Plus</a>
+        <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
+        <a href="sales-report.html" class="nav-item">📊 Sales Report</a>
+        <a href="upi-book.html" class="nav-item">📖 UPI Book</a>
+        <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
+        <a href="technical-report.html" class="nav-item">📄 Technical Report</a>
+        
+        <!-- Admin Only Links Hidden by Default -->
+        <a href="expenses.html" class="nav-item admin-only" style="display: none;">💸 Expenses</a>
+        <a href="profit.html" class="nav-item admin-only" style="display: none;">📈 Profit Book</a>
+        <a href="users.html" class="nav-item admin-only active" style="display: none; color: #2563eb; font-weight:bold;">👥 Manage Users</a>
+
+        <div style="flex-grow: 1;"></div> 
+        
+        <div class="nav-item" onclick="logOut()" style="color: black !important; font-weight: bold; cursor: pointer; border-top: 1px solid var(--border-color); padding-top: 15px; margin: 10px 20px; display: flex; justify-content: space-between; align-items: center;">
+            <span id="userNameDisplay">User</span> 
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+        </div>
+    </div>
+    <div class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">⋮</div>
+
+    <div class="main-content">
+        <div class="header">
+            <div><h1 style="margin:0; font-size:1.5rem;">Manage Staff & Users</h1></div>
+            <div><button class="btn btn-primary" onclick="toggleForm()">+ Add New User</button></div>
+        </div>
+
+        <div class="dashboard-padding">
+            <div class="form-card" id="userForm">
+                <div style="font-weight:bold; font-size: 0.85rem; color: #4b5563; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:10px;">👤 CREATE NEW ACCOUNT</div>
+                <div class="form-grid">
+                    <div class="form-group"><label>Email / Username</label><input type="email" id="u-email" placeholder="staff@gsmsolution.com"></div>
+                    <div class="form-group"><label>Password (Min 6 chars)</label><input type="password" id="u-password" placeholder="******"></div>
+                    <div class="form-group"><label>Full Name</label><input type="text" id="u-name" placeholder="e.g. John Doe"></div>
+                    <div class="form-group">
+                        <label>Role</label>
+                        <select id="u-role">
+                            <option value="Engineer">Engineer</option>
+                            <option value="CCO">CCO (Customer Care)</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="margin-top:20px; display: flex; gap: 10px;">
+                    <button class="btn btn-primary" onclick="saveUser()">Create Account</button>
+                    <button class="btn" onclick="toggleForm()">Cancel</button>
+                </div>
+            </div>
+
+            <div class="table-card">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Full Name</th>
+                            <th>Email / Username</th>
+                            <th>Role</th>
+                            <th style="text-align: center;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const supabaseUrl = 'https://cbsmsclmyyxgwwztqwsc.supabase.co';
+        const supabaseKey = 'sb_publishable_wAIQBEnR8-o5R6Ic48efGQ_zomyZiJ-';
+        
+        const db = window.supabase.createClient(supabaseUrl, supabaseKey);
+        const adminSilentDb = window.supabase.createClient(supabaseUrl, supabaseKey, {
+            auth: { storageKey: 'silent-admin', persistSession: false }
+        });
+
+        const ADMIN_EMAIL = 'faizan@gsmsolution.com'; 
+
+        // Sidebar Auto-Collapse Logic
+        let sidebarTimer;
+        window.resetSidebarTimer = function() {
+            clearTimeout(sidebarTimer);
+            sidebarTimer = setTimeout(() => {
+                document.getElementById('sidebar').classList.add('collapsed');
+                document.getElementById('sidebarToggle').classList.add('sidebar-collapsed-btn');
+            }, 5000);
+        }
+        window.clearSidebarTimer = function() { clearTimeout(sidebarTimer); }
+        window.toggleSidebar = function() {
+            const sidebar = document.getElementById('sidebar');
+            const btn = document.getElementById('sidebarToggle');
+            sidebar.classList.toggle('collapsed');
+            btn.classList.toggle('sidebar-collapsed-btn');
+            if(!sidebar.classList.contains('collapsed')) resetSidebarTimer();
+            else clearSidebarTimer();
+        }
+
+        async function checkAuth() {
+            const { data } = await db.auth.getSession();
+            if (!data.session) {
+                window.location.href = 'login.html';
+            } else if (data.session.user.email.trim().toLowerCase() !== ADMIN_EMAIL.trim().toLowerCase()) {
+                alert("Security Alert: Only Administrators can access this page.");
+                window.location.href = 'index.html'; 
+            } else {
+                let loggedInEmail = data.session.user.email.split('@')[0];
+                document.getElementById('userNameDisplay').innerText = loggedInEmail.charAt(0).toUpperCase() + loggedInEmail.slice(1);
+                
+                // Show Admin Elements
+                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
+            }
+        }
+
+        window.logOut = async function() {
+            await db.auth.signOut();
+            window.location.href = 'login.html';
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            checkAuth();
+            resetSidebarTimer();
+            window.fetchUsers();
+        });
+
+        window.toggleForm = function() {
+            const form = document.getElementById('userForm');
+            form.style.display = (form.style.display === 'none' || form.style.display === '') ? 'block' : 'none';
+        }
+
+        window.fetchUsers = async function() {
+            const { data, error } = await db.from('user_profiles').select('*').order('created_at', { ascending: false });
+            if (error) return console.error(error);
+            
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+            
+            data.forEach(user => {
+                let roleColor = user.role === 'Admin' ? '#dc2626' : (user.role === 'Engineer' ? '#3b82f6' : '#eab308');
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${user.fullName}</strong></td>
+                        <td>${user.email}</td>
+                        <td><span style="background:${roleColor}; color:white; padding:4px 8px; border-radius:4px; font-size:0.75rem; font-weight:bold;">${user.role.toUpperCase()}</span></td>
+                        <td style="text-align: center;"><button onclick="deleteUserProfile('${user.email}')" class="action-delete">Remove Role</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        window.saveUser = async function() {
+            const email = document.getElementById('u-email').value.trim();
+            const password = document.getElementById('u-password').value;
+            const fullName = document.getElementById('u-name').value.trim();
+            const role = document.getElementById('u-role').value;
+
+            if(!email || !password || !fullName) return alert("Please fill out all fields.");
+            
+            const { error: authError } = await adminSilentDb.auth.signUp({ email: email, password: password });
+            if (authError) return alert("Error creating login: " + authError.message);
+
+            const { error: dbError } = await db.from('user_profiles').insert([{ email, fullName, role }]);
+            if (dbError) return alert("Error saving profile: " + dbError.message);
+
+            alert("New User Account Created Successfully!");
+            
+            document.getElementById('u-email').value = '';
+            document.getElementById('u-password').value = '';
+            document.getElementById('u-name').value = '';
+            window.toggleForm();
+            window.fetchUsers();
+        }
+
+        window.deleteUserProfile = async function(email) {
+            if(!confirm(`Remove role for ${email}?`)) return;
+            await db.from('user_profiles').delete().eq('email', email);
+            window.fetchUsers();
+        }
+    </script>
+</body>
+</html>
