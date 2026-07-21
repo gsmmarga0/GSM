@@ -552,4 +552,126 @@
                             <td><span class="pill ${pillClass}">${row.category}</span></td>
                             <td class="${row.type === 'in' ? 'text-green' : ''}">${row.type === 'in' ? formatCurr(amt) : '—'}</td>
                             <td class="${row.type === 'out' ? 'text-red' : ''}">${row.type === 'out' ? formatCurr(amt) : '—'}</td>
-                            <td
+                            <td style="font-weight:bold;">${formatCurr(runningBalance)}</td>
+                            <td class="admin-col ${isAdmin ? '' : 'admin-hidden'}" style="text-align:center;">${deleteBtn}</td>
+                        </tr>
+                    `;
+                    ledgerHtml.push(rowHtml);
+
+                    if (row.type === 'in') {
+                        periodIn += amt;
+                        periodInCount++;
+                        cashInHtml.push(`
+                            <tr>
+                                <td style="width: 25%; color: #6b7280;">${formatDateObj(rowDate)}</td>
+                                <td style="width: 55%;">${row.description}</td>
+                                <td style="width: 20%; text-align: right;" class="text-green">${formatCurr(amt)}</td>
+                            </tr>
+                        `);
+                    } else {
+                        periodOut += amt;
+                        periodOutCount++;
+                        cashOutHtml.push(`
+                            <tr>
+                                <td style="width: 25%; color: #6b7280;">${formatDateObj(rowDate)}</td>
+                                <td style="width: 55%;">${row.description}</td>
+                                <td style="width: 20%; text-align: right;" class="text-red">${formatCurr(amt)}</td>
+                            </tr>
+                        `);
+                    }
+                }
+            });
+
+            // Update DOM - Top Cards
+            document.getElementById('dailyCashIn').innerText = formatCurr(periodIn);
+            document.getElementById('cashInCount').innerText = `${periodInCount} transactions`;
+            document.getElementById('dailyCashOut').innerText = formatCurr(periodOut);
+            document.getElementById('cashOutCount').innerText = `${periodOutCount} transactions`;
+            document.getElementById('dailyClosing').innerText = formatCurr(runningBalance);
+
+            // Update DOM - Ledger Table
+            document.getElementById('ledgerBody').innerHTML = ledgerHtml.join('') || '<tr><td colspan="7" style="text-align:center; padding: 30px; color: #6b7280;">No transactions found for this date range.</td></tr>';
+            document.getElementById('totalCashInCol').innerText = formatCurr(periodIn);
+            document.getElementById('totalCashOutCol').innerText = formatCurr(periodOut);
+            document.getElementById('totalBalanceCol').innerText = formatCurr(runningBalance);
+
+            // Update DOM - Breakdowns
+            document.getElementById('cashInBreakdownBody').innerHTML = cashInHtml.join('');
+            document.getElementById('bdTotalCashIn').innerText = formatCurr(periodIn);
+            
+            document.getElementById('cashOutBreakdownBody').innerHTML = cashOutHtml.join('');
+            if(periodOutCount > 0) {
+                document.getElementById('emptyCashOutMsg').innerHTML = `Total Cash Out <span style="margin-left: 20px; color: var(--c-red-text); font-weight:bold; font-size:1rem;">${formatCurr(periodOut)}</span>`;
+            } else {
+                document.getElementById('emptyCashOutMsg').innerHTML = `No cash out entries`;
+            }
+
+            // Update DOM - Lifetime Summary
+            document.getElementById('lifeTotalIn').innerText = formatCurr(lifeIn);
+            document.getElementById('lifeTotalOut').innerText = formatCurr(lifeOut);
+            document.getElementById('lifeNet').innerText = formatCurr(lifeIn - lifeOut);
+            document.getElementById('lifeBilling').innerText = formatCurr(lifeBilling);
+            document.getElementById('lifeAccessories').innerText = formatCurr(lifeAccessories);
+            document.getElementById('lifeAdvances').innerText = formatCurr(lifeAdvances);
+            document.getElementById('lifeStore').innerText = formatCurr(lifeStore);
+            document.getElementById('lifeManual').innerText = formatCurr(lifeManual);
+
+        } catch(e) { console.error("Error formatting cashbook: ", e); }
+    }
+
+    // --- Save Cash Out ---
+    window.saveCashOut = async function() {
+        const desc = document.getElementById('outDesc').value.trim();
+        const category = document.getElementById('outCategory').value;
+        const amount = parseFloat(document.getElementById('outAmount').value) || 0;
+        
+        const currentDate = new Date().toISOString().split('T')[0];
+
+        if(!desc || amount <= 0) return alert("Please enter a valid description and amount.");
+
+        const entry = {
+            date: currentDate,
+            description: desc,
+            category: category,
+            amount: amount,
+            type: 'out',
+            created_by: currentUserEmail
+        };
+
+        try {
+            const { error } = await db.from('cashbook_entries').insert([entry]);
+            if(error) throw error;
+            closeModal();
+            fetchCashbook(true); 
+        } catch(e) {
+            alert("Error saving: " + e.message);
+        }
+    }
+
+    // --- Delete Cash Out (Admin Only) ---
+    window.deleteCashOut = async function(id) {
+        if (!isAdmin) return alert("Unauthorized. Admins only.");
+        if (!confirm("Are you sure you want to delete this cash out entry? This will affect your total balance.")) return;
+        
+        try {
+            const { error } = await db.from('cashbook_entries').delete().eq('id', id);
+            if (error) throw error;
+            fetchCashbook(true); // Force refresh to update calculations
+        } catch (e) {
+            alert("Error deleting entry: " + e.message);
+        }
+    }
+
+    // Initialization
+    document.addEventListener("DOMContentLoaded", async () => {
+        await checkAuth(); 
+        resetSidebarTimer();
+        
+        document.getElementById('ledgerDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('ledgerDate').addEventListener('change', () => fetchCashbook(false));
+        
+        fetchCashbook(true);
+    });
+</script>
+</body>
+</html>
