@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPI Book - GSM SOLUTIONS</title>
+    <link rel="icon" href="data:,">
+    
+    <style>
+        :root {
+            --bg-color: #f4f5f7;
+            --sidebar-width: 250px;
+            --border-color: #e5e7eb;
+            --c-blue: #2563eb;
+            --c-blue-light: #eff6ff;
+            --c-purple: #9333ea;
+            --c-purple-light: #faf5ff;
+            --c-green: #10b981;
+            --c-green-light: #ecfdf5;
+        }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; position: relative; }
+        
+        /* Sidebar Styling */
+        .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; transition: width 0.4s ease; overflow: hidden; white-space: nowrap; z-index: 40; }
+        .sidebar.collapsed { width: 0; padding-left: 0; padding-right: 0; border-right: none; }
+        .logo-area { display: flex; align-items: center; padding: 0 20px 20px 20px; font-weight: bold; font-size: 1.2rem; }
+        .logo-icon { background: black; color: white; padding: 5px 10px; border-radius: 4px; margin-right: 10px; font-size: 0.9rem; }
+        .nav-item { padding: 12px 20px; color: #4b5563 !important; text-decoration: none; display: flex; align-items: center; font-size: 0.95rem; cursor: pointer; }
+        .nav-item.active { background: black !important; color: white !important; border-radius: 0 20px 20px 0; margin-right: 20px; }
+        .nav-item:hover:not(.active) { background: #f3f4f6; }
+
+        .sidebar-toggle-btn { position: absolute; left: var(--sidebar-width); top: 50%; transform: translateY(-50%); background: black; color: white; width: 20px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; border-radius: 0 8px 8px 0; transition: left 0.4s ease; font-weight: bold;}
+        .sidebar-collapsed-btn { left: 0 !important; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg-color); z-index: 10; padding: 20px 30px;}
+        
+        /* Top Navigation Date */
+        .top-nav-date { text-align: right; font-size: 0.85rem; color: #6b7280; font-weight: 500; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
+
+        /* Header & Filters */
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .header-title h1 { margin: 0; font-size: 1.5rem; color: #111827; }
+        .header-title p { margin: 5px 0 0 0; color: #6b7280; font-size: 0.9rem; }
+        
+        .filter-group { display: flex; align-items: center; gap: 15px; font-size: 0.85rem; color: #4b5563;}
+        .filter-item { display: flex; align-items: center; gap: 8px; }
+        .filter-item input { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; outline: none; background: white;}
+        .btn-fetch { background: black; color: white; border: none; padding: 9px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; display: flex; align-items: center; gap: 5px;}
+        .btn-fetch:hover { opacity: 0.8; }
+
+        /* Stats Grid */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; display: flex; flex-direction: column; position: relative;}
+        
+        .stat-card-main { background: var(--c-blue-light); border-color: #bfdbfe; }
+        .stat-card-card { background: var(--c-purple-light); border-color: #e9d5ff; }
+        
+        .stat-card h3 { margin: 0; font-size: 0.85rem; font-weight: 600; color: #4b5563; }
+        .stat-card-main h3 { color: var(--c-blue); }
+        .stat-card-card h3 { color: var(--c-purple); }
+        
+        .stat-card .amount { font-size: 1.8rem; font-weight: 800; color: #111827; margin: 10px 0 5px 0; }
+        .stat-card-main .amount { color: var(--c-blue); }
+        .stat-card-card .amount { color: var(--c-purple); }
+        
+        .stat-card .subtitle { font-size: 0.75rem; color: #6b7280; }
+        .stat-card-main .subtitle { color: var(--c-blue); }
+        .stat-card-card .subtitle { color: var(--c-purple); }
+
+        /* Table Styles */
+        .table-card { background: white; border-radius: 8px; border: 1px solid var(--border-color); padding: 0; overflow: hidden; margin-bottom: 50px;}
+        .table-header-title { padding: 15px 20px; font-size: 0.9rem; font-weight: bold; color: #374151; border-bottom: 1px solid var(--border-color); display: flex; gap: 10px; align-items: center;}
+        .table-header-title span { font-weight: normal; color: #6b7280; font-size: 0.8rem; }
+        
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { padding: 15px 20px; font-size: 0.85rem; color: #6b7280; font-weight: 600; border-bottom: 1px solid var(--border-color); }
+        td { padding: 15px 20px; font-size: 0.85rem; color: #374151; border-bottom: 1px solid #f3f4f6; }
+        
+        .col-upi { font-weight: bold; color: var(--c-blue); }
+        .col-card { font-weight: bold; color: var(--c-purple); }
+
+        /* Group Headers and Footers */
+        .group-header { background: #f9fafb; font-size: 0.75rem; font-weight: bold; color: #4b5563; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e5e7eb;}
+        .group-header td { padding: 10px 20px; color: #4b5563; border: none;}
+        
+        .table-footer { background: #111827; font-weight: bold; color: white; font-size: 0.9rem;}
+        .table-footer td { padding: 15px 20px; color: white; border: none;}
+
+        /* Badges */
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: inline-block;}
+        .badge-repair { background: var(--c-green-light); color: var(--c-green); }
+        .badge-accessories { background: #f3f4f6; color: #4b5563; }
+        
+        .no-data { text-align: center; padding: 40px; color: #9ca3af; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar" id="sidebar">
+    <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
+    <a href="index.html" class="nav-item">⏳ Pending Orders</a>
+    <a href="repair-completed.html" class="nav-item">✅ Repair Completed</a>
+    <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
+    <a href="upi-book.html" class="nav-item active">📖 UPI Book</a>
+    <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
+    
+    <a href="sales-report.html" class="nav-item admin-only" style="display: none;">📊 Sales Report</a>
+    <a href="expenses.html" class="nav-item admin-only" style="display: none;">💸 Expenses</a>
+    <a href="profit.html" class="nav-item admin-only" style="display: none;">📈 Profit Book</a>
+    <a href="users.html" class="nav-item admin-only" style="display: none; color: #2563eb; font-weight:bold;">👥 Manage Users</a>
+    <div style="flex-grow: 1;"></div> 
+    
+    <!-- Redesigned Logout -->
+    <div class="nav-item" onclick="logOut()" style="color: black !important; font-weight: bold; cursor: pointer; border-top: 1px solid var(--border-color); padding-top: 15px; margin: 10px 20px; display: flex; justify-content: space-between; align-items: center;">
+        <span id="userNameDisplay">User</span> 
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+    </div>
+</div>    
+<div class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">⋮</div>
+
+<div class="main-content">
+    <div class="top-nav-date" id="topNavDate"></div>
+
+    <div class="header-top">
+        <div class="header-title">
+            <h1>UPI Book</h1>
+            <p>Mapped dynamically from Repair Orders and Accessories</p>
+        </div>
+        
+        <div class="filter-group">
+            <div class="filter-item">
+                <label>From:</label>
+                <input type="date" id="filterFromDate">
+            </div>
+            <div class="filter-item">
+                <label>To:</label>
+                <input type="date" id="filterToDate">
+            </div>
+            <button class="btn-fetch" onclick="fetchMappedData()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Fetch
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+        <div class="stat-card stat-card-main">
+            <h3>Total UPI Received</h3>
+            <div class="amount" id="statTotalUPI">₹0.00</div>
+            <div class="subtitle" id="statCountUPI">0 transactions</div>
+        </div>
+        <div class="stat-card stat-card-card">
+            <h3>Total Card Received</h3>
+            <div class="amount" id="statTotalCard">₹0.00</div>
+            <div class="subtitle" id="statCountCard">0 transactions</div>
+        </div>
+        <div class="stat-card">
+            <h3>From Repair Payments</h3>
+            <div class="amount" id="statRepairAmount">₹0.00</div>
+            <div class="subtitle">UPI & Card combined</div>
+        </div>
+        <div class="stat-card">
+            <h3>From Accessories</h3>
+            <div class="amount" id="statAccessoriesAmount">₹0.00</div>
+            <div class="subtitle">UPI & Card combined</div>
+        </div>
+    </div>
+
+    <!-- Table Card -->
+    <div class="table-card">
+        <div class="table-header-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--c-blue);"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+            Digital Transactions <span id="tableDateRangeDisplay"></span>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Time (IST)</th>
+                    <th>Description</th>
+                    <th>Source</th>
+                    <th style="text-align: right;">UPI (₹)</th>
+                    <th style="text-align: right;">Card (₹)</th>
+                </tr>
+            </thead>
+            <tbody id="dataTableBody">
+                <!-- Transactions injected here -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    // Project Specific Supabase Configuration
+    const supabaseUrl = 'https://cvxjvicpefggheiojmtn.supabase.co';
+    const supabaseKey = 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I';
+    const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+    const ADMIN_EMAIL = 'faizan@gsmsolution.com'; 
+    let currentUserEmail = '';
+
+    // Sidebar Logic
+    window.toggleSidebar = function() {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+        document.getElementById('sidebarToggle').classList.toggle('sidebar-collapsed-btn');
+    }
+
+    // Dates Setup
+    const dateOptions = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+    const today = new Date();
+    document.getElementById('topNavDate').innerText = today.toLocaleDateString('en-GB', dateOptions) + " | GSM SOLUTION";
+    
+    // Set default filter to today
+    const todayString = today.toISOString().split('T')[0];
+    document.getElementById('filterFromDate').value = todayString;
+    document.getElementById('filterToDate').value = todayString;
+
+    async function checkAuth() {
+        const { data } = await supabaseClient.auth.getSession();
+        if (!data.session) window.location.href = 'login.html';
+        else {
+            currentUserEmail = data.session.user.email;
+            let displayEmail = currentUserEmail.split('@')[0];
+            document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
+            
+            // Show Admin Tabs
+            if (currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase()) {
+                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
+            }
+        }
+    }
+
+    async function logOut() {
+        await supabaseClient.auth.signOut();
+        window.location.href = 'login.html';
+    }
+
+    function formatMoney(amount) {
+        return amount.toLocaleString('en-IN', { style: 'currency', currency: 'INR' });
+    }
+
+    function getBadgeClass(source) {
+        if (source === 'Repair Payment') return 'badge-repair';
+        return 'badge-accessories';
+    }
+
+    // FETCH DYNAMICALLY FROM REPAIRS AND ACCESSORIES TABLES
+    window.fetchMappedData = async function() {
+        const fromDate = document.getElementById('filterFromDate').value;
+        const toDate = document.getElementById('filterToDate').value;
+        document.getElementById('tableDateRangeDisplay').innerText = fromDate === toDate ? fromDate : `${fromDate} to ${toDate}`;
+
+        let unifiedData = [];
+
+        try {
+            // 1. Fetch Repair Orders (Delivered & Paid via UPI/Card)
+            const { data: repairs } = await supabaseClient
+                .from('repairOrders')
+                .select('*')
+                .eq('status', 'Goods Delivered')
+                .in('finalPaymentMethod', ['UPI', 'Card']);
+
+            repairs?.forEach(r => {
+                let amt = parseFloat(r.finalAmount) || 0;
+                let upi = r.finalPaymentMethod === 'UPI' ? amt : 0;
+                let card = r.finalPaymentMethod === 'Card' ? amt : 0;
+                
+                // Use updated_at for completion time, fallback to created_at
+                let timestamp = r.updated_at || r.created_at; 
+                let dateStr = new Date(timestamp).toISOString().split('T')[0];
+
+                unifiedData.push({
+                    dateObj: new Date(timestamp),
+                    dateStr: dateStr,
+                    timeStr: new Date(timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' }),
+                    description: `Final Bill - Job ${r.jobNo} (${r.customerName})`,
+                    source: 'Repair Payment',
+                    upi: upi,
+                    card: card
+                });
+            });
+
+            // 2. Fetch Accessories Invoices (Paid via UPI/Card)
+            const { data: accessories } = await supabaseClient
+                .from('accessories_invoices')
+                .select('*')
+                .in('payment_mode', ['UPI', 'Card']);
+
+            accessories?.forEach(a => {
+                let amt = parseFloat(a.total_amt) || 0;
+                let upi = a.payment_mode === 'UPI' ? amt : 0;
+                let card = a.payment_mode === 'Card' ? amt : 0;
+                
+                let dateStr = a.date || new Date(a.created_at).toISOString().split('T')[0];
+
+                unifiedData.push({
+                    dateObj: new Date(a.created_at || a.date),
+                    dateStr: dateStr,
+                    timeStr: new Date(a.created_at).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' }),
+                    description: `Acc. Invoice #${a.invoice_no} (${a.customer_name})`,
+                    source: 'Accessories',
+                    upi: upi,
+                    card: card
+                });
+            });
+
+            // Apply Date Filter
+            unifiedData = unifiedData.filter(d => d.dateStr >= fromDate && d.dateStr <= toDate);
+            
+            // Sort by Date/Time ascending
+            unifiedData.sort((a, b) => a.dateObj - b.dateObj);
+
+            renderTable(unifiedData);
+            calculateStats(unifiedData);
+
+        } catch (error) {
+            console.error("Error fetching mapped data:", error.message);
+        }
+    }
+
+    function calculateStats(data) {
+        let totals = {
+            upiAmount: 0, upiCount: 0,
+            cardAmount: 0, cardCount: 0,
+            repairTotal: 0,
+            accessoriesTotal: 0
+        };
+
+        data.forEach(item => {
+            if (item.upi > 0) {
+                totals.upiAmount += item.upi;
+                totals.upiCount += 1;
+            }
+            if (item.card > 0) {
+                totals.cardAmount += item.card;
+                totals.cardCount += 1;
+            }
+
+            let rowTotal = item.upi + item.card;
+            if (item.source === 'Repair Payment') {
+                totals.repairTotal += rowTotal;
+            } else {
+                totals.accessoriesTotal += rowTotal;
+            }
+        });
+
+        document.getElementById('statTotalUPI').innerText = formatMoney(totals.upiAmount);
+        document.getElementById('statCountUPI').innerText = `${totals.upiCount} transactions`;
+
+        document.getElementById('statTotalCard').innerText = formatMoney(totals.cardAmount);
+        document.getElementById('statCountCard').innerText = `${totals.cardCount} transactions`;
+
+        document.getElementById('statRepairAmount').innerText = formatMoney(totals.repairTotal);
+        document.getElementById('statAccessoriesAmount').innerText = formatMoney(totals.accessoriesTotal);
+    }
+
+    function renderTable(data) {
+        const tbody = document.getElementById('dataTableBody');
+        tbody.innerHTML = '';
+
+        if (data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="no-data">No UPI or Card transactions found for this date range.</td></tr>`;
+            return;
+        }
+
+        // Group by Date for headers
+        const groupedData = {};
+        data.forEach(item => {
+            if (!groupedData[item.dateStr]) groupedData[item.dateStr] = [];
+            groupedData[item.dateStr].push(item);
+        });
+
+        let grandUpi = 0;
+        let grandCard = 0;
+
+        for (const [dateStr, transactions] of Object.entries(groupedData)) {
+            let dayUpi = 0, dayCard = 0;
+
+            transactions.forEach(t => {
+                dayUpi += t.upi;
+                dayCard += t.card;
+            });
+
+            // Create Day Header
+            const dateObj = new Date(dateStr);
+            const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
+            
+            const headerRow = document.createElement('tr');
+            headerRow.className = 'group-header';
+            headerRow.innerHTML = `
+                <td colspan="4">${formattedDate}</td>
+                <td style="text-align: right;">DAY UPI: ${formatMoney(dayUpi)}</td>
+                <td style="text-align: right;">DAY CARD: ${formatMoney(dayCard)}</td>
+            `;
+            tbody.appendChild(headerRow);
+
+            // Create Rows
+            transactions.forEach(item => {
+                grandUpi += item.upi;
+                grandCard += item.card;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.dateStr}</td>
+                    <td>${item.timeStr}</td>
+                    <td>${item.description}</td>
+                    <td><span class="badge ${getBadgeClass(item.source)}">${item.source}</span></td>
+                    <td class="col-upi" style="text-align: right;">${item.upi > 0 ? formatMoney(item.upi) : '-'}</td>
+                    <td class="col-card" style="text-align: right;">${item.card > 0 ? formatMoney(item.card) : '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Create Footer for Period Total
+        const footerRow = document.createElement('tr');
+        footerRow.className = 'table-footer';
+        footerRow.innerHTML = `
+            <td colspan="4" style="text-align: right;">PERIOD TOTAL</td>
+            <td style="text-align: right;">${formatMoney(grandUpi)}</td>
+            <td style="text-align: right;">${formatMoney(grandCard)}</td>
+        `;
+        tbody.appendChild(footerRow);
+    }
+
+    // Initialize App
+    document.addEventListener("DOMContentLoaded", async () => {
+        await checkAuth();
+        fetchMappedData();
+    });
+</script>
+</body>
+</html>
