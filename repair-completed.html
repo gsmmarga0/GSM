@@ -9,6 +9,7 @@
         /* Base styles */
         :root { --bg-color: #f4f5f7; --sidebar-width: 250px; --border-color: #e5e7eb; }
         body { margin: 0; font-family: -apple-system, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; }
+        
         .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; transition: width 0.4s ease; overflow: hidden; white-space: nowrap; z-index: 40; }
         .sidebar.collapsed { width: 0; padding: 0; border-right: none; }
         .logo-area { display: flex; align-items: center; padding: 0 20px 20px 20px; font-weight: bold; font-size: 1.2rem; }
@@ -16,7 +17,7 @@
         .nav-item { padding: 12px 20px; color: #4b5563 !important; text-decoration: none; display: flex; align-items: center; font-size: 0.95rem; cursor: pointer; }
         .nav-item.active { background: black !important; color: white !important; border-radius: 0 20px 20px 0; margin-right: 20px; }
         .nav-item:hover:not(.active) { background: #f3f4f6; }
-        .sidebar-toggle-btn { position: absolute; left: var(--sidebar-width); top: 50%; transform: translateY(-50%); background: black; color: white; width: 20px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; border-radius: 0 8px 8px 0; }
+        .sidebar-toggle-btn { position: absolute; left: var(--sidebar-width); top: 50%; transform: translateY(-50%); background: black; color: white; width: 20px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; border-radius: 0 8px 8px 0; font-weight: bold;}
         .sidebar-collapsed-btn { left: 0 !important; }
         
         .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg-color); }
@@ -30,10 +31,26 @@
         th { padding: 15px; background: #f9fafb; font-size: 0.85rem; color: #4b5563; border-bottom: 1px solid var(--border-color); }
         td { padding: 15px; font-size: 0.9rem; border-bottom: 1px solid var(--border-color); color: #111827; }
         
-        .status-btn { border: none; padding: 8px 16px; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; transition: opacity 0.2s; width: 150px; }
+        .status-btn { border: none; padding: 8px 16px; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; transition: 0.2s; width: 160px; }
         .status-btn:hover { opacity: 0.85; }
         .status-completed { background-color: #3b82f6; }
-        .status-delivered { background-color: #22c55e; }
+        .status-delivered { background-color: #22c55e; cursor: default; }
+
+        /* Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(2px); }
+        .modal-container { background: white; padding: 25px; border-radius: 12px; width: 450px; max-width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .modal-title { font-size: 1.2rem; font-weight: bold; margin: 0 0 5px 0; }
+        .modal-subtitle { font-size: 0.85rem; color: #6b7280; margin: 0 0 20px 0; padding-bottom: 15px; border-bottom: 1px solid #e5e7eb;}
+        .billing-row { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
+        .billing-row label { font-weight: bold; color: #374151; font-size: 0.9rem;}
+        .billing-row input { text-align: right; width: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-weight: bold; outline:none;}
+        .payment-toggle { display: flex; gap: 10px; margin-top: 5px; }
+        .pay-btn { padding: 8px 16px; border-radius: 6px; border: 1px solid #d1d5db; background: white; color: #374151; cursor: pointer; font-size: 0.85rem; font-weight: bold; flex: 1; transition: 0.2s;}
+        .pay-btn.active { background: #111827; color: white; border-color: #111827; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .btn { padding: 10px 20px; border-radius: 6px; border: 1px solid var(--border-color); background: white; cursor: pointer; font-weight: bold; }
+        .btn-confirm { padding: 10px 20px; border-radius: 6px; border: none; background: #10b981; color: white; cursor: pointer; font-weight: bold; transition:0.2s;}
+        .btn-confirm:hover { background: #059669; }
     </style>
 </head>
 <body>
@@ -51,8 +68,15 @@
     <a href="profit.html" class="nav-item admin-only" style="display: none;">📈 Profit Book</a>
     <a href="users.html" class="nav-item admin-only" style="display: none; color: #2563eb; font-weight:bold;">👥 Manage Users</a>
     <div style="flex-grow: 1;"></div> 
-    <div class="nav-item" onclick="logOut()" style="color: black !important; font-weight: bold; cursor: pointer; border-top: 1px solid var(--border-color); padding-top: 15px; margin: 10px 20px;">
-        <span id="userNameDisplay">User</span> (Logout)
+    
+    <!-- Redesigned Logout -->
+    <div class="nav-item" onclick="logOut()" style="color: black !important; font-weight: bold; cursor: pointer; border-top: 1px solid var(--border-color); padding-top: 15px; margin: 10px 20px; display: flex; justify-content: space-between; align-items: center;">
+        <span id="userNameDisplay">User</span> 
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
     </div>
 </div>    
 <div class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">⋮</div>
@@ -61,7 +85,7 @@
     <div class="header">
         <div class="header-left">
             <h1>Repair Completed</h1>
-            <p>Billed orders ready for delivery</p>
+            <p>Ready for delivery & billing</p>
         </div>
     </div>
 
@@ -70,12 +94,12 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Date Billed</th>
+                        <th>Date</th>
                         <th>Job No.</th>
                         <th>Customer</th>
-                        <th>Advance (₹)</th>
-                        <th>Final Bill (₹)</th>
-                        <th>Balance Mode</th>
+                        <th>Model / Problem</th>
+                        <th>Password</th>
+                        <th>Est. Bill (₹)</th>
                         <th style="text-align: center;">Delivery Status</th>
                     </tr>
                 </thead>
@@ -85,9 +109,54 @@
     </div>
 </div>
 
+<!-- DELIVERY & BILLING MODAL -->
+<div class="modal-overlay" id="modalDelivery">
+    <div class="modal-container">
+        <h2 class="modal-title">Deliver Device</h2>
+        <p class="modal-subtitle" id="deliverySubtitle">Job No: GSM00 | Customer</p>
+        
+        <div class="modal-body">
+            <!-- Shows the Estimate entered in the Pending Orders tab -->
+            <div class="billing-row">
+                <label style="color: #6b7280;">Estimated Bill (₹)</label>
+                <span id="deliveryEstimateAmount" style="font-weight:bold; font-size:1.1rem; color:#4b5563;">0</span>
+            </div>
+            
+            <!-- Input to collect the final payment -->
+            <div class="billing-row" style="border-top: 2px dashed #e5e7eb; padding-top: 15px;">
+                <label style="color: #059669; font-size: 1.05rem;">Final Payment Collected (₹)</label>
+                <input type="number" id="deliveryTotalAmount" placeholder="0" style="border-color: #10b981;">
+            </div>
+
+            <!-- Payment Mode Selection -->
+            <div id="paymentSection" style="margin-top: 20px;">
+                <label style="font-size: 0.8rem; color: #6b7280; font-weight:bold;">PAYMENT METHOD</label>
+                <div class="payment-toggle">
+                    <button class="pay-btn active" id="btnDelCash" onclick="setDeliveryMode('Cash')">Cash</button>
+                    <button class="pay-btn" id="btnDelUPI" onclick="setDeliveryMode('UPI')">UPI</button>
+                    <button class="pay-btn" id="btnDelCard" onclick="setDeliveryMode('Card')">Card</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button class="btn" onclick="closeDeliveryModal()">Cancel</button>
+            <button class="btn-confirm" onclick="confirmDelivery()">Deliver & Save Bill</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
     const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
+    const ADMIN_EMAIL = 'faizan@gsmsolution.com';
+    let currentUserEmail = '';
+    
+    // Delivery State Variables
+    let deliveryOrderId = null;
+    let deliveryJobNo = '';
+    let deliveryCustomer = '';
+    let deliveryPaymentMode = 'Cash';
     
     window.toggleSidebar = function() {
         document.getElementById('sidebar').classList.toggle('collapsed');
@@ -98,9 +167,9 @@
         const { data } = await supabaseClient.auth.getSession();
         if (!data.session) window.location.href = 'login.html';
         else {
-            const email = data.session.user.email;
-            document.getElementById('userNameDisplay').innerText = email.split('@')[0];
-            if (email.toLowerCase() === 'gsmmargao@gmail.com') {
+            currentUserEmail = data.session.user.email;
+            document.getElementById('userNameDisplay').innerText = currentUserEmail.split('@')[0];
+            if (currentUserEmail.toLowerCase() === ADMIN_EMAIL) {
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
             }
         }
@@ -120,36 +189,102 @@
         const tbody = document.getElementById('completedTableBody');
         tbody.innerHTML = '';
 
+        if(data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: gray;">No completed orders found.</td></tr>`;
+            return;
+        }
+
         data.forEach(order => {
             const isDelivered = order.status === 'Goods Delivered';
             const btnClass = isDelivered ? 'status-delivered' : 'status-completed';
-            const btnText = isDelivered ? 'Goods Delivered' : 'Repair Completed';
+            
+            // If already delivered, show a static label. If not, make it a clickable button.
+            const actionHtml = isDelivered 
+                ? `<button class="status-btn ${btnClass}" disabled>✓ Delivered</button>`
+                : `<button class="status-btn ${btnClass}" onclick="openDeliveryModal('${order.id}', '${order.jobNo}', '${order.customerName}', '${order.estimateAmount || 0}')">Deliver Device</button>`;
 
             tbody.innerHTML += `
                 <tr>
                     <td>${order.date}</td>
                     <td><strong>${order.jobNo}</strong></td>
-                    <td>${order.customerName}</td>
-                    <td style="color:#10b981;">₹${order.advancePaid || 0}</td>
-                    <td style="font-weight:bold;">₹${order.finalAmount || 0}</td>
-                    <td><small style="color:gray;">${order.finalPaymentMethod || '-'}</small></td>
-                    <td style="text-align: center;">
-                        <button class="status-btn ${btnClass}" onclick="toggleDelivery('${order.id}', '${order.status}')">
-                            ${btnText}
-                        </button>
-                    </td>
+                    <td>${order.customerName}<br><small style="color:gray;">${order.contactNo}</small></td>
+                    <td>${order.problemDesc || '-'}</td>
+                    <td style="color:#ef4444; font-weight:bold; letter-spacing:1px;">${order.devicePassword || '-'}</td>
+                    <td style="font-weight:bold; color:#059669;">₹${order.estimateAmount || 0}</td>
+                    <td style="text-align: center;">${actionHtml}</td>
                 </tr>`;
         });
     }
 
-    window.toggleDelivery = async function(id, currentStatus) {
-        if(currentStatus === 'Goods Delivered') {
-            return alert("Item is already marked as delivered.");
-        }
+    // --- DELIVERY LOGIC ---
+    window.openDeliveryModal = function(id, jobNo, customer, estimateAmount) {
+        deliveryOrderId = id;
+        deliveryJobNo = jobNo;
+        deliveryCustomer = customer;
         
-        if(confirm("Mark this device as Goods Delivered to the customer?")) {
-            await supabaseClient.from('repairOrders').update({ status: 'Goods Delivered' }).eq('id', id);
-            fetchCompletedOrders();
+        document.getElementById('deliverySubtitle').innerText = `Job No: ${jobNo} | Customer: ${customer}`;
+        
+        // Show the previously entered estimate amount
+        document.getElementById('deliveryEstimateAmount').innerText = estimateAmount;
+        
+        // Pre-fill the final amount with the estimate for convenience (user can overwrite)
+        document.getElementById('deliveryTotalAmount').value = estimateAmount;
+        
+        setDeliveryMode('Cash');
+        document.getElementById('modalDelivery').style.display = 'flex';
+        document.getElementById('deliveryTotalAmount').focus();
+    }
+
+    window.setDeliveryMode = function(mode) {
+        deliveryPaymentMode = mode;
+        document.querySelectorAll('.pay-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`btnDel${mode}`).classList.add('active');
+    }
+
+    window.closeDeliveryModal = function() {
+        document.getElementById('modalDelivery').style.display = 'none';
+    }
+
+    window.confirmDelivery = async function() {
+        const finalAmount = parseFloat(document.getElementById('deliveryTotalAmount').value) || 0;
+        
+        if (finalAmount <= 0) {
+            if(!confirm("Are you sure the final bill is ₹0?")) return;
+        }
+
+        try {
+            // 1. Update the order status and final payment info
+            await supabaseClient.from('repairOrders').update({ 
+                status: 'Goods Delivered',
+                finalAmount: finalAmount,
+                finalPaymentMethod: deliveryPaymentMode
+            }).eq('id', deliveryOrderId);
+
+            // 2. Add the revenue to the respective ledger
+            if(finalAmount > 0) {
+                const currentDate = new Date().toISOString().split('T')[0];
+                const desc = `Final Bill - Job ${deliveryJobNo} (${deliveryCustomer})`;
+                
+                if(deliveryPaymentMode === 'Cash') {
+                    await supabaseClient.from('cashbook_entries').insert([{
+                        description: desc, category: 'Repair Sales', amount: finalAmount, type: 'in', 
+                        date: currentDate, created_by: currentUserEmail
+                    }]);
+                } else {
+                    await supabaseClient.from('upi_transactions').insert([{
+                        description: desc, source: 'Repair Payment', amount: finalAmount, 
+                        date: currentDate, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' }),
+                        created_by: currentUserEmail
+                    }]);
+                }
+            }
+
+            closeDeliveryModal();
+            fetchCompletedOrders(); 
+            alert("Device marked as Delivered and Bill recorded in Ledger successfully!");
+
+        } catch (err) {
+            alert("Error delivering device: " + err.message);
         }
     }
 
