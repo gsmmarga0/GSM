@@ -73,11 +73,13 @@
         .card-header { padding: 15px 20px; font-weight: bold; font-size: 0.95rem; border-bottom: 1px solid var(--border-color); background: #f9fafb; display: flex; flex-direction: column;}
         .card-header span { font-size: 0.75rem; color: #6b7280; font-weight: normal; margin-top: 2px;}
         
-        /* SCROLLABLE TABLE WRAPPER */
+        /* SCROLLABLE TABLE WRAPPER WITH INCREASED HEIGHT */
         .ledger-wrapper {
-            max-height: 550px; 
+            height: 50vh; 
+            min-height: 400px;
             overflow-y: auto;
             position: relative;
+            padding-bottom: 20px;
         }
         
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
@@ -98,6 +100,9 @@
 
         .text-green { color: var(--c-green-text); font-weight: 600; }
         .text-red { color: var(--c-red-text); font-weight: 600; }
+        
+        .action-delete { color: #ef4444; cursor: pointer; background: none; border: none; padding: 5px; font-size: 1.1rem; transition: 0.2s;}
+        .action-delete:hover { transform: scale(1.1); }
 
         /* Breakdowns */
         .breakdown-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
@@ -132,7 +137,7 @@
 <body>
 
 <!-- Sidebar -->
-<div class="sidebar" id="sidebar">
+<div class="sidebar" id="sidebar" onmouseenter="clearSidebarTimer()" onmouseleave="resetSidebarTimer()">
     <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
     <a href="index.html" class="nav-item">⏳ Pending Orders</a>
     <a href="repair-completed.html" class="nav-item">✅ Repair Completed</a>
@@ -148,7 +153,6 @@
 
     <div style="flex-grow: 1;"></div> 
     
-    <!-- Redesigned Logout -->
     <div class="nav-item" onclick="logOut()" style="color: black !important; font-weight: bold; cursor: pointer; border-top: 1px solid var(--border-color); padding-top: 15px; margin: 10px 20px; display: flex; justify-content: space-between; align-items: center;">
         <span id="userNameDisplay">User</span> 
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -223,6 +227,7 @@
                         <th>Cash In (₹)</th>
                         <th>Cash Out (₹)</th>
                         <th>Balance (₹)</th>
+                        <th class="admin-col" style="display:none; text-align:center;">Action</th>
                     </tr>
                 </thead>
                 <tbody id="ledgerBody">
@@ -230,10 +235,11 @@
                 </tbody>
                 <tfoot class="table-totals">
                     <tr>
-                        <td colspan="3" style="text-align: right; font-size: 0.75rem;">TOTALS</td>
+                        <td id="tfootColspan" colspan="3" style="text-align: right; font-size: 0.75rem;">TOTALS</td>
                         <td class="text-green" id="totalCashInCol">₹0.00</td>
                         <td class="text-red" id="totalCashOutCol">₹0.00</td>
                         <td style="color: #2563eb;" id="totalBalanceCol">₹0.00</td>
+                        <td class="admin-col" style="display:none;"></td>
                     </tr>
                 </tfoot>
             </table>
@@ -347,15 +353,36 @@
     const db = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
     const ADMIN_EMAIL = 'faizan@gsmsolution.com'; 
     let currentUserEmail = '';
+    let isAdmin = false;
 
     // Cache to hold db data for fast filtering
     let currentMode = 'Daily';
     let allEntries = []; 
 
     // --- Sidebar Logic ---
+    let sidebarTimer;
+    window.resetSidebarTimer = function() {
+        clearTimeout(sidebarTimer);
+        sidebarTimer = setTimeout(() => {
+            const sb = document.getElementById('sidebar');
+            const btn = document.getElementById('sidebarToggle');
+            if(sb && btn) {
+                sb.classList.add('collapsed');
+                btn.classList.add('sidebar-collapsed-btn');
+            }
+        }, 5000);
+    }
+    window.clearSidebarTimer = function() { clearTimeout(sidebarTimer); }
+
     window.toggleSidebar = function() {
-        document.getElementById('sidebar').classList.toggle('collapsed');
-        document.getElementById('sidebarToggle').classList.toggle('sidebar-collapsed-btn');
+        const sb = document.getElementById('sidebar');
+        const btn = document.getElementById('sidebarToggle');
+        if(sb && btn) {
+            sb.classList.toggle('collapsed');
+            btn.classList.toggle('sidebar-collapsed-btn');
+            if(!sb.classList.contains('collapsed')) resetSidebarTimer();
+            else clearSidebarTimer();
+        }
     }
 
     // --- Auth Check ---
@@ -368,11 +395,13 @@
             let displayEmail = currentUserEmail.split('@')[0];
             document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
             
-            // Show all admin-only nav links if admin
+            // Handle Admin Roles
             if (currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase()) {
+                isAdmin = true;
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
                 
-                // Show Admin-only Summary Section
+                // Show Admin Columns & Sections
+                document.querySelectorAll('.admin-col').forEach(el => el.style.display = 'table-cell');
                 const summarySection = document.getElementById('adminSummarySection');
                 if (summarySection) summarySection.style.display = 'block';
             }
@@ -428,7 +457,6 @@
     // --- Main Fetch & Render Logic ---
     window.fetchCashbook = async function(forceRefresh = false) {
         try {
-            // Fetch fresh data if forced or if cache is empty
             if (forceRefresh || allEntries.length === 0) {
                 const { data, error } = await db.from('cashbook_entries').select('*').order('created_at', { ascending: true });
                 if (error) {
@@ -451,7 +479,6 @@
             
             let runningBalance = 0;
 
-            // Establish Filtering rules
             let targetDate, fromDate, toDate;
             let subtitleText = '';
             
@@ -465,13 +492,10 @@
             }
             document.getElementById('ledgerSubtitle').innerText = subtitleText;
 
-            // Process Data
             allEntries.forEach(row => {
-                // Using the specific 'date' column inserted by index.html / saveCashOut
                 const rowDate = row.date || new Date(row.created_at).toISOString().split('T')[0];
                 const amt = parseFloat(row.amount) || 0;
 
-                // Determine if row belongs in the currently viewed ledger
                 let isVisible = false;
                 if (currentMode === 'Daily') {
                     isVisible = (rowDate === targetDate);
@@ -479,7 +503,6 @@
                     isVisible = (!fromDate || rowDate >= fromDate) && (!toDate || rowDate <= toDate);
                 }
 
-                // Lifetime Totals & Global Running Balance Calculation
                 if (row.type === 'in') {
                     lifeIn += amt;
                     runningBalance += amt;
@@ -493,12 +516,17 @@
                     else lifeManual += amt;
                 }
 
-                // Render specific period/daily data
                 if (isVisible) {
                     let pillClass = 'pill-general';
                     if(row.category === 'Billing' || row.category === 'Repair Sales' || row.category === 'Advances') pillClass = 'pill-billing';
                     if(row.category === 'Accessories') pillClass = 'pill-accessories';
                     if(row.type === 'out') pillClass = 'pill-admin';
+
+                    // Admin Delete Action for Cash Out Entries
+                    let deleteBtn = '';
+                    if (isAdmin && row.type === 'out') {
+                        deleteBtn = `<button class="action-delete" onclick="deleteCashOut('${row.id}')" title="Delete Cash Out Entry">🗑️</button>`;
+                    }
 
                     const rowHtml = `
                         <tr>
@@ -511,11 +539,11 @@
                             <td class="${row.type === 'in' ? 'text-green' : ''}">${row.type === 'in' ? formatCurr(amt) : '—'}</td>
                             <td class="${row.type === 'out' ? 'text-red' : ''}">${row.type === 'out' ? formatCurr(amt) : '—'}</td>
                             <td style="font-weight:bold;">${formatCurr(runningBalance)}</td>
+                            <td class="admin-col" style="${isAdmin ? '' : 'display:none;'} text-align:center;">${deleteBtn}</td>
                         </tr>
                     `;
                     ledgerHtml.push(rowHtml);
 
-                    // Breakdowns
                     if (row.type === 'in') {
                         periodIn += amt;
                         periodInCount++;
@@ -548,7 +576,7 @@
             document.getElementById('dailyClosing').innerText = formatCurr(runningBalance);
 
             // Update DOM - Ledger Table
-            document.getElementById('ledgerBody').innerHTML = ledgerHtml.join('') || '<tr><td colspan="6" style="text-align:center; padding: 30px; color: #6b7280;">No transactions found for this date range.</td></tr>';
+            document.getElementById('ledgerBody').innerHTML = ledgerHtml.join('') || '<tr><td colspan="7" style="text-align:center; padding: 30px; color: #6b7280;">No transactions found for this date range.</td></tr>';
             document.getElementById('totalCashInCol').innerText = formatCurr(periodIn);
             document.getElementById('totalCashOutCol').innerText = formatCurr(periodOut);
             document.getElementById('totalBalanceCol').innerText = formatCurr(runningBalance);
@@ -583,7 +611,6 @@
         const category = document.getElementById('outCategory').value;
         const amount = parseFloat(document.getElementById('outAmount').value) || 0;
         
-        // Grab current date for standard logging
         const currentDate = new Date().toISOString().split('T')[0];
 
         if(!desc || amount <= 0) return alert("Please enter a valid description and amount.");
@@ -601,17 +628,31 @@
             const { error } = await db.from('cashbook_entries').insert([entry]);
             if(error) throw error;
             closeModal();
-            fetchCashbook(true); // Force Refresh to pull new data
+            fetchCashbook(true); 
         } catch(e) {
             alert("Error saving: " + e.message);
+        }
+    }
+
+    // --- Delete Cash Out (Admin Only) ---
+    window.deleteCashOut = async function(id) {
+        if (!isAdmin) return alert("Unauthorized. Admins only.");
+        if (!confirm("Are you sure you want to delete this cash out entry? This will affect your total balance.")) return;
+        
+        try {
+            const { error } = await db.from('cashbook_entries').delete().eq('id', id);
+            if (error) throw error;
+            fetchCashbook(true); // Force refresh to update calculations
+        } catch (e) {
+            alert("Error deleting entry: " + e.message);
         }
     }
 
     // Initialization
     document.addEventListener("DOMContentLoaded", () => {
         checkAuth(); 
+        resetSidebarTimer();
         
-        // Set default to today
         document.getElementById('ledgerDate').value = new Date().toISOString().split('T')[0];
         document.getElementById('ledgerDate').addEventListener('change', () => fetchCashbook(false));
         
