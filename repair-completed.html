@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repair Completed - GSM SOLUTIONS</title>
+    <link rel="icon" href="data:,">
+    <style>
+        /* Base styles */
+        :root { --bg-color: #f4f5f7; --sidebar-width: 250px; --border-color: #e5e7eb; }
+        body { margin: 0; font-family: -apple-system, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; }
+        .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; transition: width 0.4s ease; overflow: hidden; white-space: nowrap; z-index: 40; }
+        .sidebar.collapsed { width: 0; padding: 0; border-right: none; }
+        .logo-area { display: flex; align-items: center; padding: 0 20px 20px 20px; font-weight: bold; font-size: 1.2rem; }
+        .logo-icon { background: black; color: white; padding: 5px 10px; border-radius: 4px; margin-right: 10px; font-size: 0.9rem; }
+        .nav-item { padding: 12px 20px; color: #4b5563 !important; text-decoration: none; display: flex; align-items: center; font-size: 0.95rem; cursor: pointer; }
+        .nav-item.active { background: black !important; color: white !important; border-radius: 0 20px 20px 0; margin-right: 20px; }
+        .nav-item:hover:not(.active) { background: #f3f4f6; }
+        .sidebar-toggle-btn { position: absolute; left: var(--sidebar-width); top: 50%; transform: translateY(-50%); background: black; color: white; width: 20px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; border-radius: 0 8px 8px 0; }
+        .sidebar-collapsed-btn { left: 0 !important; }
+        
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg-color); }
+        .header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
+        .header-left h1 { margin: 0; font-size: 1.5rem; }
+        .header-left p { margin: 5px 0 0 0; color: #6b7280; font-size: 0.9rem; }
+        .dashboard-padding { padding: 20px 30px; }
+        
+        .table-card { background: white; border-radius: 8px; border: 1px solid var(--border-color); overflow-x: auto; margin-bottom: 50px;}
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { padding: 15px; background: #f9fafb; font-size: 0.85rem; color: #4b5563; border-bottom: 1px solid var(--border-color); }
+        td { padding: 15px; font-size: 0.9rem; border-bottom: 1px solid var(--border-color); color: #111827; }
+        
+        .status-btn { border: none; padding: 8px 16px; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; transition: opacity 0.2s; width: 150px; }
+        .status-btn:hover { opacity: 0.85; }
+        .status-completed { background-color: #3b82f6; }
+        .status-delivered { background-color: #22c55e; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar" id="sidebar">
+    <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
+    <a href="index.html" class="nav-item">⏳ Pending Orders</a>
+    <a href="repair-completed.html" class="nav-item active">✅ Repair Completed</a>
+    <a href="billing.html" class="nav-item">💳 Billing</a>
+    <a href="store-plus.html" class="nav-item">📦 Store Plus</a>
+    <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
+    <a href="upi-book.html" class="nav-item">📖 UPI Book</a>
+    <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
+    
+    <a href="sales-report.html" class="nav-item admin-only" style="display: none;">📊 Sales Report</a>
+    <a href="expenses.html" class="nav-item admin-only" style="display: none;">💸 Expenses</a>
+    <a href="profit.html" class="nav-item admin-only" style="display: none;">📈 Profit Book</a>
+    <a href="users.html" class="nav-item admin-only" style="display: none; color: #2563eb; font-weight:bold;">👥 Manage Users</a>
+    <div style="flex-grow: 1;"></div> 
+    <div class="nav-item" onclick="logOut()" style="color: black !important; font-weight: bold; cursor: pointer; border-top: 1px solid var(--border-color); padding-top: 15px; margin: 10px 20px;">
+        <span id="userNameDisplay">User</span> (Logout)
+    </div>
+</div>    
+<div class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">⋮</div>
+
+<div class="main-content">
+    <div class="header">
+        <div class="header-left">
+            <h1>Repair Completed</h1>
+            <p>Billed orders ready for delivery</p>
+        </div>
+    </div>
+
+    <div class="dashboard-padding">
+        <div class="table-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date Billed</th>
+                        <th>Job No.</th>
+                        <th>Customer</th>
+                        <th>Advance (₹)</th>
+                        <th>Final Bill (₹)</th>
+                        <th>Balance Mode</th>
+                        <th style="text-align: center;">Delivery Status</th>
+                    </tr>
+                </thead>
+                <tbody id="completedTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
+    
+    window.toggleSidebar = function() {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+        document.getElementById('sidebarToggle').classList.toggle('sidebar-collapsed-btn');
+    }
+
+    async function checkAuth() {
+        const { data } = await supabaseClient.auth.getSession();
+        if (!data.session) window.location.href = 'login.html';
+        else {
+            const email = data.session.user.email;
+            document.getElementById('userNameDisplay').innerText = email.split('@')[0];
+            if (email.toLowerCase() === 'gsmmargao@gmail.com') {
+                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
+            }
+        }
+    }
+    async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
+
+    async function fetchCompletedOrders() {
+        // Fetch orders that are Repair Completed OR Goods Delivered
+        const { data, error } = await supabaseClient
+            .from('repairOrders')
+            .select('*')
+            .in('status', ['Repair Completed', 'Goods Delivered'])
+            .order('created_at', { ascending: false });
+
+        if (error) return console.error(error);
+        
+        const tbody = document.getElementById('completedTableBody');
+        tbody.innerHTML = '';
+
+        data.forEach(order => {
+            const isDelivered = order.status === 'Goods Delivered';
+            const btnClass = isDelivered ? 'status-delivered' : 'status-completed';
+            const btnText = isDelivered ? 'Goods Delivered' : 'Repair Completed';
+
+            tbody.innerHTML += `
+                <tr>
+                    <td>${order.date}</td>
+                    <td><strong>${order.jobNo}</strong></td>
+                    <td>${order.customerName}</td>
+                    <td style="color:#10b981;">₹${order.advancePaid || 0}</td>
+                    <td style="font-weight:bold;">₹${order.finalAmount || 0}</td>
+                    <td><small style="color:gray;">${order.finalPaymentMethod || '-'}</small></td>
+                    <td style="text-align: center;">
+                        <button class="status-btn ${btnClass}" onclick="toggleDelivery('${order.id}', '${order.status}')">
+                            ${btnText}
+                        </button>
+                    </td>
+                </tr>`;
+        });
+    }
+
+    window.toggleDelivery = async function(id, currentStatus) {
+        if(currentStatus === 'Goods Delivered') {
+            return alert("Item is already marked as delivered.");
+        }
+        
+        if(confirm("Mark this device as Goods Delivered to the customer?")) {
+            await supabaseClient.from('repairOrders').update({ status: 'Goods Delivered' }).eq('id', id);
+            fetchCompletedOrders();
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        await checkAuth();
+        fetchCompletedOrders();
+    });
+</script>
+</body>
+</html>
