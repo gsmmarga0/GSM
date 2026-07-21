@@ -73,24 +73,22 @@
         .card-header { padding: 15px 20px; font-weight: bold; font-size: 0.95rem; border-bottom: 1px solid var(--border-color); background: #f9fafb; display: flex; flex-direction: column;}
         .card-header span { font-size: 0.75rem; color: #6b7280; font-weight: normal; margin-top: 2px;}
         
-        /* SCROLLABLE TABLE WRAPPER WITH INCREASED HEIGHT */
+        /* SCROLLABLE TABLE WRAPPER */
         .ledger-wrapper {
-            height: 50vh; 
-            min-height: 400px;
+            max-height: 350px; /* Reduced to force scrollbar appearance */
             overflow-y: auto;
             position: relative;
-            padding-bottom: 20px;
         }
         
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
         th, td { padding: 12px 20px; text-align: left; border-bottom: 1px solid var(--border-color); }
         
         /* Sticky Header */
-        th { color: #6b7280; font-weight: 600; position: sticky; top: 0; background: #f9fafb; z-index: 2; box-shadow: 0 1px 0 var(--border-color); }
+        th { color: #6b7280; font-weight: 600; position: sticky; top: 0; background: #f9fafb; z-index: 10; box-shadow: 0 1px 0 var(--border-color); }
         td { color: #111827; }
         
         /* Sticky Footer for Totals */
-        .table-totals td { position: sticky; bottom: 0; background: #f9fafb; font-weight: bold; z-index: 2; border-top: 2px solid var(--border-color); box-shadow: 0 -1px 0 var(--border-color); }
+        .table-totals td { position: sticky; bottom: 0; background: #f9fafb; font-weight: bold; z-index: 10; border-top: 2px solid var(--border-color); box-shadow: 0 -1px 0 var(--border-color); }
         
         .pill { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; display: inline-block;}
         .pill-billing { background: #dcfce7; color: #166534; }
@@ -227,7 +225,7 @@
                         <th>Cash In (₹)</th>
                         <th>Cash Out (₹)</th>
                         <th>Balance (₹)</th>
-                        <th class="admin-col" style="display:none; text-align:center;">Action</th>
+                        <th class="admin-col" style="display:none; text-align:center; width: 60px;">Action</th>
                     </tr>
                 </thead>
                 <tbody id="ledgerBody">
@@ -649,8 +647,8 @@
     }
 
     // Initialization
-    document.addEventListener("DOMContentLoaded", () => {
-        checkAuth(); 
+    document.addEventListener("DOMContentLoaded", async () => {
+        await checkAuth(); 
         resetSidebarTimer();
         
         document.getElementById('ledgerDate').value = new Date().toISOString().split('T')[0];
