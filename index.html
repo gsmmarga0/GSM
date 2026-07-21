@@ -59,9 +59,6 @@
         .billing-row { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
         .billing-row label { font-weight: bold; color: #374151; font-size: 0.9rem;}
         .billing-row input { text-align: right; width: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-weight: bold;}
-        .payment-toggle { display: flex; gap: 10px; margin-top: 5px; }
-        .pay-btn { padding: 8px 16px; border-radius: 6px; border: 1px solid #d1d5db; background: white; color: #374151; cursor: pointer; font-size: 0.85rem; font-weight: bold; flex: 1; }
-        .pay-btn.active { background: #111827; color: white; border-color: #111827; }
         .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         .btn-confirm { padding: 10px 20px; border-radius: 6px; border: none; background: #10b981; color: white; cursor: pointer; font-weight: bold; }
     </style>
@@ -131,7 +128,6 @@
                     <input type="text" id="jobNo" readonly placeholder="Generating...">
                 </div>
                 
-                <!-- Replaced Advance Paid with Password -->
                 <div class="form-group">
                     <label>Device Password</label>
                     <input type="text" id="devicePassword" placeholder="e.g. 1234 or Pattern">
@@ -166,36 +162,22 @@
     </div>
 </div>
 
-<!-- BILLING / REPAIR COMPLETE MODAL -->
+<!-- REPAIR COMPLETE MODAL (Only asks for Estimate) -->
 <div class="modal-overlay" id="modalBilling">
     <div class="modal-container">
         <h2 class="modal-title">Complete Repair</h2>
         <p class="modal-subtitle" id="billingSubtitle">Job No: GSM00 | Customer</p>
         
         <div class="modal-body">
-            <!-- Added Estimate Amount Field -->
             <div class="billing-row">
                 <label style="color: #6b7280;">Estimated Amount (₹)</label>
                 <input type="number" id="billEstimateAmount" placeholder="0">
             </div>
-            
-            <div class="billing-row" style="border-top: 2px dashed #e5e7eb; padding-top: 15px;">
-                <label style="color: #059669; font-size: 1.05rem;">Final Bill Amount (₹)</label>
-                <input type="number" id="billTotalAmount" placeholder="0" style="border-color: #10b981;">
-            </div>
-
-            <div id="balancePaymentSection" style="margin-top: 20px;">
-                <label style="font-size: 0.8rem; color: #6b7280; font-weight:bold;">PAYMENT METHOD</label>
-                <div class="payment-toggle">
-                    <button class="pay-btn active" id="btnBillCash" onclick="setBillingMode('Cash')">Cash</button>
-                    <button class="pay-btn" id="btnBillUPI" onclick="setBillingMode('UPI')">UPI</button>
-                    <button class="pay-btn" id="btnBillCard" onclick="setBillingMode('Card')">Card</button>
-                </div>
-            </div>
         </div>
+        
         <div class="modal-footer">
             <button class="btn" onclick="closeBillingModal()">Cancel</button>
-            <button class="btn-confirm" onclick="confirmBilling()">Confirm & Complete</button>
+            <button class="btn-confirm" onclick="confirmBilling()">Confirm & Move</button>
         </div>
     </div>
 </div>
@@ -213,7 +195,6 @@
     let billingOrderId = null;
     let billingJobNo = '';
     let billingCustomer = '';
-    let billingPaymentMode = 'Cash';
 
     window.toggleSidebar = function() {
         document.getElementById('sidebar').classList.toggle('collapsed');
@@ -329,7 +310,7 @@
             contactNo: contactNo,
             jobNo: jobNoVal,
             problemDesc: problemDesc,
-            devicePassword: devicePassword, // Ensure your DB table has this column
+            devicePassword: devicePassword,
             date: currentDate,
             status: "Pending",
             createdBy: currentUserEmail.split('@')[0]
@@ -353,7 +334,7 @@
         }
     };
 
-    // --- REPAIR COMPLETE / BILLING LOGIC ---
+    // --- REPAIR COMPLETE LOGIC ---
     window.openBillingModal = function(id, jobNo, customer) {
         billingOrderId = id;
         billingJobNo = jobNo;
@@ -361,17 +342,9 @@
         
         document.getElementById('billingSubtitle').innerText = `Job No: ${jobNo} | Customer: ${customer}`;
         document.getElementById('billEstimateAmount').value = '';
-        document.getElementById('billTotalAmount').value = '';
-        setBillingMode('Cash');
         
         document.getElementById('modalBilling').style.display = 'flex';
-        document.getElementById('billTotalAmount').focus();
-    }
-
-    window.setBillingMode = function(mode) {
-        billingPaymentMode = mode;
-        document.querySelectorAll('.pay-btn').forEach(btn => btn.classList.remove('active'));
-        document.getElementById(`btnBill${mode}`).classList.add('active');
+        document.getElementById('billEstimateAmount').focus();
     }
 
     window.closeBillingModal = function() {
@@ -380,39 +353,17 @@
 
     window.confirmBilling = async function() {
         const estimateAmount = parseFloat(document.getElementById('billEstimateAmount').value) || 0;
-        const totalAmount = parseFloat(document.getElementById('billTotalAmount').value) || 0;
-        
-        if(totalAmount <= 0) return alert("Please enter a valid final bill amount.");
 
         try {
-            // Ensure your repairOrders table has a column for 'estimateAmount' if you wish to store it
+            // Only update the status and estimate amount. Final bill and ledger entries are deferred.
             await supabaseClient.from('repairOrders').update({ 
                 status: 'Repair Completed', 
-                estimateAmount: estimateAmount,
-                finalAmount: totalAmount,
-                finalPaymentMethod: billingPaymentMode
+                estimateAmount: estimateAmount
             }).eq('id', billingOrderId);
-
-            // Send Full Bill Amount to Ledger
-            const currentDate = new Date().toISOString().split('T')[0];
-            const desc = `Final Bill - Job ${billingJobNo} (${billingCustomer})`;
-            
-            if(billingPaymentMode === 'Cash') {
-                await supabaseClient.from('cashbook_entries').insert([{
-                    description: desc, category: 'Repair Sales', amount: totalAmount, type: 'in', 
-                    date: currentDate, created_by: currentUserEmail
-                }]);
-            } else {
-                await supabaseClient.from('upi_transactions').insert([{
-                    description: desc, source: 'Repair Payment', amount: totalAmount, 
-                    date: currentDate, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' }),
-                    created_by: currentUserEmail
-                }]);
-            }
 
             closeBillingModal();
             fetchOrders(); 
-            alert("Order completed successfully and moved to Repair Completed!");
+            alert("Order marked as completed and moved to the Repair Completed tab!");
 
         } catch (err) {
             alert("Error completing repair: " + err.message);
