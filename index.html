@@ -50,11 +50,22 @@
         .form-group input { padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; background: #fdfdfd; }
         input[readonly] { background-color: #f3f4f6 !important; color: #6b7280; font-weight: bold; cursor: not-allowed; }
 
+        /* Searchable Customer Dropdown Styles */
+        .search-select-container { position: relative; width: 100%; }
+        .search-select-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem; outline: none; box-sizing: border-box; background: white url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%239ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>') no-repeat right 10px center; padding-right: 35px; }
+        .search-select-input:focus { border-color: #9ca3af; }
+        .search-select-list { display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--border-color); max-height: 200px; overflow-y: auto; z-index: 50; list-style: none; padding: 0; margin: 0; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 6px; margin-top: 5px; }
+        .search-select-list li { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f3f4f6; font-size: 0.85rem; color: #374151; }
+        .search-select-list li:last-child { border-bottom: none; }
+        .search-select-list li:hover { background: #f3f4f6; color: #111827; }
+
         .table-card { background: white; border-radius: 8px; border: 1px solid var(--border-color); overflow-x: auto; margin-bottom: 50px;}
         table { width: 100%; border-collapse: collapse; text-align: left; }
         th { padding: 15px; background: #f9fafb; font-size: 0.85rem; color: #4b5563; border-bottom: 1px solid var(--border-color); }
         td { padding: 15px; font-size: 0.9rem; border-bottom: 1px solid var(--border-color); color: #111827; }
         
+        .pagination { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: white; border-top: 1px solid var(--border-color); }
+
         /* Modals */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(2px); }
         .modal-container { background: white; padding: 25px; border-radius: 12px; width: 450px; max-width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
@@ -74,7 +85,7 @@
 </head>
 <body>
 
-<div class="sidebar" id="sidebar">
+<div class="sidebar" id="sidebar" onmouseenter="clearSidebarTimer()" onmouseleave="resetSidebarTimer()">
     <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
     <a href="index.html" class="nav-item active">⏳ Pending Orders</a>
     <a href="repair-completed.html" class="nav-item">✅ Repair Completed</a>
@@ -123,15 +134,31 @@
         <!-- NEW ORDER FORM -->
         <div class="form-card" id="orderFormCard">
             <div class="form-grid-2">
-                <div class="form-group">
-                    <label>Customer Name <span>*</span></label>
-                    <input type="text" id="customerName" placeholder="Mandatory">
-                </div>
-                <div class="form-group">
-                    <label>Contact No. <span>*</span></label>
-                    <input type="text" id="contactNo" placeholder="Mandatory">
-                </div>
                 
+                <!-- CUSTOMER SELECTION / CREATION MODULE -->
+                <div class="form-group col-span-2" style="grid-column: 1 / -1; border-bottom: 1px solid #e5e7eb; padding-bottom: 15px; margin-bottom: 5px;">
+                    <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label style="margin:0;">Customer Details <span>*</span></label>
+                        <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.75rem; background: #f9fafb;" onclick="toggleCustomerMode()" id="btnToggleCustomerMode">➕ Create New Customer</button>
+                    </div>
+                    
+                    <!-- Search Mode -->
+                    <div id="customerSelectMode">
+                        <div class="search-select-container">
+                            <input type="text" id="custSearchInput" class="search-select-input" placeholder="🔍 Search existing customer by Name or Mobile..." oninput="filterCustomerSearch()" onfocus="openCustomerDropdown()">
+                            <input type="hidden" id="selectedCustName">
+                            <input type="hidden" id="selectedCustMobile">
+                            <ul class="search-select-list" id="customerDropdownList"></ul>
+                        </div>
+                    </div>
+
+                    <!-- Create Mode -->
+                    <div id="customerCreateMode" style="display: none; gap: 15px;">
+                        <input type="text" id="newCustName" placeholder="Full Name" style="flex:1;">
+                        <input type="text" id="newCustMobile" placeholder="10-digit Mobile" style="flex:1;">
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label>Job Number <span>(Auto-Generated)</span></label>
                     <input type="text" id="jobNo" readonly placeholder="Generating...">
@@ -153,6 +180,7 @@
             </div>
         </div>
 
+        <!-- TABLE WITH PAGINATION -->
         <div class="table-card">
             <table>
                 <thead>
@@ -167,6 +195,11 @@
                 </thead>
                 <tbody id="ordersTableBody"></tbody>
             </table>
+            <div class="pagination">
+                <button class="btn" onclick="prevPage()">Previous</button>
+                <span id="pageInfo" style="font-size:0.9rem; font-weight:bold;">Page 1</span>
+                <button class="btn" onclick="nextPage()">Next</button>
+            </div>
         </div>
     </div>
 </div>
@@ -229,14 +262,117 @@
     let isAdmin = false;
     
     let allPendingOrders = [];
+    let customersList = [];
+    let isNewCustomerMode = false;
     let billingOrderId = null;
     let editOrderId = null;
+    
+    // Pagination State
+    let currentPage = 1;
+    const rowsPerPage = 10;
 
+    // --- Sidebar Logic ---
+    let sidebarTimer;
+    window.resetSidebarTimer = function() {
+        clearTimeout(sidebarTimer);
+        sidebarTimer = setTimeout(() => {
+            const sb = document.getElementById('sidebar');
+            const btn = document.getElementById('sidebarToggle');
+            if(sb && btn) {
+                sb.classList.add('collapsed');
+                btn.classList.add('sidebar-collapsed-btn');
+            }
+        }, 5000);
+    }
+    window.clearSidebarTimer = function() { clearTimeout(sidebarTimer); }
+    
     window.toggleSidebar = function() {
-        document.getElementById('sidebar').classList.toggle('collapsed');
-        document.getElementById('sidebarToggle').classList.toggle('sidebar-collapsed-btn');
+        const sb = document.getElementById('sidebar');
+        const btn = document.getElementById('sidebarToggle');
+        if(sb && btn) {
+            sb.classList.toggle('collapsed');
+            btn.classList.toggle('sidebar-collapsed-btn');
+            if(!sb.classList.contains('collapsed')) resetSidebarTimer();
+            else clearSidebarTimer();
+        }
     }
 
+    async function checkAuth() {
+        const { data } = await supabaseClient.auth.getSession();
+        if (!data.session) window.location.href = 'login.html';
+        else {
+            currentUserEmail = data.session.user.email;
+            document.getElementById('userNameDisplay').innerText = currentUserEmail.split('@')[0];
+            if (currentUserEmail.toLowerCase() === ADMIN_EMAIL) {
+                isAdmin = true;
+                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
+            }
+        }
+    }
+    async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
+
+    // --- Customer Database Logic ---
+    async function fetchCustomers() {
+        const { data } = await supabaseClient.from('customers').select('*').order('name', { ascending: true });
+        if (data) {
+            customersList = data;
+            populateCustomerDropdown();
+        }
+    }
+
+    function populateCustomerDropdown() {
+        const list = document.getElementById('customerDropdownList');
+        list.innerHTML = '';
+        customersList.forEach(c => {
+            list.innerHTML += `<li onclick="selectCustomer('${c.name.replace(/'/g, "\\'")}', '${c.mobile}')">${c.name} - ${c.mobile}</li>`;
+        });
+    }
+
+    window.filterCustomerSearch = function() {
+        const filter = document.getElementById('custSearchInput').value.toLowerCase();
+        const list = document.getElementById('customerDropdownList');
+        const items = list.getElementsByTagName('li');
+        
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].innerText.toLowerCase().includes(filter)) items[i].style.display = 'block';
+            else items[i].style.display = 'none';
+        }
+    }
+
+    window.openCustomerDropdown = function() {
+        document.getElementById('customerDropdownList').style.display = 'block';
+        filterCustomerSearch();
+    }
+
+    window.selectCustomer = function(name, mobile) {
+        document.getElementById('custSearchInput').value = `${name} (${mobile})`;
+        document.getElementById('selectedCustName').value = name;
+        document.getElementById('selectedCustMobile').value = mobile;
+        document.getElementById('customerDropdownList').style.display = 'none';
+    }
+
+    // Close dropdown on outside click
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.search-select-container')) {
+            const list = document.getElementById('customerDropdownList');
+            if (list) list.style.display = 'none';
+        }
+    });
+
+    window.toggleCustomerMode = function() {
+        isNewCustomerMode = !isNewCustomerMode;
+        if (isNewCustomerMode) {
+            document.getElementById('customerSelectMode').style.display = 'none';
+            document.getElementById('customerCreateMode').style.display = 'flex';
+            document.getElementById('btnToggleCustomerMode').innerText = '🔍 Search Existing Database';
+        } else {
+            document.getElementById('customerSelectMode').style.display = 'block';
+            document.getElementById('customerCreateMode').style.display = 'none';
+            document.getElementById('btnToggleCustomerMode').innerText = '➕ Create New Customer';
+        }
+    }
+
+    // --- Order Logic ---
     window.toggleForm = async function() {
         const form = document.getElementById('orderFormCard');
         if (form.style.display === 'block') {
@@ -244,7 +380,9 @@
         } else {
             form.style.display = 'block';
             await generateNextJobNo(); 
-            document.getElementById('customerName').focus();
+            // Focus on whichever input is visible
+            if(isNewCustomerMode) document.getElementById('newCustName').focus();
+            else document.getElementById('custSearchInput').focus();
         }
     }
 
@@ -275,26 +413,12 @@
         }
     }
 
-    async function checkAuth() {
-        const { data } = await supabaseClient.auth.getSession();
-        if (!data.session) window.location.href = 'login.html';
-        else {
-            currentUserEmail = data.session.user.email;
-            document.getElementById('userNameDisplay').innerText = currentUserEmail.split('@')[0];
-            
-            if (currentUserEmail.toLowerCase() === ADMIN_EMAIL) {
-                isAdmin = true;
-                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
-            }
-        }
-    }
-    async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
-
     async function fetchOrders() {
         const { data, error } = await supabaseClient.from('repairOrders').select('*').eq('status', 'Pending').order('created_at', { ascending: false });
         if (error) return console.error(error);
         
         allPendingOrders = data;
+        currentPage = 1; // reset page on load
         renderOrdersTable(allPendingOrders);
     }
 
@@ -303,7 +427,16 @@
         const tbody = document.getElementById('ordersTableBody');
         tbody.innerHTML = '';
 
-        dataToRender.forEach(order => {
+        if(dataToRender.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: gray;">No pending orders found.</td></tr>`;
+            document.getElementById('pageInfo').innerText = `Page 1 of 1`;
+            return;
+        }
+
+        const start = (currentPage - 1) * rowsPerPage;
+        const paginatedItems = dataToRender.slice(start, start + rowsPerPage);
+
+        paginatedItems.forEach(order => {
             const problemSafe = order.problemDesc ? order.problemDesc.replace(/'/g, "\\'") : '';
             const passwordSafe = order.devicePassword ? order.devicePassword.replace(/'/g, "\\'") : '';
             
@@ -320,7 +453,10 @@
                 <tr>
                     <td>${order.date}</td>
                     <td><strong>${order.jobNo}</strong></td>
-                    <td>${order.customerName}<br><small style="color:gray;">${order.contactNo}</small></td>
+                    <td>
+                        ${order.customerName}<br>
+                        <div style="font-size: 0.95rem; color: #111827; font-weight: 600; margin-top: 3px;">${order.contactNo}</div>
+                    </td>
                     <td>${order.problemDesc || '-'}</td>
                     <td style="color:#ef4444; font-weight:bold; letter-spacing:1px;">${order.devicePassword || '-'}</td>
                     <td style="text-align: center; white-space: nowrap;">
@@ -328,6 +464,25 @@
                     </td>
                 </tr>`;
         });
+
+        document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(dataToRender.length / rowsPerPage) || 1}`;
+    }
+
+    // Pagination Controls
+    window.prevPage = function() { 
+        if (currentPage > 1) { 
+            currentPage--; 
+            const input = document.getElementById("searchInput").value.toLowerCase();
+            if (input) searchTable(); else renderOrdersTable(allPendingOrders);
+        } 
+    }
+    window.nextPage = function() { 
+        const maxPage = Math.ceil(allPendingOrders.length / rowsPerPage);
+        if (currentPage < maxPage) { 
+            currentPage++; 
+            const input = document.getElementById("searchInput").value.toLowerCase();
+            if (input) searchTable(); else renderOrdersTable(allPendingOrders);
+        } 
     }
 
     window.searchTable = function() {
@@ -336,23 +491,34 @@
             const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc} ${order.devicePassword}`.toLowerCase();
             return combinedString.includes(input);
         });
+        currentPage = 1; // reset to 1 on search
         renderOrdersTable(filtered);
     };
 
     window.saveOrder = async function() {
-        let custName = document.getElementById('customerName').value.trim();
-        let contactNo = document.getElementById('contactNo').value.trim();
+        let custName = '';
+        let contactNo = '';
+
+        if (isNewCustomerMode) {
+            custName = document.getElementById('newCustName').value.trim();
+            contactNo = document.getElementById('newCustMobile').value.trim();
+            if(!custName || !contactNo) return alert("Please fill in New Customer details.");
+            
+            // Add to Customers DB
+            const { error: custErr } = await supabaseClient.from('customers').insert([{ name: custName, mobile: contactNo }]);
+            if(!custErr) fetchCustomers(); // silently refresh dropdown list
+        } else {
+            custName = document.getElementById('selectedCustName').value;
+            contactNo = document.getElementById('selectedCustMobile').value;
+            if(!custName || !contactNo) return alert("Please select a customer from the dropdown search.");
+        }
+
         let jobNoVal = document.getElementById('jobNo').value.trim();
         let problemDesc = document.getElementById('problemDesc').value.trim();
         let devicePassword = document.getElementById('devicePassword').value.trim();
         let currentDate = new Date().toISOString().split('T')[0];
 
-        if(!custName || !contactNo) {
-            return alert("Error: Customer Name and Contact Number are mandatory fields.");
-        }
-        if(!jobNoVal) {
-            return alert("Job Number is missing. Please close and reopen the form.");
-        }
+        if(!jobNoVal) return alert("Job Number is missing. Please close and reopen the form.");
 
         const orderData = {
             customerName: custName,
@@ -370,8 +536,13 @@
             if (orderError) throw orderError;
             
             alert("Repair order added successfully!");
-            document.getElementById('customerName').value = '';
-            document.getElementById('contactNo').value = '';
+            
+            // Clear form
+            document.getElementById('custSearchInput').value = '';
+            document.getElementById('selectedCustName').value = '';
+            document.getElementById('selectedCustMobile').value = '';
+            document.getElementById('newCustName').value = '';
+            document.getElementById('newCustMobile').value = '';
             document.getElementById('problemDesc').value = '';
             document.getElementById('devicePassword').value = '';
             
@@ -382,6 +553,7 @@
         }
     };
 
+    // --- Completion Modals ---
     window.openBillingModal = function(id, jobNo, customer) {
         billingOrderId = id;
         document.getElementById('billingSubtitle').innerText = `Job No: ${jobNo} | Customer: ${customer}`;
@@ -415,7 +587,6 @@
         }
     }
 
-    // --- REPAIR NP (NOT POSSIBLE) LOGIC ---
     window.markRepairNP = async function() {
         if(!confirm("Are you sure you want to mark this device as Repair Not Possible (NP)?")) return;
         
@@ -435,7 +606,6 @@
         }
     }
 
-    // --- ADMIN ACTIONS (EDIT & DELETE) ---
     window.deleteOrder = async function(id, jobNo) {
         if(!confirm(`Are you sure you want to completely delete Job No: ${jobNo}? This cannot be undone.`)) return;
         try {
@@ -478,7 +648,9 @@
     }
 
     document.addEventListener("DOMContentLoaded", async () => {
+        resetSidebarTimer();
         await checkAuth();
+        fetchCustomers();
         fetchOrders();
     });
 </script>
