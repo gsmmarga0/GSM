@@ -6,6 +6,9 @@
     <title>GSM Solution - Cashbook</title>
     <link rel="icon" href="data:,">
     
+    <!-- HTML2PDF Library for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
     <style>
         :root { 
             --bg-color: #f9fafb; 
@@ -46,6 +49,8 @@
         .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; border: 1px solid var(--border-color); background: white; font-size: 0.85rem;}
         .btn:hover { background: #f3f4f6; }
         .btn-black { background: black; color: white; border: none; font-weight: bold;}
+        .btn-whatsapp { background: #25D366; color: white; border: none; font-weight: bold;}
+        .btn-whatsapp:hover { background: #1eb956; }
         
         /* Summary Cards */
         .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px; }
@@ -81,18 +86,8 @@
         .card-header { padding: 15px 20px; font-weight: bold; font-size: 0.95rem; background: #f9fafb; display: flex; flex-direction: row;}
         .card-header span { font-size: 0.75rem; color: #6b7280; font-weight: normal; margin-left: 10px; margin-top: 2px;}
         
-        /* SCROLLABLE TABLE WRAPPER UPDATED */
-        .ledger-wrapper {
-            position: relative;
-            width: 100%;
-        }
-        .table-container {
-            width: 100%;
-            max-height: 350px;
-            overflow-y: auto;
-            overflow-x: hidden;
-            display: block;
-        }
+        .ledger-wrapper { position: relative; width: 100%; }
+        .table-container { width: 100%; max-height: 350px; overflow-y: auto; overflow-x: hidden; display: block; }
 
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
         th, td { padding: 12px 20px; text-align: left; border-bottom: 1px solid var(--border-color); }
@@ -142,6 +137,17 @@
         .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box; outline: none;}
         .form-group input:focus, .form-group select:focus { border-color: #9ca3af; }
         .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;}
+
+        /* --- PDF Export Styles --- */
+        body.pdf-mode { height: auto; overflow: visible; background: white; }
+        body.pdf-mode .sidebar, 
+        body.pdf-mode .sidebar-toggle-btn, 
+        body.pdf-mode .action-bar, 
+        body.pdf-mode .admin-col { display: none !important; }
+        body.pdf-mode .main-content { overflow: visible; height: auto; padding: 10px 20px; background: white;}
+        body.pdf-mode .table-container, 
+        body.pdf-mode .breakdown-wrapper { max-height: none !important; overflow: visible !important; }
+        body.pdf-mode .card-container { break-inside: avoid; }
     </style>
 </head>
 <body>
@@ -151,6 +157,7 @@
     <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
     <a href="index.html" class="nav-item">⏳ Pending Orders</a>
     <a href="repair-completed.html" class="nav-item">✅ Repair Completed</a>
+    <a href="goods-delivered.html" class="nav-item">📦 Goods Delivered</a>
     <a href="repair-refusal.html" class="nav-item">🚫 Repair Refusal</a>
     <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
     <a href="upi-book.html" class="nav-item">📖 UPI Book</a>
@@ -176,7 +183,7 @@
 <div class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">⋮</div>
 
 <!-- Main Content -->
-<div class="main-content">
+<div class="main-content" id="printContent">
     
     <!-- Header Controls -->
     <div class="header-controls">
@@ -196,6 +203,10 @@
                     <input type="date" class="date-picker" id="toDate">
                 </span>
             </div>
+            
+            <!-- EXPORT PDF BUTTON -->
+            <button class="btn btn-whatsapp" onclick="exportAndSharePDF()">📄 Share PDF</button>
+
             <button class="btn" onclick="fetchCashbook(true)">↻ Refresh</button>
             <button class="btn btn-black" onclick="openModal()">+ Cash Out</button>
         </div>
@@ -635,6 +646,52 @@
             document.getElementById('lifeManual').innerText = formatCurr(lifeManual);
 
         } catch(e) { console.error("Error formatting cashbook: ", e); }
+    }
+
+    // --- Export PDF & Share ---
+    window.exportAndSharePDF = async function() {
+        // Prepare UI for PDF generation
+        document.body.classList.add('pdf-mode');
+        
+        // Ensure accordions are open to capture all content
+        document.querySelectorAll('.accordion-content').forEach(el => el.classList.add('open'));
+        document.querySelectorAll('.accordion-header').forEach(el => el.classList.add('open'));
+
+        const element = document.getElementById('printContent');
+        const filename = `GSM_Cashbook_${currentMode}_${new Date().toISOString().split('T')[0]}.pdf`;
+
+        const opt = {
+            margin:       0.3,
+            filename:     filename,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true, windowWidth: 1200 },
+            jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+        };
+
+        try {
+            // Generate PDF Blob
+            const pdfBlob = await html2pdf().set(opt).from(element).outputPdf('blob');
+            const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+            // Check if Web Share API is available (works on Mobile browsers and Mac Safari)
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: 'GSM Cashbook Report',
+                    text: `Attached is the Cashbook report for ${currentMode}.`,
+                    files: [file]
+                });
+            } else {
+                // Fallback: trigger standard download, user can then share via WhatsApp Web/App manually
+                html2pdf().set(opt).from(element).save();
+                alert("PDF Downloaded successfully! You can now send it manually via WhatsApp.");
+            }
+        } catch(err) {
+            console.error("PDF Export error:", err);
+            alert("An error occurred while generating the PDF.");
+        } finally {
+            // Restore UI to standard web view
+            document.body.classList.remove('pdf-mode');
+        }
     }
 
     // --- Save Cash Out ---
