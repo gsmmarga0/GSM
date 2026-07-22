@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repair Refusal - GSM SOLUTIONS</title>
+    <link rel="icon" href="data:,">
+    
+    <style>
+        :root { --bg-color: #f4f5f7; --sidebar-width: 250px; --primary-blue: #2563eb; --border-color: #e5e7eb; }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; position: relative; }
+        
+        .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; transition: width 0.4s ease; overflow: hidden; white-space: nowrap; z-index: 40; }
+        .sidebar.collapsed { width: 0; padding-left: 0; padding-right: 0; border-right: none; }
+        .logo-area { display: flex; align-items: center; padding: 0 20px 20px 20px; font-weight: bold; font-size: 1.2rem; }
+        .logo-icon { background: black; color: white; padding: 5px 10px; border-radius: 4px; margin-right: 10px; font-size: 0.9rem; }
+        .nav-item { padding: 12px 20px; color: #4b5563 !important; text-decoration: none; display: flex; align-items: center; font-size: 0.95rem; cursor: pointer; }
+        .nav-item.active { background: black !important; color: white !important; border-radius: 0 20px 20px 0; margin-right: 20px; }
+        .nav-item:hover:not(.active) { background: #f3f4f6; }
+
+        .sidebar-toggle-btn { position: absolute; left: var(--sidebar-width); top: 50%; transform: translateY(-50%); background: black; color: white; width: 20px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; border-radius: 0 8px 8px 0; transition: left 0.4s ease; font-weight: bold;}
+        .sidebar-collapsed-btn { left: 0 !important; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg-color); z-index: 10; }
+        .header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
+        .header-left h1 { margin: 0; font-size: 1.5rem; color: #ef4444; }
+        .header-left p { margin: 5px 0 0 0; color: #6b7280; font-size: 0.9rem; }
+        
+        .search-bar { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; width: 250px; outline: none;}
+        .btn-icon { background: transparent; border: none; cursor: pointer; font-size: 1.1rem; vertical-align: middle; transition: 0.2s; padding: 4px; }
+        .btn-icon:hover { opacity: 0.7; transform: scale(1.1); }
+
+        .dashboard-padding { padding: 20px 30px; }
+        
+        .table-card { background: white; border-radius: 8px; border: 1px solid var(--border-color); overflow-x: auto; margin-bottom: 50px;}
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { padding: 15px; background: #f9fafb; font-size: 0.85rem; color: #4b5563; border-bottom: 1px solid var(--border-color); }
+        td { padding: 15px; font-size: 0.9rem; border-bottom: 1px solid var(--border-color); color: #111827; }
+        
+        .badge-np { background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar" id="sidebar">
+    <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
+    <a href="index.html" class="nav-item">⏳ Pending Orders</a>
+    <a href="repair-completed.html" class="nav-item">✅ Repair Completed</a>
+    <a href="repair-refusal.html" class="nav-item active">🚫 Repair Refusal</a>
+    <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
+    <a href="upi-book.html" class="nav-item">📖 UPI Book</a>
+    <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
+    
+    <a href="sales-report.html" class="nav-item admin-only" style="display: none;">📊 Sales Report</a>
+    <a href="expenses.html" class="nav-item admin-only" style="display: none;">💸 Expenses</a>
+    <a href="profit.html" class="nav-item admin-only" style="display: none;">📈 Profit Book</a>
+    <a href="users.html" class="nav-item admin-only" style="display: none; color: #2563eb; font-weight:bold;">👥 Manage Users</a>
+    <div style="flex-grow: 1;"></div> 
+    
+    <div class="nav-item" onclick="logOut()" style="color: black !important; font-weight: bold; cursor: pointer; border-top: 1px solid var(--border-color); padding-top: 15px; margin: 10px 20px; display: flex; justify-content: space-between; align-items: center;">
+        <span id="userNameDisplay">User</span> 
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+    </div>
+</div>    
+<div class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">⋮</div>
+
+<div class="main-content">
+    <div class="header">
+        <div class="header-left">
+            <h1>Repair Refusal</h1>
+            <p>Devices marked as Repair NP (Not Possible) or Rejected</p>
+        </div>
+        <div class="header-right">
+            <input type="text" id="searchInput" class="search-bar" placeholder="Search..." onkeyup="searchTable()">
+        </div>
+    </div>
+
+    <div class="dashboard-padding">
+        <div class="table-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Job No.</th>
+                        <th>Customer</th>
+                        <th>Model / Problem</th>
+                        <th>Password</th>
+                        <th>Reason / Notes</th>
+                        <th style="text-align: center;">Status</th>
+                        <th class="admin-only" style="display: none; text-align: center;">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="refusalTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
+    const ADMIN_EMAIL = 'faizan@gsmsolution.com';
+    let currentUserEmail = '';
+    let isAdmin = false;
+    let allRefusalOrders = [];
+
+    window.toggleSidebar = function() {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+        document.getElementById('sidebarToggle').classList.toggle('sidebar-collapsed-btn');
+    }
+
+    async function checkAuth() {
+        const { data } = await supabaseClient.auth.getSession();
+        if (!data.session) window.location.href = 'login.html';
+        else {
+            currentUserEmail = data.session.user.email;
+            document.getElementById('userNameDisplay').innerText = currentUserEmail.split('@')[0];
+            
+            if (currentUserEmail.toLowerCase() === ADMIN_EMAIL) {
+                isAdmin = true;
+                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'table-cell'); // Adjust for table cell
+            }
+        }
+    }
+    async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
+
+    async function fetchRefusalOrders() {
+        const { data, error } = await supabaseClient
+            .from('repairOrders')
+            .select('*')
+            .eq('status', 'Repair Refusal')
+            .order('created_at', { ascending: false });
+
+        if (error) return console.error(error);
+        
+        allRefusalOrders = data;
+        renderRefusalTable(allRefusalOrders);
+    }
+
+    function renderRefusalTable(dataToRender) {
+        const tbody = document.getElementById('refusalTableBody');
+        tbody.innerHTML = '';
+
+        if(dataToRender.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: gray;">No refused repairs found.</td></tr>`;
+            return;
+        }
+
+        dataToRender.forEach(order => {
+            let deleteBtnHtml = '';
+            if (isAdmin) {
+                deleteBtnHtml = `<td style="text-align: center;">
+                                    <button class="btn-icon" style="color:#ef4444;" onclick="deleteOrder('${order.id}', '${order.jobNo}')" title="Delete Order">🗑️</button>
+                                 </td>`;
+            }
+
+            tbody.innerHTML += `
+                <tr>
+                    <td>${order.date}</td>
+                    <td><strong>${order.jobNo}</strong></td>
+                    <td>${order.customerName}<br><small style="color:gray;">${order.contactNo}</small></td>
+                    <td>${order.problemDesc || '-'}</td>
+                    <td style="color:#ef4444; font-weight:bold; letter-spacing:1px;">${order.devicePassword || '-'}</td>
+                    <td style="color:#4b5563;">${order.repairNotes || '-'}</td>
+                    <td style="text-align: center;"><span class="badge-np">Repair NP</span></td>
+                    ${deleteBtnHtml}
+                </tr>`;
+        });
+    }
+
+    window.searchTable = function() {
+        const input = document.getElementById("searchInput").value.toLowerCase();
+        const filtered = allRefusalOrders.filter(order => {
+            const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc} ${order.repairNotes}`.toLowerCase();
+            return combinedString.includes(input);
+        });
+        renderRefusalTable(filtered);
+    };
+
+    // --- ADMIN ACTIONS (DELETE) ---
+    window.deleteOrder = async function(id, jobNo) {
+        if(!confirm(`Are you sure you want to completely delete Job No: ${jobNo}? This cannot be undone.`)) return;
+        try {
+            const { error } = await supabaseClient.from('repairOrders').delete().eq('id', id);
+            if (error) throw error;
+            
+            fetchRefusalOrders();
+        } catch (err) {
+            alert("Error deleting order: " + err.message);
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        await checkAuth();
+        fetchRefusalOrders();
+    });
+</script>
+</body>
+</html>
