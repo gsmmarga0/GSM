@@ -68,18 +68,24 @@
         .stat-card.red .stat-sub { color: var(--c-red-text); }
         .stat-card.blue .stat-sub { color: var(--c-blue-text); }
 
+        /* Accordion / Dropdown Styles */
+        .accordion-header { cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s;}
+        .accordion-header:hover { background-color: #f3f4f6; }
+        .accordion-header::after { content: '▼'; font-size: 0.8rem; transition: transform 0.3s; color: #6b7280; }
+        .accordion-header.open::after { transform: rotate(180deg); }
+        .accordion-content { display: none; }
+        .accordion-content.open { display: block; border-top: 1px solid var(--border-color); }
+
         /* Tables & Ledgers */
         .card-container { background: white; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 20px; overflow: hidden; position: relative;}
-        .card-header { padding: 15px 20px; font-weight: bold; font-size: 0.95rem; border-bottom: 1px solid var(--border-color); background: #f9fafb; display: flex; flex-direction: column;}
-        .card-header span { font-size: 0.75rem; color: #6b7280; font-weight: normal; margin-top: 2px;}
+        .card-header { padding: 15px 20px; font-weight: bold; font-size: 0.95rem; background: #f9fafb; display: flex; flex-direction: row;}
+        .card-header span { font-size: 0.75rem; color: #6b7280; font-weight: normal; margin-left: 10px; margin-top: 2px;}
         
         /* SCROLLABLE TABLE WRAPPER UPDATED */
         .ledger-wrapper {
             position: relative;
             width: 100%;
         }
-
-        /* Main scrolling container */
         .table-container {
             width: 100%;
             max-height: 350px;
@@ -91,10 +97,7 @@
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
         th, td { padding: 12px 20px; text-align: left; border-bottom: 1px solid var(--border-color); }
         
-        /* Sticky Header */
         th { color: #6b7280; font-weight: 600; position: sticky; top: 0; background: #f9fafb; z-index: 10; box-shadow: 0 1px 0 var(--border-color); }
-        
-        /* Sticky Footer for Totals */
         .table-totals td { position: sticky; bottom: 0; background: #f9fafb; font-weight: bold; z-index: 10; border-top: 2px solid var(--border-color); box-shadow: 0 -1px 0 var(--border-color); }
         
         .pill { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; display: inline-block;}
@@ -109,15 +112,13 @@
         .action-delete { color: #ef4444; cursor: pointer; background: none; border: none; padding: 5px; font-size: 1.1rem; transition: 0.2s;}
         .action-delete:hover { transform: scale(1.1); }
 
-        /* Admin Columns toggling */
         .admin-hidden { display: none !important; }
         .admin-col { text-align: center; width: 60px; }
 
         /* Breakdowns */
-        .breakdown-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-        .breakdown-header { padding: 15px; font-weight: bold; font-size: 0.9rem; }
-        .breakdown-header.green { color: var(--c-green-text); background: #f0fdf4; border-bottom: 1px solid var(--c-green-border);}
-        .breakdown-header.red { color: var(--c-red-text); background: #fef2f2; border-bottom: 1px solid var(--c-red-border);}
+        .breakdown-header { padding: 15px 20px; font-weight: bold; font-size: 0.95rem; }
+        .breakdown-header.green { color: var(--c-green-text); background: #f0fdf4; }
+        .breakdown-header.red { color: var(--c-red-text); background: #fef2f2; }
         .breakdown-wrapper { max-height: 300px; overflow-y: auto; }
         
         /* Complete Summary Section */
@@ -150,6 +151,7 @@
     <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
     <a href="index.html" class="nav-item">⏳ Pending Orders</a>
     <a href="repair-completed.html" class="nav-item">✅ Repair Completed</a>
+    <a href="repair-refusal.html" class="nav-item">🚫 Repair Refusal</a>
     <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
     <a href="upi-book.html" class="nav-item">📖 UPI Book</a>
     <a href="cashbook.html" class="nav-item active">💵 Cashbook</a>
@@ -218,48 +220,51 @@
         </div>
     </div>
 
-    <!-- Daily Ledger -->
+    <!-- Daily Ledger Accordion -->
     <div class="card-container">
-        <div class="card-header">
+        <div class="card-header accordion-header open" onclick="toggleAccordion('ledgerContent', this)">
             <div>Ledger <span id="ledgerSubtitle">Business day</span></div>
         </div>
         
-        <!-- UPDATED SCROLL WRAPPER STRUCTURE -->
-        <div class="ledger-wrapper">
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date & Time</th>
-                            <th>Description</th>
-                            <th>Category / Source</th>
-                            <th>Cash In (₹)</th>
-                            <th>Cash Out (₹)</th>
-                            <th>Balance (₹)</th>
-                            <th class="admin-col admin-hidden">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ledgerBody">
-                        <!-- Rows injected via JS -->
-                    </tbody>
-                    <tfoot class="table-totals">
-                        <tr>
-                            <td id="tfootColspan" colspan="3" style="text-align: right; font-size: 0.75rem;">TOTALS</td>
-                            <td class="text-green" id="totalCashInCol">₹0.00</td>
-                            <td class="text-red" id="totalCashOutCol">₹0.00</td>
-                            <td style="color: #2563eb;" id="totalBalanceCol">₹0.00</td>
-                            <td class="admin-col admin-hidden"></td>
-                        </tr>
-                    </tfoot>
-                </table>
+        <div id="ledgerContent" class="accordion-content open">
+            <div class="ledger-wrapper">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Description</th>
+                                <th>Category / Source</th>
+                                <th>Cash In (₹)</th>
+                                <th>Cash Out (₹)</th>
+                                <th>Balance (₹)</th>
+                                <th class="admin-col admin-hidden">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ledgerBody">
+                            <!-- Rows injected via JS -->
+                        </tbody>
+                        <tfoot class="table-totals">
+                            <tr>
+                                <td id="tfootColspan" colspan="3" style="text-align: right; font-size: 0.75rem;">TOTALS</td>
+                                <td class="text-green" id="totalCashInCol">₹0.00</td>
+                                <td class="text-red" id="totalCashOutCol">₹0.00</td>
+                                <td style="color: #2563eb;" id="totalBalanceCol">₹0.00</td>
+                                <td class="admin-col admin-hidden"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Breakdowns -->
-    <div class="breakdown-grid">
-        <div class="card-container" style="margin-bottom: 0;">
-            <div class="breakdown-header green">Cash In Breakdown</div>
+    <!-- Cash In Breakdown Accordion -->
+    <div class="card-container">
+        <div class="breakdown-header green accordion-header" onclick="toggleAccordion('cashInContent', this)">
+            Cash In Breakdown
+        </div>
+        <div id="cashInContent" class="accordion-content">
             <div class="breakdown-wrapper">
                 <table><tbody id="cashInBreakdownBody"></tbody></table>
             </div>
@@ -267,9 +272,14 @@
                 Total Cash In <span style="margin-left: 20px; color: var(--c-green-text);" id="bdTotalCashIn">₹0.00</span>
             </div>
         </div>
-        
-        <div class="card-container" style="margin-bottom: 0;">
-            <div class="breakdown-header red">Cash Out Breakdown</div>
+    </div>
+    
+    <!-- Cash Out Breakdown Accordion -->
+    <div class="card-container">
+        <div class="breakdown-header red accordion-header" onclick="toggleAccordion('cashOutContent', this)">
+            Cash Out Breakdown
+        </div>
+        <div id="cashOutContent" class="accordion-content">
             <div class="breakdown-wrapper">
                 <table><tbody id="cashOutBreakdownBody"></tbody></table>
             </div>
@@ -393,6 +403,13 @@
             if(!sb.classList.contains('collapsed')) resetSidebarTimer();
             else clearSidebarTimer();
         }
+    }
+
+    // --- Accordion Logic ---
+    window.toggleAccordion = function(contentId, headerEl) {
+        const content = document.getElementById(contentId);
+        content.classList.toggle('open');
+        headerEl.classList.toggle('open');
     }
 
     // --- Auth Check ---
@@ -573,9 +590,10 @@
                         periodOutCount++;
                         cashOutHtml.push(`
                             <tr>
-                                <td style="width: 25%; color: #6b7280;">${formatDateObj(rowDate)}</td>
+                                <td style="width: 20%; color: #6b7280;">${formatDateObj(rowDate)}</td>
                                 <td style="width: 55%;">${row.description}</td>
-                                <td style="width: 20%; text-align: right;" class="text-red">${formatCurr(amt)}</td>
+                                <td style="width: 15%; text-align: right;" class="text-red">${formatCurr(amt)}</td>
+                                <td class="admin-col ${isAdmin ? '' : 'admin-hidden'}" style="width: 10%; text-align:right;">${deleteBtn}</td>
                             </tr>
                         `);
                     }
