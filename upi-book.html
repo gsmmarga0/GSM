@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UPI Book - GSM SOLUTIONS</title>
+    <title>GSM Solution - UPI Book</title>
     <link rel="icon" href="data:,">
     
     <style>
@@ -21,7 +21,7 @@
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; position: relative; }
         
         /* Sidebar Styling */
-        .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; transition: width 0.4s ease; overflow: hidden; white-space: nowrap; z-index: 40; }
+        .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; transition: width 0.4s ease, padding 0.4s ease; overflow: hidden; white-space: nowrap; z-index: 40; }
         .sidebar.collapsed { width: 0; padding-left: 0; padding-right: 0; border-right: none; }
         .logo-area { display: flex; align-items: center; padding: 0 20px 20px 20px; font-weight: bold; font-size: 1.2rem; }
         .logo-icon { background: black; color: white; padding: 5px 10px; border-radius: 4px; margin-right: 10px; font-size: 0.9rem; }
@@ -29,7 +29,7 @@
         .nav-item.active { background: black !important; color: white !important; border-radius: 0 20px 20px 0; margin-right: 20px; }
         .nav-item:hover:not(.active) { background: #f3f4f6; }
 
-        .sidebar-toggle-btn { position: absolute; left: var(--sidebar-width); top: 50%; transform: translateY(-50%); background: black; color: white; width: 20px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; border-radius: 0 8px 8px 0; transition: left 0.4s ease; font-weight: bold;}
+        .sidebar-toggle-btn { position: absolute; left: var(--sidebar-width); top: 50%; transform: translateY(-50%); background: black; color: white; width: 20px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; border-radius: 0 8px 8px 0; transition: left 0.4s ease; font-weight: bold; box-shadow: 2px 0 5px rgba(0,0,0,0.2);}
         .sidebar-collapsed-btn { left: 0 !important; }
 
         .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg-color); z-index: 10; padding: 20px 30px;}
@@ -89,17 +89,18 @@
         /* Badges */
         .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: inline-block;}
         .badge-repair { background: var(--c-green-light); color: var(--c-green); }
-        .badge-accessories { background: #f3f4f6; color: #4b5563; }
+        .badge-accessories { background: #f3e8ff; color: #6b21a8; }
         
         .no-data { text-align: center; padding: 40px; color: #9ca3af; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
-<div class="sidebar" id="sidebar">
+<div class="sidebar" id="sidebar" onmouseenter="clearSidebarTimer()" onmouseleave="resetSidebarTimer()">
     <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
     <a href="index.html" class="nav-item">⏳ Pending Orders</a>
     <a href="repair-completed.html" class="nav-item">✅ Repair Completed</a>
+    <a href="repair-refusal.html" class="nav-item">🚫 Repair Refusal</a>
     <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
     <a href="upi-book.html" class="nav-item active">📖 UPI Book</a>
     <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
@@ -197,18 +198,34 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    // Project Specific Supabase Configuration
-    const supabaseUrl = 'https://cvxjvicpefggheiojmtn.supabase.co';
-    const supabaseKey = 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I';
-    const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-
+    const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
     const ADMIN_EMAIL = 'faizan@gsmsolution.com'; 
     let currentUserEmail = '';
 
-    // Sidebar Logic
+    // Sidebar Hover Timers
+    let sidebarTimer;
+    window.resetSidebarTimer = function() {
+        clearTimeout(sidebarTimer);
+        sidebarTimer = setTimeout(() => {
+            const sb = document.getElementById('sidebar');
+            const btn = document.getElementById('sidebarToggle');
+            if(sb && btn) {
+                sb.classList.add('collapsed');
+                btn.classList.add('sidebar-collapsed-btn');
+            }
+        }, 5000);
+    }
+    window.clearSidebarTimer = function() { clearTimeout(sidebarTimer); }
+
     window.toggleSidebar = function() {
-        document.getElementById('sidebar').classList.toggle('collapsed');
-        document.getElementById('sidebarToggle').classList.toggle('sidebar-collapsed-btn');
+        const sb = document.getElementById('sidebar');
+        const btn = document.getElementById('sidebarToggle');
+        if(sb && btn) {
+            sb.classList.toggle('collapsed');
+            btn.classList.toggle('sidebar-collapsed-btn');
+            if(!sb.classList.contains('collapsed')) resetSidebarTimer();
+            else clearSidebarTimer();
+        }
     }
 
     // Dates Setup
@@ -216,7 +233,6 @@
     const today = new Date();
     document.getElementById('topNavDate').innerText = today.toLocaleDateString('en-GB', dateOptions) + " | GSM SOLUTION";
     
-    // Set default filter to today
     const todayString = today.toISOString().split('T')[0];
     document.getElementById('filterFromDate').value = todayString;
     document.getElementById('filterToDate').value = todayString;
@@ -229,7 +245,6 @@
             let displayEmail = currentUserEmail.split('@')[0];
             document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
             
-            // Show Admin Tabs
             if (currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase()) {
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
             }
@@ -250,7 +265,7 @@
         return 'badge-accessories';
     }
 
-    // FETCH DYNAMICALLY FROM REPAIRS AND ACCESSORIES TABLES
+    // FETCH MAPPED DATA WITH UPI NOTES SUPPORT
     window.fetchMappedData = async function() {
         const fromDate = document.getElementById('filterFromDate').value;
         const toDate = document.getElementById('filterToDate').value;
@@ -259,30 +274,24 @@
         let unifiedData = [];
 
         try {
-            // 1. Fetch Repair Orders (Delivered & Paid via UPI/Card)
-            const { data: repairs } = await supabaseClient
-                .from('repairOrders')
-                .select('*')
-                .eq('status', 'Goods Delivered')
-                .in('finalPaymentMethod', ['UPI', 'Card']);
+            // 1. Fetch Repair Orders (Delivered & Paid via UPI/Card) from upi_transactions ledger or repairOrders directly
+            const { data: upiLedger } = await supabaseClient
+                .from('upi_transactions')
+                .select('*');
 
-            repairs?.forEach(r => {
-                let amt = parseFloat(r.finalAmount) || 0;
-                let upi = r.finalPaymentMethod === 'UPI' ? amt : 0;
-                let card = r.finalPaymentMethod === 'Card' ? amt : 0;
-                
-                // Use updated_at for completion time, fallback to created_at
-                let timestamp = r.updated_at || r.created_at; 
-                let dateStr = new Date(timestamp).toISOString().split('T')[0];
+            upiLedger?.forEach(u => {
+                let amt = parseFloat(u.amount) || 0;
+                let timestamp = u.created_at;
+                let dateStr = u.date || new Date(timestamp).toISOString().split('T')[0];
 
                 unifiedData.push({
                     dateObj: new Date(timestamp),
                     dateStr: dateStr,
-                    timeStr: new Date(timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' }),
-                    description: `Final Bill - Job ${r.jobNo} (${r.customerName})`,
-                    source: 'Repair Payment',
-                    upi: upi,
-                    card: card
+                    timeStr: u.time || new Date(timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' }),
+                    description: u.description, // Includes notes mapped from modal input
+                    source: u.source || 'Repair Payment',
+                    upi: amt,
+                    card: 0
                 });
             });
 
@@ -343,7 +352,7 @@
             }
 
             let rowTotal = item.upi + item.card;
-            if (item.source === 'Repair Payment') {
+            if (item.source === 'Repair Payment' || item.source === 'Advance Towards Repair') {
                 totals.repairTotal += rowTotal;
             } else {
                 totals.accessoriesTotal += rowTotal;
@@ -369,7 +378,6 @@
             return;
         }
 
-        // Group by Date for headers
         const groupedData = {};
         data.forEach(item => {
             if (!groupedData[item.dateStr]) groupedData[item.dateStr] = [];
@@ -387,7 +395,6 @@
                 dayCard += t.card;
             });
 
-            // Create Day Header
             const dateObj = new Date(dateStr);
             const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
             
@@ -400,7 +407,6 @@
             `;
             tbody.appendChild(headerRow);
 
-            // Create Rows
             transactions.forEach(item => {
                 grandUpi += item.upi;
                 grandCard += item.card;
@@ -418,7 +424,6 @@
             });
         }
 
-        // Create Footer for Period Total
         const footerRow = document.createElement('tr');
         footerRow.className = 'table-footer';
         footerRow.innerHTML = `
@@ -429,9 +434,9 @@
         tbody.appendChild(footerRow);
     }
 
-    // Initialize App
     document.addEventListener("DOMContentLoaded", async () => {
         await checkAuth();
+        resetSidebarTimer();
         fetchMappedData();
     });
 </script>
