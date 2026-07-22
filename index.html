@@ -26,7 +26,11 @@
         .header-left h1 { margin: 0; font-size: 1.5rem; }
         .header-left p { margin: 5px 0 0 0; color: #6b7280; font-size: 0.9rem; }
         .header-right { display: flex; gap: 10px; align-items: center; }
-        .search-bar { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; width: 250px; outline: none;}
+        
+        .search-bar { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; width: 200px; outline: none;}
+        .search-bar-global { background-color: #f0fdf4; border-color: #bbf7d0; width: 220px; font-weight: 500; }
+        .search-bar-global:focus { border-color: #22c55e; }
+
         .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; border: 1px solid var(--border-color); background: white; }
         .btn-primary { background: black; color: white; border: none; }
         .btn-bill { background: #10b981; color: white; border: none; font-weight: bold; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s;}
@@ -59,6 +63,13 @@
         .search-select-list li:last-child { border-bottom: none; }
         .search-select-list li:hover { background: #f3f4f6; color: #111827; }
 
+        /* Global Search Dropdown */
+        #globalSearchResults { position: absolute; top: 110%; right: 0; width: 300px; background: white; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: none; z-index: 1000; list-style: none; padding: 0; margin: 0; overflow: hidden; }
+        #globalSearchResults li { padding: 12px 15px; border-bottom: 1px solid #f3f4f6; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; }
+        #globalSearchResults li:last-child { border-bottom: none; }
+        #globalSearchResults li:hover { background: #f9fafb; }
+        #globalSearchResults li.no-results { justify-content: center; color: #6b7280; font-style: italic; }
+
         .table-card { background: white; border-radius: 8px; border: 1px solid var(--border-color); overflow-x: auto; margin-bottom: 50px;}
         table { width: 100%; border-collapse: collapse; text-align: left; }
         th { padding: 15px; background: #f9fafb; font-size: 0.85rem; color: #4b5563; border-bottom: 1px solid var(--border-color); }
@@ -89,6 +100,7 @@
     <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
     <a href="index.html" class="nav-item active">⏳ Pending Orders</a>
     <a href="repair-completed.html" class="nav-item">✅ Repair Completed</a>
+    <a href="goods-delivered.html" class="nav-item">📦 Goods Delivered</a>
     <a href="repair-refusal.html" class="nav-item">🚫 Repair Refusal</a>
     <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
     <a href="upi-book.html" class="nav-item">📖 UPI Book</a>
@@ -118,7 +130,14 @@
             <p>Active repair jobs awaiting billing</p>
         </div>
         <div class="header-right">
-            <input type="text" id="searchInput" class="search-bar" placeholder="Search pending..." onkeyup="searchTable()">
+            <!-- Global Job Search -->
+            <div style="position: relative;">
+                <input type="text" id="globalJobSearch" class="search-bar search-bar-global" placeholder="🔍 Track Any Job No..." oninput="debounceGlobalSearch()">
+                <ul id="globalSearchResults"></ul>
+            </div>
+            
+            <!-- Local Search & Add -->
+            <input type="text" id="searchInput" class="search-bar" placeholder="Search pending list..." onkeyup="searchTable()">
             <button class="btn btn-primary" onclick="toggleForm()">+ New Order</button>
         </div>
     </div>
@@ -311,6 +330,71 @@
     }
     async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
 
+    // --- Global Job Tracker Logic ---
+    let globalSearchTimeout = null;
+    function debounceGlobalSearch() {
+        clearTimeout(globalSearchTimeout);
+        globalSearchTimeout = setTimeout(performGlobalSearch, 400);
+    }
+
+    async function performGlobalSearch() {
+        const input = document.getElementById('globalJobSearch').value.trim();
+        const resultsList = document.getElementById('globalSearchResults');
+        
+        if (input.length < 3) {
+            resultsList.style.display = 'none';
+            return;
+        }
+
+        const { data, error } = await supabaseClient
+            .from('repairOrders')
+            .select('jobNo, status, customerName')
+            .ilike('jobNo', `%${input}%`)
+            .limit(5);
+
+        if (error) {
+            console.error(error);
+            return;
+        }
+
+        resultsList.innerHTML = '';
+        if (data.length === 0) {
+            resultsList.innerHTML = `<li class="no-results">No jobs found matching "${input}"</li>`;
+        } else {
+            data.forEach(job => {
+                let targetUrl = 'index.html';
+                let statusColor = '#3b82f6'; // Pending
+                if (job.status === 'Repair Completed') { targetUrl = 'repair-completed.html'; statusColor = '#f59e0b'; }
+                else if (job.status === 'Repair Refusal') { targetUrl = 'repair-refusal.html'; statusColor = '#ef4444'; }
+                else if (job.status === 'Goods Delivered') { targetUrl = 'goods-delivered.html'; statusColor = '#10b981'; }
+
+                resultsList.innerHTML += `
+                    <li>
+                        <div>
+                            <strong style="color: #111827;">${job.jobNo}</strong> <span style="color: #9ca3af; font-size: 0.75rem;">(${job.customerName})</span><br>
+                            <span style="font-size: 0.7rem; font-weight: bold; color: ${statusColor};">${job.status}</span>
+                        </div>
+                        <button class="btn" style="padding: 6px 10px; font-size: 0.7rem; color: #374151;" onclick="window.location.href='${targetUrl}'">Go ➔</button>
+                    </li>
+                `;
+            });
+        }
+        resultsList.style.display = 'block';
+    }
+
+    // Hide dropdowns on outside click
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.search-select-container')) {
+            const list = document.getElementById('customerDropdownList');
+            if (list) list.style.display = 'none';
+        }
+        if (!e.target.closest('#globalJobSearch') && !e.target.closest('#globalSearchResults')) {
+            const list = document.getElementById('globalSearchResults');
+            if (list) list.style.display = 'none';
+        }
+    });
+
+
     // --- Customer Database Logic ---
     async function fetchCustomers() {
         const { data } = await supabaseClient.from('customers').select('*').order('name', { ascending: true });
@@ -351,14 +435,6 @@
         document.getElementById('customerDropdownList').style.display = 'none';
     }
 
-    // Close dropdown on outside click
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('.search-select-container')) {
-            const list = document.getElementById('customerDropdownList');
-            if (list) list.style.display = 'none';
-        }
-    });
-
     window.toggleCustomerMode = function() {
         isNewCustomerMode = !isNewCustomerMode;
         if (isNewCustomerMode) {
@@ -380,7 +456,6 @@
         } else {
             form.style.display = 'block';
             await generateNextJobNo(); 
-            // Focus on whichever input is visible
             if(isNewCustomerMode) document.getElementById('newCustName').focus();
             else document.getElementById('custSearchInput').focus();
         }
@@ -418,7 +493,7 @@
         if (error) return console.error(error);
         
         allPendingOrders = data;
-        currentPage = 1; // reset page on load
+        currentPage = 1; 
         renderOrdersTable(allPendingOrders);
     }
 
@@ -506,7 +581,7 @@
             
             // Add to Customers DB
             const { error: custErr } = await supabaseClient.from('customers').insert([{ name: custName, mobile: contactNo }]);
-            if(!custErr) fetchCustomers(); // silently refresh dropdown list
+            if(!custErr) fetchCustomers(); 
         } else {
             custName = document.getElementById('selectedCustName').value;
             contactNo = document.getElementById('selectedCustMobile').value;
