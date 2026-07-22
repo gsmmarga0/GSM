@@ -204,8 +204,8 @@
                 </span>
             </div>
             
-            <!-- EXPORT PDF BUTTON -->
-            <button class="btn btn-whatsapp" onclick="exportAndSharePDF()">📄 Share PDF</button>
+            <!-- SHARE VIA WHATSAPP BUTTON -->
+            <button class="btn btn-whatsapp" onclick="promptWhatsAppShare()">📱 Share via WhatsApp</button>
 
             <button class="btn" onclick="fetchCashbook(true)">↻ Refresh</button>
             <button class="btn btn-black" onclick="openModal()">+ Cash Out</button>
@@ -648,12 +648,16 @@
         } catch(e) { console.error("Error formatting cashbook: ", e); }
     }
 
-    // --- Export PDF & Share ---
-    window.exportAndSharePDF = async function() {
-        // Prepare UI for PDF generation
+    // --- Prompt WhatsApp Share with Number Input ---
+    window.promptWhatsAppShare = async function() {
+        let phoneNum = prompt("Enter WhatsApp contact number (with country code, e.g. 919876543210):");
+        if (!phoneNum) return; // Cancelled
+
+        // Clean phone number (remove spaces, symbols)
+        phoneNum = phoneNum.replace(/\D/g, '');
+
+        // Prepare UI for clean PDF generation
         document.body.classList.add('pdf-mode');
-        
-        // Ensure accordions are open to capture all content
         document.querySelectorAll('.accordion-content').forEach(el => el.classList.add('open'));
         document.querySelectorAll('.accordion-header').forEach(el => el.classList.add('open'));
 
@@ -673,23 +677,42 @@
             const pdfBlob = await html2pdf().set(opt).from(element).outputPdf('blob');
             const file = new File([pdfBlob], filename, { type: 'application/pdf' });
 
-            // Check if Web Share API is available (works on Mobile browsers and Mac Safari)
+            let sharedSuccessfully = false;
+
+            // Try Web Share API with files if supported (e.g. Mobile phones, Safari)
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                    title: 'GSM Cashbook Report',
-                    text: `Attached is the Cashbook report for ${currentMode}.`,
-                    files: [file]
-                });
-            } else {
-                // Fallback: trigger standard download, user can then share via WhatsApp Web/App manually
-                html2pdf().set(opt).from(element).save();
-                alert("PDF Downloaded successfully! You can now send it manually via WhatsApp.");
+                try {
+                    await navigator.share({
+                        title: 'GSM Cashbook Report',
+                        text: `Here is the Cashbook report (${currentMode}).`,
+                        files: [file]
+                    });
+                    sharedSuccessfully = true;
+                } catch (shareErr) {
+                    console.log("User cancelled share or API error:", shareErr);
+                }
             }
+
+            // Fallback or secondary step: Trigger automatic download + open WhatsApp Web with prefilled text
+            if (!sharedSuccessfully) {
+                // Download file locally so they can attach it easily
+                html2pdf().set(opt).from(element).save();
+            }
+
+            // Open WhatsApp chat directly with the specified number
+            const message = encodeURIComponent(`Hello, here is the Cashbook report (${currentMode}) from GSM Solutions.`);
+            const whatsappUrl = `https://wa.me/${phoneNum}?text=${message}`;
+            window.open(whatsappUrl, '_blank');
+
+            if(!sharedSuccessfully) {
+                alert("PDF file downloaded! Your WhatsApp chat has opened. Please attach the downloaded PDF file to send it.");
+            }
+
         } catch(err) {
-            console.error("PDF Export error:", err);
-            alert("An error occurred while generating the PDF.");
+            console.error("PDF WhatsApp generation error:", err);
+            alert("An error occurred while generating the PDF report.");
         } finally {
-            // Restore UI to standard web view
+            // Restore UI to standard view
             document.body.classList.remove('pdf-mode');
         }
     }
