@@ -8,7 +8,7 @@
     <style>
         /* Base styles */
         :root { --bg-color: #f4f5f7; --sidebar-width: 250px; --border-color: #e5e7eb; }
-        body { margin: 0; font-family: -apple-system, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; }
+        body { margin: 0; font-family: -apple-system, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; position: relative; }
         
         /* Sidebar Styling with transitions */
         .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; transition: width 0.4s ease, padding 0.4s ease; overflow: hidden; white-space: nowrap; z-index: 40; }
@@ -21,10 +21,13 @@
         .sidebar-toggle-btn { position: absolute; left: var(--sidebar-width); top: 50%; transform: translateY(-50%); background: black; color: white; width: 20px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; border-radius: 0 8px 8px 0; transition: left 0.4s ease; font-weight: bold; box-shadow: 2px 0 5px rgba(0,0,0,0.2);}
         .sidebar-collapsed-btn { left: 0 !important; }
         
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg-color); }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg-color); z-index: 10;}
         .header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
         .header-left h1 { margin: 0; font-size: 1.5rem; }
         .header-left p { margin: 5px 0 0 0; color: #6b7280; font-size: 0.9rem; }
+        .header-right { display: flex; gap: 10px; align-items: center; }
+        .search-bar { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; width: 250px; outline: none;}
+        
         .dashboard-padding { padding: 20px 30px; }
         
         .table-card { background: white; border-radius: 8px; border: 1px solid var(--border-color); overflow-x: auto; margin-bottom: 50px;}
@@ -70,6 +73,7 @@
     <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
     <a href="index.html" class="nav-item">⏳ Pending Orders</a>
     <a href="repair-completed.html" class="nav-item active">✅ Repair Completed</a>
+    <a href="repair-refusal.html" class="nav-item">🚫 Repair Refusal</a>
     <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
     <a href="upi-book.html" class="nav-item">📖 UPI Book</a>
     <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
@@ -97,6 +101,9 @@
         <div class="header-left">
             <h1>Repair Completed</h1>
             <p>Ready for delivery & billing</p>
+        </div>
+        <div class="header-right">
+            <input type="text" id="searchInput" class="search-bar" placeholder="Search completed..." onkeyup="searchTable()">
         </div>
     </div>
 
@@ -240,22 +247,22 @@
         
         allCompletedOrders = data || [];
         currentPage = 1; // Reset to page 1 on new fetch
-        renderCompletedTable();
+        renderCompletedTable(allCompletedOrders);
     }
 
     // --- RENDER TABLE WITH PAGINATION ---
-    function renderCompletedTable() {
+    function renderCompletedTable(dataToRender) {
         const tbody = document.getElementById('completedTableBody');
         tbody.innerHTML = '';
 
-        if(allCompletedOrders.length === 0) {
+        if(dataToRender.length === 0) {
             tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: gray;">No completed orders found.</td></tr>`;
             document.getElementById('pageInfo').innerText = `Page 1 of 1`;
             return;
         }
 
         const start = (currentPage - 1) * rowsPerPage;
-        const paginatedItems = allCompletedOrders.slice(start, start + rowsPerPage);
+        const paginatedItems = dataToRender.slice(start, start + rowsPerPage);
 
         paginatedItems.forEach(order => {
             const isDelivered = order.status === 'Goods Delivered';
@@ -292,20 +299,31 @@
                 </tr>`;
         });
 
-        document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(allCompletedOrders.length / rowsPerPage) || 1}`;
+        document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(dataToRender.length / rowsPerPage) || 1}`;
     }
+
+    // --- SEARCH TABLE FUNCTIONALITY ---
+    window.searchTable = function() {
+        const input = document.getElementById("searchInput").value.toLowerCase();
+        const filtered = allCompletedOrders.filter(order => {
+            const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc} ${order.repairNotes} ${order.devicePassword}`.toLowerCase();
+            return combinedString.includes(input);
+        });
+        currentPage = 1;
+        renderCompletedTable(filtered);
+    };
 
     // --- PAGINATION CONTROLS ---
     window.prevPage = function() { 
         if (currentPage > 1) { 
             currentPage--; 
-            renderCompletedTable(); 
+            renderCompletedTable(allCompletedOrders); 
         } 
     }
     window.nextPage = function() { 
         if (currentPage < Math.ceil(allCompletedOrders.length / rowsPerPage)) { 
             currentPage++; 
-            renderCompletedTable(); 
+            renderCompletedTable(allCompletedOrders); 
         } 
     }
 
