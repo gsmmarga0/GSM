@@ -31,6 +31,8 @@
         .btn-primary { background: black; color: white; border: none; }
         .btn-bill { background: #10b981; color: white; border: none; font-weight: bold; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s;}
         .btn-bill:hover { background: #059669; }
+        .btn-np { background: #ef4444; color: white; border: none; font-weight: bold; padding: 10px 20px; border-radius: 6px; cursor: pointer; transition: 0.2s;}
+        .btn-np:hover { background: #dc2626; }
         .btn-icon { background: transparent; border: none; cursor: pointer; font-size: 1.1rem; vertical-align: middle; transition: 0.2s; padding: 4px; }
         .btn-icon:hover { opacity: 0.7; transform: scale(1.1); }
 
@@ -76,6 +78,7 @@
     <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
     <a href="index.html" class="nav-item active">⏳ Pending Orders</a>
     <a href="repair-completed.html" class="nav-item">✅ Repair Completed</a>
+    <a href="repair-refusal.html" class="nav-item">🚫 Repair Refusal</a>
     <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
     <a href="upi-book.html" class="nav-item">📖 UPI Book</a>
     <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
@@ -86,7 +89,6 @@
     <a href="users.html" class="nav-item admin-only" style="display: none; color: #2563eb; font-weight:bold;">👥 Manage Users</a>
     <div style="flex-grow: 1;"></div> 
     
-    <!-- Redesigned Logout -->
     <div class="nav-item" onclick="logOut()" style="color: black !important; font-weight: bold; cursor: pointer; border-top: 1px solid var(--border-color); padding-top: 15px; margin: 10px 20px; display: flex; justify-content: space-between; align-items: center;">
         <span id="userNameDisplay">User</span> 
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -189,6 +191,7 @@
         
         <div class="modal-footer">
             <button class="btn" onclick="closeBillingModal()">Cancel</button>
+            <button class="btn-np" onclick="markRepairNP()">Repair NP</button>
             <button class="btn-confirm" onclick="confirmBilling()">Confirm & Move</button>
         </div>
     </div>
@@ -225,10 +228,7 @@
     let currentUserEmail = '';
     let isAdmin = false;
     
-    // Application Data State
     let allPendingOrders = [];
-    
-    // Modal State
     let billingOrderId = null;
     let editOrderId = null;
 
@@ -304,11 +304,9 @@
         tbody.innerHTML = '';
 
         dataToRender.forEach(order => {
-            // Escape quotes securely for the onclick string parameters
             const problemSafe = order.problemDesc ? order.problemDesc.replace(/'/g, "\\'") : '';
             const passwordSafe = order.devicePassword ? order.devicePassword.replace(/'/g, "\\'") : '';
             
-            // Build Action Buttons based on Admin Status
             let actionHtml = `<button class="btn-bill" onclick="openBillingModal('${order.id}', '${order.jobNo}', '${order.customerName}')">Repair Complete ✓</button>`;
             
             if (isAdmin) {
@@ -352,7 +350,6 @@
         if(!custName || !contactNo) {
             return alert("Error: Customer Name and Contact Number are mandatory fields.");
         }
-        
         if(!jobNoVal) {
             return alert("Job Number is missing. Please close and reopen the form.");
         }
@@ -373,7 +370,6 @@
             if (orderError) throw orderError;
             
             alert("Repair order added successfully!");
-            
             document.getElementById('customerName').value = '';
             document.getElementById('contactNo').value = '';
             document.getElementById('problemDesc').value = '';
@@ -386,10 +382,8 @@
         }
     };
 
-    // --- REPAIR COMPLETE LOGIC ---
     window.openBillingModal = function(id, jobNo, customer) {
         billingOrderId = id;
-        
         document.getElementById('billingSubtitle').innerText = `Job No: ${jobNo} | Customer: ${customer}`;
         document.getElementById('billEstimateAmount').value = '';
         document.getElementById('billRepairNotes').value = '';
@@ -416,20 +410,37 @@
             closeBillingModal();
             fetchOrders(); 
             alert("Order marked as completed and moved to the Repair Completed tab!");
-
         } catch (err) {
             alert("Error completing repair: " + err.message);
+        }
+    }
+
+    // --- REPAIR NP (NOT POSSIBLE) LOGIC ---
+    window.markRepairNP = async function() {
+        if(!confirm("Are you sure you want to mark this device as Repair Not Possible (NP)?")) return;
+        
+        const notes = document.getElementById('billRepairNotes').value.trim();
+
+        try {
+            await supabaseClient.from('repairOrders').update({ 
+                status: 'Repair Refusal', 
+                repairNotes: notes
+            }).eq('id', billingOrderId);
+
+            closeBillingModal();
+            fetchOrders(); 
+            alert("Order moved to Repair Refusal!");
+        } catch (err) {
+            alert("Error updating order: " + err.message);
         }
     }
 
     // --- ADMIN ACTIONS (EDIT & DELETE) ---
     window.deleteOrder = async function(id, jobNo) {
         if(!confirm(`Are you sure you want to completely delete Job No: ${jobNo}? This cannot be undone.`)) return;
-        
         try {
             const { error } = await supabaseClient.from('repairOrders').delete().eq('id', id);
             if (error) throw error;
-            
             fetchOrders();
         } catch (err) {
             alert("Error deleting order: " + err.message);
@@ -438,11 +449,9 @@
 
     window.openEditModal = function(id, jobNo, currentProblem, currentPassword) {
         editOrderId = id;
-        
         document.getElementById('editSubtitle').innerText = `Editing details for Job No: ${jobNo}`;
         document.getElementById('editProblemDesc').value = currentProblem;
         document.getElementById('editDevicePassword').value = currentPassword;
-        
         document.getElementById('modalEdit').style.display = 'flex';
     }
 
@@ -461,7 +470,6 @@
             }).eq('id', editOrderId);
 
             if (error) throw error;
-
             closeEditModal();
             fetchOrders(); 
         } catch (err) {
