@@ -8,48 +8,76 @@
     <style>
         /* Shared UI Styles */
         :root { --bg-color: #f4f5f7; --sidebar-width: 250px; --border-color: #e5e7eb; }
-        body { margin: 0; font-family: -apple-system, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; }
-        .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; transition: width 0.4s ease; overflow: hidden; white-space: nowrap; z-index: 40; }
-        .sidebar.collapsed { width: 0; padding: 0; border-right: none; }
+        body { margin: 0; font-family: -apple-system, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; position: relative;}
+        
+        /* Sidebar Styling */
+        .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; transition: width 0.4s ease, padding 0.4s ease; overflow: hidden; white-space: nowrap; z-index: 40; }
+        .sidebar.collapsed { width: 0; padding-left: 0; padding-right: 0; border-right: none; }
         .logo-area { display: flex; align-items: center; padding: 0 20px 20px 20px; font-weight: bold; font-size: 1.2rem; }
         .logo-icon { background: black; color: white; padding: 5px 10px; border-radius: 4px; margin-right: 10px; font-size: 0.9rem; }
         .nav-item { padding: 12px 20px; color: #4b5563 !important; text-decoration: none; display: flex; align-items: center; font-size: 0.95rem; cursor: pointer; }
         .nav-item.active { background: black !important; color: white !important; border-radius: 0 20px 20px 0; margin-right: 20px; }
         .nav-item:hover:not(.active) { background: #f3f4f6; }
-        .sidebar-toggle-btn { position: absolute; left: var(--sidebar-width); top: 50%; transform: translateY(-50%); background: black; color: white; width: 20px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; border-radius: 0 8px 8px 0; }
+        .sidebar-toggle-btn { position: absolute; left: var(--sidebar-width); top: 50%; transform: translateY(-50%); background: black; color: white; width: 20px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; border-radius: 0 8px 8px 0; box-shadow: 2px 0 5px rgba(0,0,0,0.2); transition: left 0.4s ease; font-weight: bold;}
         .sidebar-collapsed-btn { left: 0 !important; }
+        
+        /* Main Content */
         .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg-color); }
         .header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
         .header-left h1 { margin: 0; font-size: 1.5rem; }
         .header-left p { margin: 5px 0 0 0; color: #6b7280; font-size: 0.9rem; }
+        .header-right .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; border: 1px solid var(--border-color); background: white; font-size: 0.85rem;}
+        .header-right .btn:hover { background: #f3f4f6; }
+
         .dashboard-padding { padding: 20px 30px; }
-        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 25px; }
-        .stat-card { background: white; padding: 25px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 2px 10px rgba(0,0,0,0.02);}
-        .stat-card h3 { margin: 0 0 10px 0; font-size: 0.95rem; font-weight: 600; color: #4b5563;}
-        .stat-card .number { margin: 0; font-size: 2.2rem; font-weight: bold; }
+        
+        /* Stats Grid */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px; }
+        .stat-card { background: white; padding: 25px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 2px 10px rgba(0,0,0,0.02); display: flex; flex-direction: column; position: relative;}
+        .stat-card h3 { margin: 0 0 10px 0; font-size: 0.85rem; font-weight: 600; color: #6b7280; text-transform: uppercase;}
+        .stat-card .number { margin: 0; font-size: 2rem; font-weight: bold; }
+        
+        /* Breakdowns */
+        .breakdown-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .breakdown-card { background: white; border-radius: 12px; border: 1px solid var(--border-color); padding: 25px; }
         .breakdown-card h2 { margin-top: 0; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;}
         .flex-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f3f4f6; font-size: 0.95rem;}
         .flex-row:last-child { border-bottom: none; font-weight: bold; font-size: 1.1rem; padding-top: 15px;}
+        
+        .text-green { color: #10b981; }
+        .text-red { color: #ef4444; }
+        .text-blue { color: #3b82f6; }
+        .text-purple { color: #9333ea; }
     </style>
 </head>
 <body>
-<div class="sidebar" id="sidebar">
+
+<div class="sidebar" id="sidebar" onmouseenter="clearSidebarTimer()" onmouseleave="resetSidebarTimer()">
     <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
-    <a href="index.html" class="nav-item">📋 Order Details</a>
-    <a href="billing.html" class="nav-item">💳 Billing</a>
-    <a href="store-plus.html" class="nav-item">📦 Store Plus</a>
+    
+    <a href="index.html" class="nav-item">⏳ Pending Orders</a>
+    <a href="repair-completed.html" class="nav-item">✅ Repair Completed</a>
+    <a href="repair-refusal.html" class="nav-item">🚫 Repair Refusal</a>
     <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
     <a href="upi-book.html" class="nav-item">📖 UPI Book</a>
     <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
     
-    <a href="sales-report.html" class="nav-item admin-only">📊 Sales Report</a>
-    <a href="expenses.html" class="nav-item admin-only">💸 Expenses</a>
-    <a href="profit.html" class="nav-item admin-only active">📈 Profit Book</a>
-    <a href="users.html" class="nav-item admin-only" style="color: #2563eb; font-weight:bold;">👥 Manage Users</a>
+    <!-- Admin Only Links -->
+    <a href="sales-report.html" class="nav-item admin-only" style="display: none;">📊 Sales Report</a>
+    <a href="expenses.html" class="nav-item admin-only" style="display: none;">💸 Expenses</a>
+    <a href="profit.html" class="nav-item active admin-only" style="display: none;">📈 Profit Book</a>
+    <a href="users.html" class="nav-item admin-only" style="display: none; color: #2563eb; font-weight:bold;">👥 Manage Users</a>
+
     <div style="flex-grow: 1;"></div> 
-    <div class="nav-item" onclick="logOut()" style="color: black !important; font-weight: bold; cursor: pointer; border-top: 1px solid var(--border-color); padding-top: 15px; margin: 10px 20px;">
-        <span id="userNameDisplay">User</span> (Logout)
+    
+    <!-- SVG Logout -->
+    <div class="nav-item" onclick="logOut()" style="color: black !important; font-weight: bold; cursor: pointer; border-top: 1px solid var(--border-color); padding-top: 15px; margin: 10px 20px; display: flex; justify-content: space-between; align-items: center;">
+        <span id="userNameDisplay">User</span> 
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
     </div>
 </div>    
 <div class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">⋮</div>
@@ -58,7 +86,10 @@
     <div class="header">
         <div class="header-left">
             <h1>Master Profit Book</h1>
-            <p>Admin Overview of Business Health</p>
+            <p>Comprehensive overview of Ledger Balances and Parts Margins</p>
+        </div>
+        <div class="header-right">
+            <button class="btn" onclick="calculateProfit()">↻ Refresh Data</button>
         </div>
     </div>
 
@@ -66,32 +97,53 @@
         <!-- Master Stats -->
         <div class="stats-grid">
             <div class="stat-card" style="border-top: 4px solid #10b981;">
-                <h3>Total Gross Revenue</h3>
-                <p class="number" id="masterRevenue" style="color: #10b981;">₹0</p>
+                <h3>Ledger Inflows (Revenue)</h3>
+                <p class="number text-green" id="masterRevenue">₹0</p>
             </div>
             <div class="stat-card" style="border-top: 4px solid #ef4444;">
-                <h3>Total Expenses</h3>
-                <p class="number" id="masterExpenses" style="color: #ef4444;">₹0</p>
+                <h3>Ledger Outflows (Expenses)</h3>
+                <p class="number text-red" id="masterExpenses">₹0</p>
             </div>
             <div class="stat-card" style="border-top: 4px solid #3b82f6;">
-                <h3>Net Store Profit</h3>
-                <p class="number" id="masterProfit" style="color: #3b82f6;">₹0</p>
+                <h3>Net Ledger Balance</h3>
+                <p class="number text-blue" id="masterBalance">₹0</p>
+            </div>
+            <div class="stat-card" style="border-top: 4px solid #9333ea; background: #faf5ff;">
+                <h3 style="color:#9333ea;">Parts Profit (Sales Report)</h3>
+                <p class="number text-purple" id="masterPartsProfit">₹0</p>
             </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="breakdown-grid">
+            <!-- Ledger Breakdown -->
             <div class="breakdown-card">
-                <h2>Revenue Breakdown</h2>
-                <div class="flex-row"><span>Cash Income</span> <span id="cashInText">₹0</span></div>
-                <div class="flex-row"><span>UPI/Digital Income</span> <span id="upiInText">₹0</span></div>
-                <div class="flex-row" style="color:#10b981;"><span>Total Revenue</span> <span id="totalRevText">₹0</span></div>
+                <h2>Ledger Breakdown (Cashbook + UPI)</h2>
+                <div class="flex-row"><span>Cash Income (Cashbook In)</span> <span id="cashInText">₹0</span></div>
+                <div class="flex-row"><span>Digital Income (UPI Book)</span> <span id="upiInText">₹0</span></div>
+                <div class="flex-row" style="background: #f0fdf4; padding: 10px; margin-top: 5px; border-radius: 6px;">
+                    <span class="text-green" style="font-weight:bold;">Total Gross Inflows</span> 
+                    <span class="text-green" style="font-weight:bold;" id="totalRevText">₹0</span>
+                </div>
+                
+                <div class="flex-row" style="margin-top: 15px;"><span>Cash Expenses (Cashbook Out)</span> <span class="text-red" id="cashOutText">₹0</span></div>
+                <div class="flex-row"><span>Digital Expenses (UPI Refund/Out)</span> <span class="text-red" id="upiOutText">₹0</span></div>
+                <div class="flex-row" style="background: #fef2f2; padding: 10px; margin-top: 5px; border-radius: 6px;">
+                    <span class="text-red" style="font-weight:bold;">Total Gross Outflows</span> 
+                    <span class="text-red" style="font-weight:bold;" id="totalExpText">₹0</span>
+                </div>
             </div>
 
+            <!-- Parts Margin Breakdown -->
             <div class="breakdown-card">
-                <h2>Expense Breakdown</h2>
-                <div class="flex-row"><span>Cash Outflows</span> <span id="cashOutText">₹0</span></div>
-                <div class="flex-row"><span>UPI/Digital Outflows</span> <span id="upiOutText">₹0</span></div>
-                <div class="flex-row" style="color:#ef4444;"><span>Total Expenses</span> <span id="totalExpText">₹0</span></div>
+                <h2>Parts Margin Breakdown (Sales Report)</h2>
+                <p style="font-size: 0.85rem; color:#6b7280; margin-top:-5px; margin-bottom: 15px;">Margins generated directly from individual part sales.</p>
+                
+                <div class="flex-row"><span>Total Retail Value (Sold)</span> <span class="text-green" id="salesRetailText">₹0</span></div>
+                <div class="flex-row"><span>Total Unit Cost (Sourced)</span> <span class="text-red" id="salesUnitText">₹0</span></div>
+                <div class="flex-row" style="background: #faf5ff; padding: 10px; margin-top: 15px; border-radius: 6px; border: 1px solid #e9d5ff;">
+                    <span class="text-purple" style="font-weight:bold;">Total Parts Profit</span> 
+                    <span class="text-purple" style="font-weight:bold;" id="salesProfitText">₹0</span>
+                </div>
             </div>
         </div>
     </div>
@@ -101,10 +153,32 @@
 <script>
     const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
     const ADMIN_EMAIL = 'faizan@gsmsolution.com'; 
+    let currentUserEmail = '';
+
+    // Sidebar Logic
+    let sidebarTimer;
+    window.resetSidebarTimer = function() {
+        clearTimeout(sidebarTimer);
+        sidebarTimer = setTimeout(() => {
+            const sb = document.getElementById('sidebar');
+            const btn = document.getElementById('sidebarToggle');
+            if(sb && btn) {
+                sb.classList.add('collapsed');
+                btn.classList.add('sidebar-collapsed-btn');
+            }
+        }, 5000);
+    }
+    window.clearSidebarTimer = function() { clearTimeout(sidebarTimer); }
 
     window.toggleSidebar = function() {
-        document.getElementById('sidebar').classList.toggle('collapsed');
-        document.getElementById('sidebarToggle').classList.toggle('sidebar-collapsed-btn');
+        const sb = document.getElementById('sidebar');
+        const btn = document.getElementById('sidebarToggle');
+        if(sb && btn) {
+            sb.classList.toggle('collapsed');
+            btn.classList.toggle('sidebar-collapsed-btn');
+            if(!sb.classList.contains('collapsed')) resetSidebarTimer();
+            else clearSidebarTimer();
+        }
     }
 
     async function checkAuth() {
@@ -112,20 +186,25 @@
         if (!data.session) {
             window.location.href = 'login.html';
         } else {
-            const email = data.session.user.email;
-            document.getElementById('userNameDisplay').innerText = email.split('@')[0];
+            currentUserEmail = data.session.user.email;
+            document.getElementById('userNameDisplay').innerText = currentUserEmail.split('@')[0].charAt(0).toUpperCase() + currentUserEmail.split('@')[0].slice(1);
             
-            // Kick out non-admins
-            if (email.toLowerCase() !== ADMIN_EMAIL) {
+            // Kick out non-admins and show admin tabs
+            if (currentUserEmail.trim().toLowerCase() !== ADMIN_EMAIL.trim().toLowerCase()) {
                 alert("Access Denied: Administrators only.");
                 window.location.href = 'index.html';
+            } else {
+                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
             }
         }
     }
     async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
 
+    // Format Currency
+    const formatCurr = (num) => '₹' + parseFloat(num || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
     async function calculateProfit() {
-        // Fetch Cashbook
+        // 1. Fetch Cashbook
         const { data: cashData } = await supabaseClient.from('cashbook_entries').select('amount, type');
         let cashIn = 0, cashOut = 0;
         if(cashData) {
@@ -136,7 +215,7 @@
             });
         }
 
-        // Fetch UPI Book
+        // 2. Fetch UPI Book (Assuming positive amounts are inflows, negative are outflows/refunds)
         const { data: upiData } = await supabaseClient.from('upi_transactions').select('amount');
         let upiIn = 0, upiOut = 0;
         if(upiData) {
@@ -147,27 +226,46 @@
             });
         }
 
+        // 3. Fetch Sales Report (Parts Profit)
+        const { data: salesData } = await supabaseClient.from('sales_reports').select('unit_price, retail_price');
+        let totalUnit = 0, totalRetail = 0;
+        if (salesData) {
+            salesData.forEach(s => {
+                totalUnit += parseFloat(s.unit_price) || 0;
+                totalRetail += parseFloat(s.retail_price) || 0;
+            });
+        }
+        let partsProfit = totalRetail - totalUnit;
+
+        // Calculations
         const totalRevenue = cashIn + upiIn;
         const totalExpenses = cashOut + upiOut;
-        const netProfit = totalRevenue - totalExpenses;
+        const netLedgerBalance = totalRevenue - totalExpenses;
 
-        // Update UI Dashboard
-        document.getElementById('masterRevenue').innerText = `₹${totalRevenue}`;
-        document.getElementById('masterExpenses').innerText = `₹${totalExpenses}`;
-        document.getElementById('masterProfit').innerText = `₹${netProfit}`;
+        // Update UI Dashboard Stats
+        document.getElementById('masterRevenue').innerText = formatCurr(totalRevenue);
+        document.getElementById('masterExpenses').innerText = formatCurr(totalExpenses);
+        document.getElementById('masterBalance').innerText = formatCurr(netLedgerBalance);
+        document.getElementById('masterPartsProfit').innerText = formatCurr(partsProfit);
 
-        // Breakdown texts
-        document.getElementById('cashInText').innerText = `₹${cashIn}`;
-        document.getElementById('upiInText').innerText = `₹${upiIn}`;
-        document.getElementById('totalRevText').innerText = `₹${totalRevenue}`;
+        // Ledger Breakdown texts
+        document.getElementById('cashInText').innerText = formatCurr(cashIn);
+        document.getElementById('upiInText').innerText = formatCurr(upiIn);
+        document.getElementById('totalRevText').innerText = formatCurr(totalRevenue);
         
-        document.getElementById('cashOutText').innerText = `₹${cashOut}`;
-        document.getElementById('upiOutText').innerText = `₹${upiOut}`;
-        document.getElementById('totalExpText').innerText = `₹${totalExpenses}`;
+        document.getElementById('cashOutText').innerText = formatCurr(cashOut);
+        document.getElementById('upiOutText').innerText = formatCurr(upiOut);
+        document.getElementById('totalExpText').innerText = formatCurr(totalExpenses);
+
+        // Parts Margin Breakdown texts
+        document.getElementById('salesRetailText').innerText = formatCurr(totalRetail);
+        document.getElementById('salesUnitText').innerText = formatCurr(totalUnit);
+        document.getElementById('salesProfitText').innerText = formatCurr(partsProfit);
     }
 
     document.addEventListener("DOMContentLoaded", async () => {
         await checkAuth();
+        resetSidebarTimer();
         calculateProfit();
     });
 </script>
