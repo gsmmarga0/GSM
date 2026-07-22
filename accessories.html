@@ -167,6 +167,12 @@
                     <label>Date</label>
                     <input type="date" id="inv-date">
                 </div>
+                
+                <!-- Dynamic UPI Notes -->
+                <div class="form-group col-span-2" id="upiNotesGroup" style="display: none;">
+                    <label style="color: #4b5563;">UPI Account Details / Notes</label>
+                    <input type="text" id="upiAccountNotes" placeholder="e.g. Paid to GPay / Personal Acct" style="width: 100%;">
+                </div>
             </div>
 
             <button class="btn btn-primary" id="btnSubmitInv" style="margin-top: 10px;" onclick="saveInvoice()">+ Create Invoice</button>
@@ -322,6 +328,13 @@
             selectedPaymentMode = mode;
             document.getElementById('payCash').className = mode === 'Cash' ? 'pay-btn active' : 'pay-btn';
             document.getElementById('payUPI').className = mode === 'UPI' ? 'pay-btn active' : 'pay-btn';
+            
+            // Toggle UPI Notes field visibility
+            if (mode === 'UPI') {
+                document.getElementById('upiNotesGroup').style.display = 'flex';
+            } else {
+                document.getElementById('upiNotesGroup').style.display = 'none';
+            }
         }
 
         // --- Searchable Dropdown Logic ---
@@ -682,22 +695,25 @@
             // INTEGRATION: Push to Cashbook or UPI Book
             let currentDate = new Date().toISOString().split('T')[0];
             let currentTime = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' });
-            let desc = `Acc. Invoice #${invoiceNoStr} - ${name} (${selectedPaymentMode})`;
+            let baseDesc = `Acc. Invoice #${invoiceNoStr} - ${name} (${selectedPaymentMode})`;
 
             if(selectedPaymentMode === 'Cash') {
                 await db.from('cashbook_entries').insert([{
-                    description: desc,
+                    description: baseDesc,
                     category: 'Accessories',
                     amount: grandTotal,
                     type: 'in',
                     date: currentDate,
                     created_by: currentUserEmail
                 }]);
-            } else if (selectedPaymentMode === 'UPI' || selectedPaymentMode === 'Card') {
+            } else if (selectedPaymentMode === 'UPI') {
+                let upiNotes = document.getElementById('upiAccountNotes').value.trim();
+                let finalDesc = upiNotes ? `${baseDesc} - Acct: ${upiNotes}` : baseDesc;
+                
                 await db.from('upi_transactions').insert([{
                     date: currentDate,
                     time: currentTime,
-                    description: desc,
+                    description: finalDesc,
                     source: 'Accessories',
                     amount: grandTotal,
                     created_by: currentUserEmail
@@ -709,6 +725,7 @@
             document.getElementById('inv-name').value = '';
             document.getElementById('inv-mobile').value = '';
             document.getElementById('invoiceItemsContainer').innerHTML = '';
+            document.getElementById('upiAccountNotes').value = '';
             addInvoiceItem(); 
             setPaymentMode('Cash');
             
