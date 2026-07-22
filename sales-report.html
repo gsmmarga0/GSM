@@ -75,8 +75,6 @@
         table { width: 100%; border-collapse: collapse; text-align: left; }
         th, td { padding: 15px; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; }
         th { background: #f9fafb; color: #4b5563; font-weight: 600; }
-        .th-group { text-align: center; border-bottom: none; padding-bottom: 5px; background: white;}
-        .th-sub { background: #f9fafb; font-size: 0.8rem; }
         td { color: #111827; }
         .pagination { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: white; border-top: 1px solid var(--border-color); }
         
@@ -96,6 +94,7 @@
     <!-- Updated Sidebar Links -->
     <a href="index.html" class="nav-item">⏳ Pending Orders</a>
     <a href="repair-completed.html" class="nav-item">✅ Repair Completed</a>
+    <a href="repair-refusal.html" class="nav-item">🚫 Repair Refusal</a>
     <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
     <a href="upi-book.html" class="nav-item">📖 UPI Book</a>
     <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
@@ -183,22 +182,14 @@
         <table id="salesTable">
             <thead>
                 <tr>
-                    <th rowspan="2" style="border-right: 1px solid #e5e7eb;">Date</th>
-                    <th rowspan="2" style="border-right: 1px solid #e5e7eb;">Job Number</th>
-                    <th rowspan="2" style="border-right: 1px solid #e5e7eb;">Created By</th>
-                    <th rowspan="2" style="border-right: 1px solid #e5e7eb;">Part Description</th>
-                    <th colspan="3" class="th-group" style="border-right: 1px solid #e5e7eb;">Unit Price (Supplier)</th>
-                    <th colspan="3" class="th-group" style="border-right: 1px solid #e5e7eb;">Retail Price (Customer)</th>
-                    <th rowspan="2" class="profit-col" style="text-align: center; border-right: 1px solid #e5e7eb;">Profit</th>
-                    <th rowspan="2" style="text-align: center;">Action</th>
-                </tr>
-                <tr>
-                    <th class="th-sub">Base</th>
-                    <th class="th-sub">GST 18%</th>
-                    <th class="th-sub" style="border-right: 1px solid #e5e7eb;">Total</th>
-                    <th class="th-sub">Base</th>
-                    <th class="th-sub">GST 18%</th>
-                    <th class="th-sub" style="border-right: 1px solid #e5e7eb;">Total</th>
+                    <th>Date</th>
+                    <th>Job Number</th>
+                    <th>Created By</th>
+                    <th>Part Description</th>
+                    <th style="text-align: right;">Unit Price (₹)</th>
+                    <th style="text-align: right;">Retail Price (₹)</th>
+                    <th class="profit-col" style="text-align: right;">Profit (₹)</th>
+                    <th style="text-align: center;">Action</th>
                 </tr>
             </thead>
             <tbody id="salesTableBody">
@@ -279,9 +270,6 @@
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
             } else {
                 isAdmin = false;
-                // Since this is an admin-only page (based on the sidebar), 
-                // you might want to redirect non-admins. 
-                // We will leave the profit column hiding logic in just in case you allow staff access later.
                 const profitCols = document.querySelectorAll('.profit-col');
                 profitCols.forEach(col => col.style.display = 'none');
             }
@@ -348,8 +336,8 @@
                     job_no: jobNo,
                     created_by: currentUserName,
                     part_label: label,
-                    unit_price_base: unit,
-                    retail_price_base: retail
+                    unit_price: unit,     // Saved without GST base tags
+                    retail_price: retail  // Saved without GST base tags
                 });
             }
         });
@@ -404,7 +392,7 @@
         tableBody.innerHTML = '';
 
         if(allSalesData.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="11" style="text-align: center; color: gray;">No entries found.</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: gray;">No entries found.</td></tr>`;
             document.getElementById('pageInfo').innerText = `Page 1 of 1`;
             return;
         }
@@ -413,47 +401,31 @@
         const paginatedItems = allSalesData.slice(start, start + rowsPerPage);
 
         paginatedItems.forEach(item => {
-            const gstRate = 0.18;
-            
-            const unitBase = parseFloat(item.unit_price_base);
-            const unitGst = unitBase * gstRate;
-            const unitTotal = unitBase + unitGst;
-
-            const retailBase = parseFloat(item.retail_price_base);
-            const retailGst = retailBase * gstRate;
-            const retailTotal = retailBase + retailGst;
-
-            const profit = retailTotal - unitTotal;
+            // Retrieve values (supports older 'base' columns if you had them previously)
+            const unitPrice = parseFloat(item.unit_price || item.unit_price_base) || 0;
+            const retailPrice = parseFloat(item.retail_price || item.retail_price_base) || 0;
+            const profit = retailPrice - unitPrice;
 
             let deleteBtn = isAdmin
                 ? `<button class="action-delete" onclick="deleteEntry('${item.id}')">🗑️</button>`
                 : `<span style="color:gray;">-</span>`;
 
             let profitCell = isAdmin 
-                ? `<td class="profit-col c-green" style="text-align: center; border-right: 1px solid #e5e7eb;">₹${profit.toFixed(2)}</td>` 
+                ? `<td class="profit-col c-green" style="text-align: right;">₹${profit.toFixed(2)}</td>` 
                 : `<td class="profit-col" style="display:none;"></td>`;
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td class="c-bold" style="border-right: 1px solid #e5e7eb;">${item.date}</td>
-                <td class="c-bold" style="border-right: 1px solid #e5e7eb;">${item.job_no}</td>
-                <td style="border-right: 1px solid #e5e7eb;">${item.created_by || 'Admin'}</td>
-                <td style="border-right: 1px solid #e5e7eb;">${item.part_label}</td>
+                <td class="c-bold">${item.date}</td>
+                <td class="c-bold">${item.job_no}</td>
+                <td>${item.created_by || 'Admin'}</td>
+                <td>${item.part_label}</td>
                 
-                <!-- Unit Breakdown -->
-                <td>₹${unitBase.toFixed(2)}</td>
-                <td class="c-orange">₹${unitGst.toFixed(2)}</td>
-                <td class="c-bold" style="border-right: 1px solid #e5e7eb;">₹${unitTotal.toFixed(2)}</td>
+                <td style="text-align: right;">₹${unitPrice.toFixed(2)}</td>
+                <td class="c-bold" style="text-align: right;">₹${retailPrice.toFixed(2)}</td>
                 
-                <!-- Retail Breakdown -->
-                <td>₹${retailBase.toFixed(2)}</td>
-                <td class="c-orange">₹${retailGst.toFixed(2)}</td>
-                <td class="c-bold" style="border-right: 1px solid #e5e7eb;">₹${retailTotal.toFixed(2)}</td>
-                
-                <!-- Profit -->
                 ${profitCell}
                 
-                <!-- Action -->
                 <td style="text-align: center;">${deleteBtn}</td>
             `;
             tableBody.appendChild(tr);
