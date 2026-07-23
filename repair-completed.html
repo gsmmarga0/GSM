@@ -49,9 +49,12 @@
         .billing-row label { font-weight: bold; color: #374151; font-size: 0.9rem;}
         .billing-row input { text-align: right; width: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-weight: bold; outline:none;}
         
-        .payment-toggle { display: flex; gap: 10px; margin-top: 5px; }
-        .pay-btn { padding: 8px 16px; border-radius: 6px; border: 1px solid #d1d5db; background: white; color: #374151; cursor: pointer; font-size: 0.85rem; font-weight: bold; flex: 1; transition: 0.2s;}
+        .payment-toggle { display: flex; overflow: hidden; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 5px; }
+        .pay-btn { padding: 8px 16px; border: none; border-right: 1px solid #d1d5db; background: white; color: #374151; cursor: pointer; font-size: 0.85rem; font-weight: bold; flex: 1; transition: 0.2s;}
+        .pay-btn:last-child { border-right: none; }
         .pay-btn.active { background: #111827; color: white; border-color: #111827; }
+        .pay-btn.credit { color: #dc2626; }
+        .pay-btn.credit.active { background: #dc2626; color: white; border-color: #dc2626; }
         
         .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         .btn { padding: 10px 20px; border-radius: 6px; border: 1px solid var(--border-color); background: white; cursor: pointer; font-weight: bold; color: #374151;}
@@ -67,6 +70,7 @@
     <a href="repair-completed.html" class="nav-item active">✅ Repair Completed</a>
     <a href="goods-delivered.html" class="nav-item">📦 Goods Delivered</a>
     <a href="repair-refusal.html" class="nav-item">🚫 Repair Refusal</a>
+    <a href="customers.html" class="nav-item">👥 Customers</a>
     <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
     <a href="upi-book.html" class="nav-item">📖 UPI Book</a>
     <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
@@ -139,7 +143,7 @@
             
             <div class="billing-row" style="border-top: 2px dashed #e5e7eb; padding-top: 15px;">
                 <label style="color: #059669; font-size: 1.05rem;">Final Payment Collected (₹)</label>
-                <input type="number" id="deliveryTotalAmount" placeholder="0" style="border-color: #10b981;">
+                <input type="number" id="deliveryTotalAmount" placeholder="0" style="border-color: #10b981;" oninput="handleTotalChange()">
             </div>
 
             <div id="paymentSection" style="margin-top: 15px;">
@@ -147,12 +151,32 @@
                 <div class="payment-toggle">
                     <button class="pay-btn active" id="btnDelCash" onclick="setDeliveryMode('Cash')">Cash</button>
                     <button class="pay-btn" id="btnDelUPI" onclick="setDeliveryMode('UPI')">UPI</button>
+                    <button class="pay-btn" id="btnDelSplit" onclick="setDeliveryMode('Split')">Split</button>
+                    <button class="pay-btn credit" id="btnDelCredit" onclick="setDeliveryMode('Credit')">Credit</button>
+                </div>
+            </div>
+
+            <!-- Split Payment Inputs -->
+            <div class="billing-row" id="splitInputsRow" style="display: none; justify-content: flex-start; gap: 10px; margin-top: 15px;">
+                <div style="flex:1;">
+                    <label style="color: #166534; font-size: 0.8rem; display:block; margin-bottom:5px;">Cash Amount</label>
+                    <input type="number" id="splitCashAmount" placeholder="0" style="width: 100%; border-color: #16a34a; text-align: left;" oninput="handleSplitCalc('cash')">
+                </div>
+                <div style="flex:1;">
+                    <label style="color: #2563eb; font-size: 0.8rem; display:block; margin-bottom:5px;">UPI Amount</label>
+                    <input type="number" id="splitUpiAmount" placeholder="0" style="width: 100%; border-color: #3b82f6; text-align: left;" oninput="handleSplitCalc('upi')">
                 </div>
             </div>
             
+            <!-- UPI Notes -->
             <div class="billing-row" id="upiNotesRow" style="display: none; flex-direction: column; align-items: flex-start; margin-top: 15px;">
                 <label style="color: #4b5563; margin-bottom: 5px;">UPI Account Details / Notes</label>
-                <input type="text" id="upiAccountNotes" placeholder="e.g. Paid to GPay / Personal Acct" style="width: 100%; font-weight: normal; text-align: left;">
+                <input type="text" id="upiAccountNotes" placeholder="e.g. Paid to GPay" style="width: 100%; font-weight: normal; text-align: left;">
+            </div>
+
+            <!-- Credit Warning -->
+            <div id="creditWarningMsg" style="display: none; font-size: 0.8rem; color: #dc2626; margin-top: 10px; font-weight: bold; background: #fef2f2; padding: 10px; border-radius: 6px; border: 1px solid #fecaca;">
+                ⚠️ This amount will be added to the customer's active Credit Balance.
             </div>
         </div>
         
@@ -177,6 +201,7 @@
     let deliveryOrderId = null;
     let deliveryJobNo = '';
     let deliveryCustomer = '';
+    let deliveryCustomerMobile = '';
     let deliveryPaymentMode = 'Cash';
     
     let sidebarTimer;
@@ -210,7 +235,6 @@
     async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
 
     async function fetchCompletedOrders() {
-        // Fetch ONLY strictly 'Repair Completed' status
         const { data, error } = await supabaseClient
             .from('repairOrders')
             .select('*')
@@ -239,6 +263,7 @@
 
         paginatedItems.forEach(order => {
             const deleteBtnHtml = isAdmin ? `<button class="btn-icon" onclick="deleteOrder('${order.id}', '${order.jobNo}')" title="Delete Order">🗑️</button>` : '';
+            const safeCustName = order.customerName ? order.customerName.replace(/'/g, "\\'") : '';
 
             tbody.innerHTML += `
                 <tr>
@@ -251,7 +276,7 @@
                     <td style="font-weight:bold; color:#059669;">₹${order.estimateAmount || 0}</td>
                     <td style="text-align: center;">
                         <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
-                            <button class="status-btn" onclick="openDeliveryModal('${order.id}', '${order.jobNo}', '${order.customerName}', '${order.estimateAmount || 0}')">Deliver Device</button>
+                            <button class="status-btn" onclick="openDeliveryModal('${order.id}', '${order.jobNo}', '${safeCustName}', '${order.contactNo}', '${order.estimateAmount || 0}')">Deliver Device</button>
                             ${deleteBtnHtml}
                         </div>
                     </td>
@@ -282,13 +307,23 @@
         } catch (err) { alert("Error deleting order: " + err.message); }
     }
 
-    window.openDeliveryModal = function(id, jobNo, customer, estimateAmount) {
-        deliveryOrderId = id; deliveryJobNo = jobNo; deliveryCustomer = customer;
+    // --- Delivery Modal & Payment Logic ---
+    window.openDeliveryModal = function(id, jobNo, customer, contactNo, estimateAmount) {
+        deliveryOrderId = id; 
+        deliveryJobNo = jobNo; 
+        deliveryCustomer = customer;
+        deliveryCustomerMobile = contactNo;
+        
         document.getElementById('deliverySubtitle').innerText = `Job No: ${jobNo} | Customer: ${customer}`;
         document.getElementById('deliveryEstimateAmount').innerText = estimateAmount;
         document.getElementById('deliveryTotalAmount').value = estimateAmount;
+        
         document.getElementById('upiAccountNotes').value = '';
+        document.getElementById('splitCashAmount').value = '';
+        document.getElementById('splitUpiAmount').value = '';
+        
         setDeliveryMode('Cash');
+        
         document.getElementById('modalDelivery').style.display = 'flex';
         document.getElementById('deliveryTotalAmount').focus();
     }
@@ -297,33 +332,104 @@
         deliveryPaymentMode = mode;
         document.querySelectorAll('.pay-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById(`btnDel${mode}`).classList.add('active');
-        document.getElementById('upiNotesRow').style.display = (mode === 'UPI') ? 'flex' : 'none';
+        
+        document.getElementById('upiNotesRow').style.display = (mode === 'UPI' || mode === 'Split') ? 'flex' : 'none';
+        document.getElementById('splitInputsRow').style.display = (mode === 'Split') ? 'flex' : 'none';
+        document.getElementById('creditWarningMsg').style.display = (mode === 'Credit') ? 'block' : 'none';
+
+        if (mode === 'Split') handleTotalChange(); // Trigger split calc update
+    }
+
+    window.handleTotalChange = function() {
+        if(deliveryPaymentMode === 'Split') {
+            const final = parseFloat(document.getElementById('deliveryTotalAmount').value) || 0;
+            const cInput = document.getElementById('splitCashAmount');
+            const cVal = parseFloat(cInput.value) || 0;
+            document.getElementById('splitUpiAmount').value = Math.max(0, final - cVal);
+        }
+    }
+
+    window.handleSplitCalc = function(changedField) {
+        const final = parseFloat(document.getElementById('deliveryTotalAmount').value) || 0;
+        const cInput = document.getElementById('splitCashAmount');
+        const uInput = document.getElementById('splitUpiAmount');
+        
+        if(changedField === 'cash') {
+            const cVal = parseFloat(cInput.value) || 0;
+            uInput.value = Math.max(0, final - cVal);
+        } else {
+            const uVal = parseFloat(uInput.value) || 0;
+            cInput.value = Math.max(0, final - uVal);
+        }
     }
 
     window.closeDeliveryModal = function() { document.getElementById('modalDelivery').style.display = 'none'; }
 
     window.confirmDelivery = async function() {
         const finalAmount = parseFloat(document.getElementById('deliveryTotalAmount').value) || 0;
+        let splitCash = 0;
+        let splitUpi = 0;
+        
+        if (deliveryPaymentMode === 'Split') {
+            splitCash = parseFloat(document.getElementById('splitCashAmount').value) || 0;
+            splitUpi = parseFloat(document.getElementById('splitUpiAmount').value) || 0;
+            if (Math.abs((splitCash + splitUpi) - finalAmount) > 0.01) {
+                return alert("Cash and UPI amounts must exactly match the Final Payment Collected!");
+            }
+        }
+
         try {
+            // Update Order Status
             await supabaseClient.from('repairOrders').update({ 
-                status: 'Goods Delivered', finalAmount: finalAmount, finalPaymentMethod: deliveryPaymentMode 
+                status: 'Goods Delivered', 
+                finalAmount: finalAmount, 
+                finalPaymentMethod: deliveryPaymentMode 
             }).eq('id', deliveryOrderId);
 
             if(finalAmount > 0) {
                 const currentDate = new Date().toISOString().split('T')[0];
+                const currentTime = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' });
                 const baseDesc = `Final Bill - Job ${deliveryJobNo} (${deliveryCustomer})`;
+
                 if(deliveryPaymentMode === 'Cash') {
                     await supabaseClient.from('cashbook_entries').insert([{ description: baseDesc, category: 'Repair Sales', amount: finalAmount, type: 'in', date: currentDate, created_by: currentUserEmail }]);
-                } else {
+                } 
+                else if(deliveryPaymentMode === 'UPI') {
                     let upiNotes = document.getElementById('upiAccountNotes').value.trim();
                     let finalDesc = upiNotes ? `${baseDesc} - Acct: ${upiNotes}` : baseDesc;
-                    await supabaseClient.from('upi_transactions').insert([{ description: finalDesc, source: 'Repair Payment', amount: finalAmount, date: currentDate, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' }), created_by: currentUserEmail }]);
+                    await supabaseClient.from('upi_transactions').insert([{ description: finalDesc, source: 'Repair Payment', amount: finalAmount, date: currentDate, time: currentTime, created_by: currentUserEmail }]);
+                } 
+                else if(deliveryPaymentMode === 'Split') {
+                    if (splitCash > 0) {
+                        await supabaseClient.from('cashbook_entries').insert([{ description: `${baseDesc} (Split Cash)`, category: 'Repair Sales', amount: splitCash, type: 'in', date: currentDate, created_by: currentUserEmail }]);
+                    }
+                    if (splitUpi > 0) {
+                        let upiNotes = document.getElementById('upiAccountNotes').value.trim();
+                        let finalDesc = upiNotes ? `${baseDesc} (Split UPI) - Acct: ${upiNotes}` : `${baseDesc} (Split UPI)`;
+                        await supabaseClient.from('upi_transactions').insert([{ description: finalDesc, source: 'Repair Payment', amount: splitUpi, date: currentDate, time: currentTime, created_by: currentUserEmail }]);
+                    }
+                } 
+                else if(deliveryPaymentMode === 'Credit') {
+                    // Check if customer exists by mobile
+                    const { data: custData, error: custErr } = await supabaseClient.from('customers').select('*').eq('mobile', deliveryCustomerMobile);
+                    
+                    if (custData && custData.length > 0) {
+                        // Exists -> Add to balance
+                        let currentBal = parseFloat(custData[0].credit_balance) || 0;
+                        await supabaseClient.from('customers').update({ credit_balance: currentBal + finalAmount }).eq('id', custData[0].id);
+                    } else {
+                        // New -> Create Customer with balance
+                        await supabaseClient.from('customers').insert([{ name: deliveryCustomer, mobile: deliveryCustomerMobile, credit_balance: finalAmount }]);
+                    }
                 }
             }
+            
             closeDeliveryModal();
             fetchCompletedOrders(); 
-            alert("Device marked as Delivered and moved to Goods Delivered tab!");
-        } catch (err) { alert("Error delivering device: " + err.message); }
+            alert(`Device marked as Delivered. ${deliveryPaymentMode === 'Credit' ? 'Amount added to Customer Credit.' : 'Payment logged successfully!'}`);
+        } catch (err) { 
+            alert("Error delivering device: " + err.message); 
+        }
     }
 
     document.addEventListener("DOMContentLoaded", async () => {
