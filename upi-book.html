@@ -47,6 +47,9 @@
         .filter-item input { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; outline: none; background: white;}
         .btn-fetch { background: black; color: white; border: none; padding: 9px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; display: flex; align-items: center; gap: 5px;}
         .btn-fetch:hover { opacity: 0.8; }
+        
+        .btn-export { background: var(--c-green); color: white; border: none; padding: 9px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; display: flex; align-items: center; gap: 5px; }
+        .btn-export:hover { opacity: 0.9; }
 
         /* Stats Grid */
         .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
@@ -67,27 +70,27 @@
         .stat-card-main .subtitle { color: var(--c-blue); }
         .stat-card-card .subtitle { color: var(--c-purple); }
 
-        /* Table Styles */
-        .table-card { background: white; border-radius: 8px; border: 1px solid var(--border-color); padding: 0; overflow: hidden; margin-bottom: 50px;}
-        .table-header-title { padding: 15px 20px; font-size: 0.9rem; font-weight: bold; color: #374151; border-bottom: 1px solid var(--border-color); display: flex; gap: 10px; align-items: center;}
+        /* Table Styles - Scrollable Container */
+        .table-card { background: white; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; margin-bottom: 50px; flex: 1;}
+        .table-header-title { padding: 15px 20px; font-size: 0.9rem; font-weight: bold; color: #374151; border-bottom: 1px solid var(--border-color); display: flex; gap: 10px; align-items: center; background: white; z-index: 20;}
         .table-header-title span { font-weight: normal; color: #6b7280; font-size: 0.8rem; }
         
-        table { width: 100%; border-collapse: collapse; text-align: left; }
-        th { padding: 15px 20px; font-size: 0.85rem; color: #6b7280; font-weight: 600; border-bottom: 1px solid var(--border-color); }
-        td { padding: 15px 20px; font-size: 0.85rem; color: #374151; border-bottom: 1px solid #f3f4f6; }
+        .table-scroll-container { flex: 1; overflow-y: auto; max-height: calc(100vh - 380px); }
+        
+        table { width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; }
+        th { padding: 15px 20px; font-size: 0.85rem; color: #6b7280; font-weight: 600; background: #f9fafb; position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 0 var(--border-color); }
+        td { padding: 15px 20px; font-size: 0.85rem; color: #374151; border-bottom: 1px solid #f3f4f6; background: white; }
         
         .col-upi { font-weight: bold; color: var(--c-blue); }
         .col-card { font-weight: bold; color: var(--c-purple); }
 
         /* Group Headers and Footers */
-        .group-header { background: #f9fafb; font-size: 0.75rem; font-weight: bold; color: #4b5563; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e5e7eb;}
-        .group-header td { padding: 10px 20px; color: #4b5563; border: none;}
+        .group-header td { background: #f9fafb; font-size: 0.75rem; font-weight: bold; color: #4b5563; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e5e7eb; padding: 10px 20px;}
         
-        .table-footer { background: #111827; font-weight: bold; color: white; font-size: 0.9rem;}
-        .table-footer td { padding: 15px 20px; color: white; border: none;}
+        .table-footer td { background: #111827; font-weight: bold; color: white; font-size: 0.9rem; position: sticky; bottom: 0; z-index: 10; border-top: 2px solid #374151; border-bottom: none;}
 
         /* Pagination Styles */
-        .pagination { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: white; border-top: 1px solid var(--border-color); }
+        .pagination { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: white; border-top: 1px solid var(--border-color); z-index: 20; }
         .pagination .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; border: 1px solid var(--border-color); background: white; font-size: 0.85rem;}
         .pagination .btn:hover { background: #f3f4f6; }
 
@@ -96,7 +99,7 @@
         .badge-repair { background: var(--c-green-light); color: var(--c-green); }
         .badge-accessories { background: #f3e8ff; color: #6b21a8; }
         
-        .no-data { text-align: center; padding: 40px; color: #9ca3af; font-size: 0.9rem; }
+        .no-data { text-align: center; padding: 40px !important; color: #9ca3af; font-size: 0.9rem; }
     </style>
 </head>
 <body>
@@ -151,6 +154,10 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 Fetch
             </button>
+            <button class="btn-export" onclick="exportToExcel()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Export
+            </button>
         </div>
     </div>
 
@@ -184,21 +191,24 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--c-blue);"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
             Digital Transactions <span id="tableDateRangeDisplay" style="margin-left:8px; font-weight:normal; color:gray;"></span>
         </div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Time (IST)</th>
-                    <th>Description</th>
-                    <th>Source</th>
-                    <th style="text-align: right;">UPI (₹)</th>
-                    <th style="text-align: right;">Card (₹)</th>
-                </tr>
-            </thead>
-            <tbody id="dataTableBody">
-                <!-- Transactions injected here -->
-            </tbody>
-        </table>
+        
+        <div class="table-scroll-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Time (IST)</th>
+                        <th>Description</th>
+                        <th>Source</th>
+                        <th style="text-align: right;">UPI (₹)</th>
+                        <th style="text-align: right;">Card (₹)</th>
+                    </tr>
+                </thead>
+                <tbody id="dataTableBody">
+                    <!-- Transactions injected here -->
+                </tbody>
+            </table>
+        </div>
         
         <!-- Pagination Section -->
         <div class="pagination">
@@ -222,7 +232,7 @@
     // Global Pagination State
     let allUpiData = [];
     let currentPage = 1;
-    const rowsPerPage = 20;
+    const rowsPerPage = 50; // Increased to 50 items so the scrollbar is fully utilized
 
     // Sidebar Hover Timers
     let sidebarTimer;
@@ -464,13 +474,47 @@
         const footerRow = document.createElement('tr');
         footerRow.className = 'table-footer';
         footerRow.innerHTML = `
-            <td colspan="4" style="text-align: right;">PERIOD TOTAL</td>
+            <td colspan="4" style="text-align: right;">PERIOD TOTAL (All Pages)</td>
             <td style="text-align: right;">${formatMoney(periodUpi)}</td>
             <td style="text-align: right;">${formatMoney(periodCard)}</td>
         `;
         tbody.appendChild(footerRow);
         
         document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(totalItems / rowsPerPage) || 1}`;
+    }
+
+    // --- Export to Excel (CSV Format) Function ---
+    window.exportToExcel = function() {
+        if (!allUpiData || allUpiData.length === 0) {
+            alert("No data available to export for the selected date range.");
+            return;
+        }
+
+        // Create CSV Header
+        let csvContent = "Date,Time,Description,Source,UPI Amount (INR),Card Amount (INR)\n";
+
+        // Append Rows
+        allUpiData.forEach(row => {
+            // Strip out any commas from descriptions to prevent column breaks
+            const safeDescription = row.description ? row.description.replace(/,/g, " ") : "";
+            csvContent += `${row.dateStr},${row.timeStr},${safeDescription},${row.source},${row.upi},${row.card}\n`;
+        });
+
+        // Trigger file download using a Blob
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        
+        const fromDate = document.getElementById('filterFromDate').value;
+        const toDate = document.getElementById('filterToDate').value;
+
+        link.setAttribute("href", url);
+        link.setAttribute("download", `UPI_Transactions_${fromDate}_to_${toDate}.csv`);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
     document.addEventListener("DOMContentLoaded", async () => {
