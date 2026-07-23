@@ -86,7 +86,7 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Date</th>
+                        <th>Date & Time</th>
                         <th>Job No.</th>
                         <th>Customer</th>
                         <th>Model / Problem</th>
@@ -115,6 +115,7 @@
     let isAdmin = false;
     
     let allDeliveredOrders = [];
+    let filteredDeliveredOrders = []; // Added for pagination search fix
     let currentPage = 1;
     const rowsPerPage = 10;
     
@@ -163,8 +164,9 @@
         if (error) return console.error(error);
         
         allDeliveredOrders = data || [];
+        filteredDeliveredOrders = [...allDeliveredOrders]; // Initialize filtered array
         currentPage = 1;
-        renderTable(allDeliveredOrders);
+        renderTable(filteredDeliveredOrders);
     }
 
     function renderTable(dataToRender) {
@@ -185,7 +187,10 @@
 
             tbody.innerHTML += `
                 <tr>
-                    <td>${order.date}</td>
+                    <td>
+                        ${order.date}<br>
+                        <span style="font-size: 0.8rem; color: #6b7280;">${order.time || ''}</span>
+                    </td>
                     <td><strong>${order.jobNo}</strong></td>
                     <td>${order.customerName}<br><small style="color:gray;">${order.contactNo}</small></td>
                     <td>${order.problemDesc || '-'}</td>
@@ -206,16 +211,27 @@
 
     window.searchTable = function() {
         const input = document.getElementById("searchInput").value.toLowerCase();
-        const filtered = allDeliveredOrders.filter(order => {
+        filteredDeliveredOrders = allDeliveredOrders.filter(order => {
             const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc} ${order.repairNotes} ${order.devicePassword}`.toLowerCase();
             return combinedString.includes(input);
         });
         currentPage = 1;
-        renderTable(filtered);
+        renderTable(filteredDeliveredOrders);
     };
 
-    window.prevPage = function() { if (currentPage > 1) { currentPage--; renderTable(allDeliveredOrders); } }
-    window.nextPage = function() { if (currentPage < Math.ceil(allDeliveredOrders.length / rowsPerPage)) { currentPage++; renderTable(allDeliveredOrders); } }
+    window.prevPage = function() { 
+        if (currentPage > 1) { 
+            currentPage--; 
+            renderTable(filteredDeliveredOrders); 
+        } 
+    }
+    
+    window.nextPage = function() { 
+        if (currentPage < Math.ceil(filteredDeliveredOrders.length / rowsPerPage)) { 
+            currentPage++; 
+            renderTable(filteredDeliveredOrders); 
+        } 
+    }
 
     window.deleteOrder = async function(id, jobNo) {
         if (!confirm(`Are you sure you want to delete Job No: ${jobNo} from records?`)) return;
