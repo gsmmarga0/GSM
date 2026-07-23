@@ -33,20 +33,22 @@
         th { padding: 15px; background: #f9fafb; font-size: 0.85rem; color: #4b5563; border-bottom: 1px solid var(--border-color); }
         td { padding: 15px; font-size: 0.9rem; border-bottom: 1px solid var(--border-color); color: #111827; }
         
-        /* Table Specific Styles */
+        /* Table Editable Styles */
         .editable-cell { cursor: pointer; display: flex; justify-content: space-between; align-items: flex-start; padding: 6px; border-radius: 4px; transition: background 0.2s; border: 1px solid transparent; }
         .editable-cell:hover { background: #f9fafb; border-color: #e5e7eb; }
         .edit-icon { font-size: 0.85rem; color: #9ca3af; margin-left: 8px; opacity: 0; transition: opacity 0.2s, color 0.2s; }
         .editable-cell:hover .edit-icon { opacity: 1; color: #2563eb; }
         
-        /* Enhanced Notification Badge */
-        .notify-wrapper { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; font-weight: bold; color: #4b5563; margin-bottom: 10px; justify-content: center; background: #f3f4f6; padding: 8px 12px; border-radius: 6px; border: 1px solid #e5e7eb; cursor: pointer; transition: all 0.3s ease;}
-        .notify-wrapper:hover { background: #e5e7eb; }
-        .notify-wrapper input { cursor: pointer; width: 14px; height: 14px; margin: 0; accent-color: #059669; }
+        /* New Notify Button Styles */
+        .btn-notify { padding: 6px 12px; border-radius: 6px; border: 1px solid #d1d5db; background: #f3f4f6; color: #4b5563; font-weight: bold; font-size: 0.75rem; cursor: pointer; transition: 0.2s; margin-bottom: 8px; width: 160px; display: flex; justify-content: center; align-items: center; gap: 5px; }
+        .btn-notify:hover:not(.locked) { background: #e5e7eb; }
         
-        /* Active Notified State */
-        .notify-wrapper.notified { background: #10b981; border-color: #059669; color: white; box-shadow: 0 3px 6px rgba(16,185,129,0.25); }
-        .notify-wrapper.notified:hover { background: #059669; }
+        /* Green Active State */
+        .btn-notify.notified { background: #10b981; color: white; border-color: #059669; box-shadow: 0 2px 5px rgba(16,185,129,0.3); }
+        .btn-notify.notified:hover:not(.locked) { background: #059669; }
+        
+        /* Locked State */
+        .btn-notify.locked { cursor: not-allowed; opacity: 0.9; }
 
         .status-btn { border: none; padding: 8px 16px; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; transition: 0.2s; width: 160px; background-color: #3b82f6;}
         .status-btn:hover { opacity: 0.85; }
@@ -249,7 +251,6 @@
     }
     async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
 
-    // Helper to escape HTML characters
     function escapeHtml(text) {
         if (!text) return '';
         const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -263,7 +264,7 @@
             .eq('status', 'Repair Completed')
             .order('created_at', { ascending: false });
 
-        if (error) return console.error(error);
+        if (error) return console.error("Error fetching orders:", error);
         
         allCompletedOrders = data || [];
         currentPage = 1; 
@@ -286,10 +287,23 @@
         paginatedItems.forEach(order => {
             const deleteBtnHtml = isAdmin ? `<button class="btn-icon" onclick="deleteOrder('${order.id}', '${order.jobNo}')" title="Delete Order">🗑️</button>` : '';
             const safeCustName = escapeHtml(order.customerName);
-            const isNotified = order.customer_notified ? true : false;
             
-            // Dynamic text and styling for the notification badge
-            const notifyText = isNotified ? '✅ Customer Notified' : 'Waiting for pickup';
+            const isNotified = order.customer_notified ? true : false;
+            let notifyBtnHtml = '';
+
+            // Generate Button based on Notification State & Admin Status
+            if (isNotified) {
+                if (isAdmin) {
+                    // Admin can click to revert
+                    notifyBtnHtml = `<button class="btn-notify notified" onclick="toggleNotify('${order.id}', false)">✅ Customer Notified</button>`;
+                } else {
+                    // Non-admin sees it locked
+                    notifyBtnHtml = `<button class="btn-notify notified locked" disabled title="Only admin can revert this">✅ Customer Notified</button>`;
+                }
+            } else {
+                // Not notified yet, anyone can click to notify
+                notifyBtnHtml = `<button class="btn-notify" onclick="toggleNotify('${order.id}', true)">🔔 Waiting for pickup</button>`;
+            }
 
             tbody.innerHTML += `
                 <tr>
@@ -303,7 +317,6 @@
                         <div style="color:#111827; font-weight:700; font-size:1rem; margin-top:3px; letter-spacing:0.5px;">${order.contactNo}</div>
                     </td>
                     
-                    <!-- Editable Problem Description -->
                     <td>
                         <div class="editable-cell" data-val="${escapeHtml(order.problemDesc)}" onclick="editField('${order.id}', 'problemDesc', this.getAttribute('data-val'), 'Model / Problem')">
                             <span>${escapeHtml(order.problemDesc) || '-'}</span>
@@ -311,7 +324,6 @@
                         </div>
                     </td>
                     
-                    <!-- Editable Password -->
                     <td>
                         <div class="editable-cell" style="color:#ef4444; font-weight:bold; letter-spacing:1px;" data-val="${escapeHtml(order.devicePassword)}" onclick="editField('${order.id}', 'devicePassword', this.getAttribute('data-val'), 'Password')">
                             <span>${escapeHtml(order.devicePassword) || '-'}</span>
@@ -319,7 +331,6 @@
                         </div>
                     </td>
                     
-                    <!-- Editable Repair Notes -->
                     <td>
                         <div class="editable-cell" data-val="${escapeHtml(order.repairNotes)}" onclick="editField('${order.id}', 'repairNotes', this.getAttribute('data-val'), 'Repair Notes')">
                             <span style="color:#4b5563;">${escapeHtml(order.repairNotes) || '-'}</span>
@@ -327,7 +338,6 @@
                         </div>
                     </td>
                     
-                    <!-- Editable Est. Bill -->
                     <td>
                         <div class="editable-cell" style="font-weight:bold; color:#059669;" data-val="${order.estimateAmount || 0}" onclick="editField('${order.id}', 'estimateAmount', this.getAttribute('data-val'), 'Est. Bill (₹)')">
                             <span>₹${order.estimateAmount || 0}</span>
@@ -336,19 +346,49 @@
                     </td>
                     
                     <td style="text-align: center;">
-                        <label class="notify-wrapper ${isNotified ? 'notified' : ''}">
-                            <input type="checkbox" onchange="confirmNotify('${order.id}', this)" ${isNotified ? 'checked' : ''}>
-                            <span>${notifyText}</span>
-                        </label>
-                        <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
-                            <button class="status-btn" onclick="openDeliveryModal('${order.id}', '${order.jobNo}', '${safeCustName}', '${order.contactNo}', '${order.estimateAmount || 0}')">Deliver Device</button>
-                            ${deleteBtnHtml}
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                            ${notifyBtnHtml}
+                            <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
+                                <button class="status-btn" onclick="openDeliveryModal('${order.id}', '${order.jobNo}', '${safeCustName}', '${order.contactNo}', '${order.estimateAmount || 0}')">Deliver Device</button>
+                                ${deleteBtnHtml}
+                            </div>
                         </div>
                     </td>
                 </tr>`;
         });
 
         document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(dataToRender.length / rowsPerPage) || 1}`;
+    }
+
+    // Toggle Notify Button Logic
+    window.toggleNotify = async function(id, setNotified) {
+        if (setNotified) {
+            // Action: Setting to Notified (Green)
+            if (confirm("Have you successfully informed the customer that their device is ready for pickup?")) {
+                try {
+                    const { error } = await supabaseClient.from('repairOrders').update({ customer_notified: true }).eq('id', id);
+                    if (error) throw error;
+                    fetchCompletedOrders(); // Refresh table to show green button
+                } catch (err) {
+                    alert("Database Error: " + err.message + "\n\n(Ensure you have created a 'customer_notified' boolean column in the repairOrders table in Supabase.)");
+                }
+            }
+        } else {
+            // Action: Reverting to Normal (Only Admin can trigger this due to UI lock, but checking here anyway)
+            if (!isAdmin) {
+                alert("Only administrators can revert this status.");
+                return;
+            }
+            if (confirm("Are you sure you want to remove the 'Customer Notified' status?")) {
+                try {
+                    const { error } = await supabaseClient.from('repairOrders').update({ customer_notified: false }).eq('id', id);
+                    if (error) throw error;
+                    fetchCompletedOrders();
+                } catch (err) {
+                    alert("Database Error: " + err.message);
+                }
+            }
+        }
     }
 
     // Edit Field Logic
@@ -369,42 +409,11 @@
             try {
                 const updateData = {};
                 updateData[fieldName] = valueToSave;
-                await supabaseClient.from('repairOrders').update(updateData).eq('id', id);
+                const { error } = await supabaseClient.from('repairOrders').update(updateData).eq('id', id);
+                if (error) throw error;
                 fetchCompletedOrders(); // Refresh table
             } catch(err) {
                 alert("Error updating field: " + err.message);
-            }
-        }
-    }
-
-    // Checkbox Notification Logic with updated prompts
-    window.confirmNotify = async function(id, checkboxElement) {
-        const isChecked = checkboxElement.checked;
-        
-        if(isChecked) {
-            if(confirm("Have you successfully informed the customer that their device is ready for pickup?")) {
-                try {
-                    await supabaseClient.from('repairOrders').update({ customer_notified: true }).eq('id', id);
-                    fetchCompletedOrders(); // Refresh to apply solid green styling and new text
-                } catch(err) {
-                    checkboxElement.checked = false;
-                    alert("Error updating status: " + err.message);
-                }
-            } else {
-                checkboxElement.checked = false; 
-            }
-        } else {
-            // Unchecking
-            if(confirm("Are you sure you want to remove the 'Customer Notified' status?")) {
-                try {
-                    await supabaseClient.from('repairOrders').update({ customer_notified: false }).eq('id', id);
-                    fetchCompletedOrders();
-                } catch(err) {
-                    checkboxElement.checked = true;
-                    alert("Error updating status: " + err.message);
-                }
-            } else {
-                checkboxElement.checked = true; 
             }
         }
     }
@@ -425,7 +434,8 @@
     window.deleteOrder = async function(id, jobNo) {
         if (!confirm(`Are you sure you want to completely delete Job No: ${jobNo}?`)) return;
         try {
-            await supabaseClient.from('repairOrders').delete().eq('id', id);
+            const { error } = await supabaseClient.from('repairOrders').delete().eq('id', id);
+            if (error) throw error;
             fetchCompletedOrders();
         } catch (err) { alert("Error deleting order: " + err.message); }
     }
@@ -503,11 +513,12 @@
 
         try {
             // Update Order Status
-            await supabaseClient.from('repairOrders').update({ 
+            const { error: updateErr } = await supabaseClient.from('repairOrders').update({ 
                 status: 'Goods Delivered', 
                 finalAmount: finalAmount, 
                 finalPaymentMethod: deliveryPaymentMode 
             }).eq('id', deliveryOrderId);
+            if (updateErr) throw updateErr;
 
             if(finalAmount > 0) {
                 const currentDate = new Date().toISOString().split('T')[0];
