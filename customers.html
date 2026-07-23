@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GSM Solution - Customers</title>
+    <link rel="icon" href="data:,">
+    
+    <style>
+        :root { --bg-color: #f4f5f7; --sidebar-width: 250px; --primary-blue: #2563eb; --border-color: #e5e7eb; }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; position: relative; }
+        
+        .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; transition: width 0.4s ease; overflow: hidden; white-space: nowrap; z-index: 40; }
+        .sidebar.collapsed { width: 0; padding-left: 0; padding-right: 0; border-right: none; }
+        .logo-area { display: flex; align-items: center; padding: 0 20px 20px 20px; font-weight: bold; font-size: 1.2rem; }
+        .logo-icon { background: black; color: white; padding: 5px 10px; border-radius: 4px; margin-right: 10px; font-size: 0.9rem; }
+        .nav-item { padding: 12px 20px; color: #4b5563 !important; text-decoration: none; display: flex; align-items: center; font-size: 0.95rem; cursor: pointer; }
+        .nav-item.active { background: black !important; color: white !important; border-radius: 0 20px 20px 0; margin-right: 20px; }
+        .nav-item:hover:not(.active) { background: #f3f4f6; }
+        .sidebar-toggle-btn { position: absolute; left: var(--sidebar-width); top: 50%; transform: translateY(-50%); background: black; color: white; width: 20px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; border-radius: 0 8px 8px 0; transition: left 0.4s ease; font-weight: bold;}
+        .sidebar-collapsed-btn { left: 0 !important; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg-color); z-index: 10; }
+        .header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
+        .header-left h1 { margin: 0; font-size: 1.5rem; }
+        .header-left p { margin: 5px 0 0 0; color: #6b7280; font-size: 0.9rem; }
+        
+        .search-bar { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; width: 300px; outline: none;}
+
+        .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; border: 1px solid var(--border-color); background: white; }
+        .btn-primary { background: black; color: white; border: none; }
+        .btn-settle { background: #10b981; color: white; border: none; font-weight: bold; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s;}
+        .btn-settle:hover { background: #059669; }
+
+        .dashboard-padding { padding: 20px 30px; }
+
+        .table-card { background: white; border-radius: 8px; border: 1px solid var(--border-color); overflow-x: auto; margin-bottom: 50px;}
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { padding: 15px; background: #f9fafb; font-size: 0.85rem; color: #4b5563; border-bottom: 1px solid var(--border-color); }
+        td { padding: 15px; font-size: 0.9rem; border-bottom: 1px solid var(--border-color); color: #111827; }
+        
+        .pagination { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: white; border-top: 1px solid var(--border-color); }
+
+        /* Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(2px); }
+        .modal-container { background: white; padding: 25px; border-radius: 12px; width: 450px; max-width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .modal-title { font-size: 1.2rem; font-weight: bold; margin: 0 0 5px 0; }
+        .modal-subtitle { font-size: 0.85rem; color: #6b7280; margin: 0 0 20px 0; padding-bottom: 15px; border-bottom: 1px solid #e5e7eb;}
+        .billing-row { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
+        .billing-row label { font-weight: bold; color: #374151; font-size: 0.9rem;}
+        .billing-row input, .billing-row select { text-align: right; width: 150px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-weight: bold; outline: none;}
+        
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .btn-confirm { padding: 10px 20px; border-radius: 6px; border: none; background: #2563eb; color: white; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar" id="sidebar" onmouseenter="clearSidebarTimer()" onmouseleave="resetSidebarTimer()">
+    <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
+    <a href="index.html" class="nav-item">⏳ Pending Orders</a>
+    <a href="repair-completed.html" class="nav-item">✅ Repair Completed</a>
+    <a href="goods-delivered.html" class="nav-item">📦 Goods Delivered</a>
+    <a href="repair-refusal.html" class="nav-item">🚫 Repair Refusal</a>
+    <a href="customers.html" class="nav-item active">👥 Customers</a>
+    <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
+    <a href="upi-book.html" class="nav-item">📖 UPI Book</a>
+    <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
+    
+    <a href="sales-report.html" class="nav-item admin-only" style="display: none;">📊 Sales Report</a>
+    <a href="expenses.html" class="nav-item admin-only" style="display: none;">💸 Expenses</a>
+    <a href="profit.html" class="nav-item admin-only" style="display: none;">📈 Profit Book</a>
+    <a href="users.html" class="nav-item admin-only" style="display: none; color: #2563eb; font-weight:bold;">👥 Manage Users</a>
+    <div style="flex-grow: 1;"></div> 
+    
+    <div class="nav-item" onclick="logOut()" style="color: black !important; font-weight: bold; cursor: pointer; border-top: 1px solid var(--border-color); padding-top: 15px; margin: 10px 20px; display: flex; justify-content: space-between; align-items: center;">
+        <span id="userNameDisplay">User</span> 
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+    </div>
+</div>    
+<div class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">⋮</div>
+
+<div class="main-content">
+    <div class="header">
+        <div class="header-left">
+            <h1>Customer Database</h1>
+            <p>Manage all customers and track credit dues</p>
+        </div>
+        <div class="header-right">
+            <input type="text" id="searchInput" class="search-bar" placeholder="🔍 Search Name or Mobile..." onkeyup="searchTable()">
+        </div>
+    </div>
+
+    <div class="dashboard-padding">
+        <div class="table-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Customer Name</th>
+                        <th>Mobile Number</th>
+                        <th>Joined Date</th>
+                        <th style="color: #ef4444;">Total Credit Due (₹)</th>
+                        <th style="text-align: center;">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="customerTableBody"></tbody>
+            </table>
+            <div class="pagination">
+                <button class="btn" onclick="prevPage()">Previous</button>
+                <span id="pageInfo" style="font-size:0.9rem; font-weight:bold;">Page 1</span>
+                <button class="btn" onclick="nextPage()">Next</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SETTLE CREDIT MODAL -->
+<div class="modal-overlay" id="modalSettle">
+    <div class="modal-container">
+        <h2 class="modal-title">Settle Credit Due</h2>
+        <p class="modal-subtitle" id="settleSubtitle">Settling dues for Customer</p>
+        
+        <div class="modal-body">
+            <div class="billing-row">
+                <label style="color: #ef4444;">Current Outstanding (₹)</label>
+                <span id="currentDueAmount" style="font-weight:bold; font-size:1.1rem; color:#ef4444;">0.00</span>
+            </div>
+            
+            <div class="billing-row" style="border-top: 1px solid #e5e7eb; padding-top: 15px;">
+                <label style="color: #059669;">Amount Settling Now (₹)</label>
+                <input type="number" id="settleAmount" placeholder="0" style="border-color: #10b981;">
+            </div>
+
+            <div class="billing-row">
+                <label>Payment Mode</label>
+                <select id="settleMode">
+                    <option value="Cash">Cash</option>
+                    <option value="UPI">UPI</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button class="btn" onclick="closeSettleModal()">Cancel</button>
+            <button class="btn-confirm" onclick="confirmSettlement()">Settle Dues</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
+    const ADMIN_EMAIL = 'faizan@gsmsolution.com';
+    let currentUserEmail = '';
+    
+    let allCustomers = [];
+    let settleCustId = null;
+    let settleCustName = '';
+    
+    let currentPage = 1;
+    const rowsPerPage = 10;
+
+    // Sidebar Logic
+    let sidebarTimer;
+    window.resetSidebarTimer = function() {
+        clearTimeout(sidebarTimer);
+        sidebarTimer = setTimeout(() => {
+            const sb = document.getElementById('sidebar');
+            const btn = document.getElementById('sidebarToggle');
+            if(sb && btn) { sb.classList.add('collapsed'); btn.classList.add('sidebar-collapsed-btn'); }
+        }, 5000);
+    }
+    window.clearSidebarTimer = function() { clearTimeout(sidebarTimer); }
+    window.toggleSidebar = function() {
+        const sb = document.getElementById('sidebar');
+        const btn = document.getElementById('sidebarToggle');
+        if(sb && btn) {
+            sb.classList.toggle('collapsed');
+            btn.classList.toggle('sidebar-collapsed-btn');
+            if(!sb.classList.contains('collapsed')) resetSidebarTimer(); else clearSidebarTimer();
+        }
+    }
+
+    async function checkAuth() {
+        const { data } = await supabaseClient.auth.getSession();
+        if (!data.session) window.location.href = 'login.html';
+        else {
+            currentUserEmail = data.session.user.email;
+            document.getElementById('userNameDisplay').innerText = currentUserEmail.split('@')[0];
+            if (currentUserEmail.toLowerCase() === ADMIN_EMAIL) {
+                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
+            }
+        }
+    }
+    async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
+
+    async function fetchCustomers() {
+        const { data, error } = await supabaseClient.from('customers').select('*').order('created_at', { ascending: false });
+        if (error) return console.error(error);
+        
+        allCustomers = data || [];
+        currentPage = 1; 
+        renderTable(allCustomers);
+    }
+
+    function renderTable(dataToRender) {
+        const tbody = document.getElementById('customerTableBody');
+        tbody.innerHTML = '';
+
+        if(dataToRender.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: gray;">No customers found.</td></tr>`;
+            document.getElementById('pageInfo').innerText = `Page 1 of 1`;
+            return;
+        }
+
+        const start = (currentPage - 1) * rowsPerPage;
+        const paginatedItems = dataToRender.slice(start, start + rowsPerPage);
+
+        paginatedItems.forEach(c => {
+            let due = parseFloat(c.credit_balance) || 0;
+            let actionHtml = due > 0 
+                ? `<button class="btn-settle" onclick="openSettleModal(${c.id}, '${c.name.replace(/'/g, "\\'")}', ${due})">Settle Due</button>` 
+                : `<span style="color:#9ca3af;">-</span>`;
+
+            let dateStr = new Date(c.created_at).toLocaleDateString('en-GB');
+
+            tbody.innerHTML += `
+                <tr>
+                    <td><strong>${c.name}</strong></td>
+                    <td>${c.mobile}</td>
+                    <td>${dateStr}</td>
+                    <td style="font-weight:bold; color: ${due > 0 ? '#ef4444' : '#111827'};">₹${due.toFixed(2)}</td>
+                    <td style="text-align: center;">${actionHtml}</td>
+                </tr>`;
+        });
+
+        document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(dataToRender.length / rowsPerPage) || 1}`;
+    }
+
+    window.searchTable = function() {
+        const input = document.getElementById("searchInput").value.toLowerCase();
+        const filtered = allCustomers.filter(c => {
+            const str = `${c.name} ${c.mobile}`.toLowerCase();
+            return str.includes(input);
+        });
+        currentPage = 1; 
+        renderTable(filtered);
+    };
+
+    window.prevPage = function() { if (currentPage > 1) { currentPage--; searchTable(); } }
+    window.nextPage = function() { if (currentPage < Math.ceil(allCustomers.length / rowsPerPage)) { currentPage++; searchTable(); } }
+
+    window.openSettleModal = function(id, name, due) {
+        settleCustId = id;
+        settleCustName = name;
+        document.getElementById('settleSubtitle').innerText = `Settling dues for: ${name}`;
+        document.getElementById('currentDueAmount').innerText = due.toFixed(2);
+        document.getElementById('settleAmount').value = due;
+        document.getElementById('modalSettle').style.display = 'flex';
+    }
+
+    window.closeSettleModal = function() {
+        document.getElementById('modalSettle').style.display = 'none';
+    }
+
+    window.confirmSettlement = async function() {
+        const amount = parseFloat(document.getElementById('settleAmount').value) || 0;
+        const currentDue = parseFloat(document.getElementById('currentDueAmount').innerText);
+        const mode = document.getElementById('settleMode').value;
+
+        if (amount <= 0 || amount > currentDue) return alert("Please enter a valid settlement amount.");
+
+        try {
+            // Update Customer Balance
+            const newBalance = currentDue - amount;
+            await supabaseClient.from('customers').update({ credit_balance: newBalance }).eq('id', settleCustId);
+
+            // Record in Ledger
+            let currentDate = new Date().toISOString().split('T')[0];
+            let desc = `Credit Settled - ${settleCustName}`;
+            
+            if (mode === 'Cash') {
+                await supabaseClient.from('cashbook_entries').insert([{
+                    description: desc, category: 'Billing', amount: amount, type: 'in', 
+                    date: currentDate, created_by: currentUserEmail
+                }]);
+            } else if (mode === 'UPI') {
+                await supabaseClient.from('upi_transactions').insert([{
+                    date: currentDate, time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' }),
+                    description: desc, source: 'Repair Payment', amount: amount, created_by: currentUserEmail
+                }]);
+            }
+
+            closeSettleModal();
+            fetchCustomers(); 
+            alert("Credit Settled Successfully!");
+        } catch (err) {
+            alert("Error settling credit: " + err.message);
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        resetSidebarTimer();
+        await checkAuth();
+        fetchCustomers();
+    });
+</script>
+</body>
+</html>
