@@ -33,16 +33,20 @@
         th { padding: 15px; background: #f9fafb; font-size: 0.85rem; color: #4b5563; border-bottom: 1px solid var(--border-color); }
         td { padding: 15px; font-size: 0.9rem; border-bottom: 1px solid var(--border-color); color: #111827; }
         
-        /* New Table Specific Styles */
+        /* Table Specific Styles */
         .editable-cell { cursor: pointer; display: flex; justify-content: space-between; align-items: flex-start; padding: 6px; border-radius: 4px; transition: background 0.2s; border: 1px solid transparent; }
         .editable-cell:hover { background: #f9fafb; border-color: #e5e7eb; }
         .edit-icon { font-size: 0.85rem; color: #9ca3af; margin-left: 8px; opacity: 0; transition: opacity 0.2s, color 0.2s; }
         .editable-cell:hover .edit-icon { opacity: 1; color: #2563eb; }
         
-        .notify-wrapper { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: bold; color: #4b5563; margin-bottom: 10px; justify-content: center; background: #f3f4f6; padding: 6px 10px; border-radius: 6px; border: 1px solid #e5e7eb; cursor: pointer; transition: 0.2s;}
+        /* Enhanced Notification Badge */
+        .notify-wrapper { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; font-weight: bold; color: #4b5563; margin-bottom: 10px; justify-content: center; background: #f3f4f6; padding: 8px 12px; border-radius: 6px; border: 1px solid #e5e7eb; cursor: pointer; transition: all 0.3s ease;}
         .notify-wrapper:hover { background: #e5e7eb; }
-        .notify-wrapper input { cursor: pointer; width: 14px; height: 14px; margin: 0; }
-        .notify-wrapper.notified { background: #dcfce7; border-color: #bbf7d0; color: #166534; }
+        .notify-wrapper input { cursor: pointer; width: 14px; height: 14px; margin: 0; accent-color: #059669; }
+        
+        /* Active Notified State */
+        .notify-wrapper.notified { background: #10b981; border-color: #059669; color: white; box-shadow: 0 3px 6px rgba(16,185,129,0.25); }
+        .notify-wrapper.notified:hover { background: #059669; }
 
         .status-btn { border: none; padding: 8px 16px; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; transition: 0.2s; width: 160px; background-color: #3b82f6;}
         .status-btn:hover { opacity: 0.85; }
@@ -245,7 +249,7 @@
     }
     async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
 
-    // Helper to escape HTML characters so data-val attributes don't break
+    // Helper to escape HTML characters
     function escapeHtml(text) {
         if (!text) return '';
         const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -283,6 +287,9 @@
             const deleteBtnHtml = isAdmin ? `<button class="btn-icon" onclick="deleteOrder('${order.id}', '${order.jobNo}')" title="Delete Order">🗑️</button>` : '';
             const safeCustName = escapeHtml(order.customerName);
             const isNotified = order.customer_notified ? true : false;
+            
+            // Dynamic text and styling for the notification badge
+            const notifyText = isNotified ? '✅ Customer Notified' : 'Waiting for pickup';
 
             tbody.innerHTML += `
                 <tr>
@@ -331,7 +338,7 @@
                     <td style="text-align: center;">
                         <label class="notify-wrapper ${isNotified ? 'notified' : ''}">
                             <input type="checkbox" onchange="confirmNotify('${order.id}', this)" ${isNotified ? 'checked' : ''}>
-                            Waiting for pickup
+                            <span>${notifyText}</span>
                         </label>
                         <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
                             <button class="status-btn" onclick="openDeliveryModal('${order.id}', '${order.jobNo}', '${safeCustName}', '${order.contactNo}', '${order.estimateAmount || 0}')">Deliver Device</button>
@@ -348,11 +355,9 @@
     window.editField = async function(id, fieldName, currentValue, label) {
         const newVal = prompt(`Update ${label}:`, currentValue);
         
-        // Check if user clicked Cancel or if value didn't change
         if (newVal !== null && newVal.trim() !== String(currentValue).trim()) {
             let valueToSave = newVal;
             
-            // Validate numbers for the bill column
             if (fieldName === 'estimateAmount') {
                 valueToSave = parseFloat(newVal);
                 if (isNaN(valueToSave)) {
@@ -372,7 +377,7 @@
         }
     }
 
-    // Checkbox Notification Logic
+    // Checkbox Notification Logic with updated prompts
     window.confirmNotify = async function(id, checkboxElement) {
         const isChecked = checkboxElement.checked;
         
@@ -380,17 +385,17 @@
             if(confirm("Have you successfully informed the customer that their device is ready for pickup?")) {
                 try {
                     await supabaseClient.from('repairOrders').update({ customer_notified: true }).eq('id', id);
-                    fetchCompletedOrders(); // Refresh to apply green styling
+                    fetchCompletedOrders(); // Refresh to apply solid green styling and new text
                 } catch(err) {
                     checkboxElement.checked = false;
                     alert("Error updating status: " + err.message);
                 }
             } else {
-                checkboxElement.checked = false; // Revert if they click cancel
+                checkboxElement.checked = false; 
             }
         } else {
             // Unchecking
-            if(confirm("Are you sure you want to remove the 'Waiting for pickup' status?")) {
+            if(confirm("Are you sure you want to remove the 'Customer Notified' status?")) {
                 try {
                     await supabaseClient.from('repairOrders').update({ customer_notified: false }).eq('id', id);
                     fetchCompletedOrders();
@@ -399,7 +404,7 @@
                     alert("Error updating status: " + err.message);
                 }
             } else {
-                checkboxElement.checked = true; // Revert
+                checkboxElement.checked = true; 
             }
         }
     }
