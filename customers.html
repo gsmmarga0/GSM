@@ -158,6 +158,7 @@
     let currentUserEmail = '';
     
     let allCustomers = [];
+    let filteredCustomers = []; // Added this array to keep track of searched vs total data
     let settleCustId = null;
     let settleCustName = '';
     
@@ -203,8 +204,9 @@
         if (error) return console.error(error);
         
         allCustomers = data || [];
+        filteredCustomers = [...allCustomers]; // Initialize with all data
         currentPage = 1; 
-        renderTable(allCustomers);
+        renderTable(filteredCustomers);
     }
 
     function renderTable(dataToRender) {
@@ -243,16 +245,28 @@
 
     window.searchTable = function() {
         const input = document.getElementById("searchInput").value.toLowerCase();
-        const filtered = allCustomers.filter(c => {
+        filteredCustomers = allCustomers.filter(c => {
             const str = `${c.name} ${c.mobile}`.toLowerCase();
             return str.includes(input);
         });
-        currentPage = 1; 
-        renderTable(filtered);
+        currentPage = 1; // Only reset page to 1 when a new search is typed
+        renderTable(filteredCustomers);
     };
 
-    window.prevPage = function() { if (currentPage > 1) { currentPage--; searchTable(); } }
-    window.nextPage = function() { if (currentPage < Math.ceil(allCustomers.length / rowsPerPage)) { currentPage++; searchTable(); } }
+    // Fixed Pagination logic
+    window.prevPage = function() { 
+        if (currentPage > 1) { 
+            currentPage--; 
+            renderTable(filteredCustomers); // Uses the filtered data instead of resetting search
+        } 
+    }
+    
+    window.nextPage = function() { 
+        if (currentPage < Math.ceil(filteredCustomers.length / rowsPerPage)) { 
+            currentPage++; 
+            renderTable(filteredCustomers); // Uses the filtered data instead of resetting search
+        } 
+    }
 
     window.openSettleModal = function(id, name, due) {
         settleCustId = id;
