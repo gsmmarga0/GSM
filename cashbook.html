@@ -6,8 +6,8 @@
     <title>GSM Solution - Cashbook</title>
     <link rel="icon" href="data:,">
     
-    <!-- HTML2PDF Library for PDF Export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- SheetJS Library for Excel Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
         :root { 
@@ -46,11 +46,11 @@
         
         .date-picker { padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: white; font-size: 0.85rem; outline: none; }
         .date-picker:focus { border-color: #9ca3af; }
-        .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; border: 1px solid var(--border-color); background: white; font-size: 0.85rem;}
+        .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; border: 1px solid var(--border-color); background: white; font-size: 0.85rem; display: flex; align-items: center; gap: 5px;}
         .btn:hover { background: #f3f4f6; }
         .btn-black { background: black; color: white; border: none; font-weight: bold;}
-        .btn-whatsapp { background: #25D366; color: white; border: none; font-weight: bold;}
-        .btn-whatsapp:hover { background: #1eb956; }
+        .btn-excel { background: #10b981; color: white; border: none; font-weight: bold;}
+        .btn-excel:hover { background: #059669; }
         
         /* Summary Cards */
         .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px; }
@@ -73,27 +73,16 @@
         .stat-card.red .stat-sub { color: var(--c-red-text); }
         .stat-card.blue .stat-sub { color: var(--c-blue-text); }
 
-        /* Accordion / Dropdown Styles */
-        .accordion-header { cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s;}
-        .accordion-header:hover { background-color: #f3f4f6; }
-        .accordion-header::after { content: '▼'; font-size: 0.8rem; transition: transform 0.3s; color: #6b7280; }
-        .accordion-header.open::after { transform: rotate(180deg); }
-        .accordion-content { display: none; }
-        .accordion-content.open { display: block; border-top: 1px solid var(--border-color); }
-
         /* Tables & Ledgers */
         .card-container { background: white; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 20px; overflow: hidden; position: relative;}
-        .card-header { padding: 15px 20px; font-weight: bold; font-size: 0.95rem; background: #f9fafb; display: flex; flex-direction: row;}
-        .card-header span { font-size: 0.75rem; color: #6b7280; font-weight: normal; margin-left: 10px; margin-top: 2px;}
+        .card-header { padding: 15px 20px; font-weight: bold; font-size: 0.95rem; background: #f9fafb; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color);}
         
-        .ledger-wrapper { position: relative; width: 100%; }
-        .table-container { width: 100%; max-height: 350px; overflow-y: auto; overflow-x: hidden; display: block; }
-
+        .ledger-wrapper { position: relative; width: 100%; overflow-x: auto;}
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
         th, td { padding: 12px 20px; text-align: left; border-bottom: 1px solid var(--border-color); }
         
-        th { color: #6b7280; font-weight: 600; position: sticky; top: 0; background: #f9fafb; z-index: 10; box-shadow: 0 1px 0 var(--border-color); }
-        .table-totals td { position: sticky; bottom: 0; background: #f9fafb; font-weight: bold; z-index: 10; border-top: 2px solid var(--border-color); box-shadow: 0 -1px 0 var(--border-color); }
+        th { color: #6b7280; font-weight: 600; background: #f9fafb;}
+        .table-totals td { background: #f9fafb; font-weight: bold; border-top: 2px solid var(--border-color); }
         
         .pill { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; display: inline-block;}
         .pill-billing { background: #dcfce7; color: #166534; }
@@ -110,12 +99,9 @@
         .admin-hidden { display: none !important; }
         .admin-col { text-align: center; width: 60px; }
 
-        /* Breakdowns */
-        .breakdown-header { padding: 15px 20px; font-weight: bold; font-size: 0.95rem; }
-        .breakdown-header.green { color: var(--c-green-text); background: #f0fdf4; }
-        .breakdown-header.red { color: var(--c-red-text); background: #fef2f2; }
-        .breakdown-wrapper { max-height: 300px; overflow-y: auto; }
-        
+        /* Pagination */
+        .pagination { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: white; }
+
         /* Complete Summary Section */
         .summary-section { background: #f3f4f6; border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; margin-bottom: 40px;}
         .summary-title { font-size: 0.85rem; font-weight: bold; color: #374151; display: flex; align-items: center; gap: 8px; margin-bottom: 15px;}
@@ -128,8 +114,10 @@
 
         /* Modal Overlay */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(2px);}
-        .modal-box { background: white; padding: 25px; border-radius: 8px; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        .modal-header { font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;}
+        .modal-box { background: white; padding: 25px; border-radius: 8px; width: 400px; max-width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .modal-box-large { width: 600px; max-width: 95%; padding: 0; overflow: hidden; display: flex; flex-direction: column; max-height: 85vh;}
+        
+        .modal-header { font-size: 1.1rem; font-weight: bold; padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #f9fafb;}
         .close-btn { cursor: pointer; font-size: 1.2rem; border: none; background: transparent; color: #6b7280; transition: 0.2s;}
         .close-btn:hover { color: red; }
         .form-group { margin-bottom: 15px; }
@@ -137,17 +125,6 @@
         .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box; outline: none;}
         .form-group input:focus, .form-group select:focus { border-color: #9ca3af; }
         .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;}
-
-        /* --- PDF Export Styles --- */
-        body.pdf-mode { height: auto; overflow: visible; background: white; }
-        body.pdf-mode .sidebar, 
-        body.pdf-mode .sidebar-toggle-btn, 
-        body.pdf-mode .action-bar, 
-        body.pdf-mode .admin-col { display: none !important; }
-        body.pdf-mode .main-content { overflow: visible; height: auto; padding: 10px 20px; background: white;}
-        body.pdf-mode .table-container, 
-        body.pdf-mode .breakdown-wrapper { max-height: none !important; overflow: visible !important; }
-        body.pdf-mode .card-container { break-inside: avoid; }
     </style>
 </head>
 <body>
@@ -183,7 +160,7 @@
 <div class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">⋮</div>
 
 <!-- Main Content -->
-<div class="main-content" id="printContent">
+<div class="main-content">
     
     <!-- Header Controls -->
     <div class="header-controls">
@@ -204,10 +181,11 @@
                 </span>
             </div>
             
-            <!-- SHARE VIA WHATSAPP BUTTON -->
-            <button class="btn btn-whatsapp" onclick="promptWhatsAppShare()">📱 Share via WhatsApp</button>
+            <!-- EXPORT EXCEL BUTTON -->
+            <button class="btn btn-excel" onclick="exportToExcel()">📊 Export Excel</button>
 
-            <button class="btn" onclick="fetchCashbook(true)">↻ Refresh</button>
+            <!-- REFRESH BUTTON (Fixed) -->
+            <button class="btn" onclick="triggerRefresh()">↻ Refresh</button>
             <button class="btn btn-black" onclick="openModal()">+ Cash Out</button>
         </div>
     </div>
@@ -231,71 +209,49 @@
         </div>
     </div>
 
-    <!-- Daily Ledger Accordion -->
+    <!-- Ledger & Breakdowns Area -->
     <div class="card-container">
-        <div class="card-header accordion-header open" onclick="toggleAccordion('ledgerContent', this)">
-            <div>Ledger <span id="ledgerSubtitle">Business day</span></div>
+        <div class="card-header">
+            <div>Ledger <span id="ledgerSubtitle" style="font-weight:normal; color:#6b7280; margin-left:10px;">Business day</span></div>
+            
+            <!-- Breakdown Buttons -->
+            <div style="display: flex; gap: 10px;">
+                <button class="btn" style="padding: 4px 10px; font-size: 0.75rem; color: #16a34a; border-color: #bbf7d0; background: #f0fdf4;" onclick="openBreakdownModal('in')">↗ View Cash In</button>
+                <button class="btn" style="padding: 4px 10px; font-size: 0.75rem; color: #dc2626; border-color: #fecaca; background: #fef2f2;" onclick="openBreakdownModal('out')">↘ View Cash Out</button>
+            </div>
         </div>
         
-        <div id="ledgerContent" class="accordion-content open">
-            <div class="ledger-wrapper">
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Date & Time</th>
-                                <th>Description</th>
-                                <th>Category / Source</th>
-                                <th>Cash In (₹)</th>
-                                <th>Cash Out (₹)</th>
-                                <th>Balance (₹)</th>
-                                <th class="admin-col admin-hidden">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="ledgerBody">
-                            <!-- Rows injected via JS -->
-                        </tbody>
-                        <tfoot class="table-totals">
-                            <tr>
-                                <td id="tfootColspan" colspan="3" style="text-align: right; font-size: 0.75rem;">TOTALS</td>
-                                <td class="text-green" id="totalCashInCol">₹0.00</td>
-                                <td class="text-red" id="totalCashOutCol">₹0.00</td>
-                                <td style="color: #2563eb;" id="totalBalanceCol">₹0.00</td>
-                                <td class="admin-col admin-hidden"></td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Cash In Breakdown Accordion -->
-    <div class="card-container">
-        <div class="breakdown-header green accordion-header" onclick="toggleAccordion('cashInContent', this)">
-            Cash In Breakdown
-        </div>
-        <div id="cashInContent" class="accordion-content">
-            <div class="breakdown-wrapper">
-                <table><tbody id="cashInBreakdownBody"></tbody></table>
-            </div>
-            <div style="padding: 15px; text-align: right; font-weight: bold; font-size: 0.85rem; background: #f0fdf4; border-top: 1px solid var(--c-green-border); z-index:2; position: relative;">
-                Total Cash In <span style="margin-left: 20px; color: var(--c-green-text);" id="bdTotalCashIn">₹0.00</span>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Cash Out Breakdown Accordion -->
-    <div class="card-container">
-        <div class="breakdown-header red accordion-header" onclick="toggleAccordion('cashOutContent', this)">
-            Cash Out Breakdown
-        </div>
-        <div id="cashOutContent" class="accordion-content">
-            <div class="breakdown-wrapper">
-                <table><tbody id="cashOutBreakdownBody"></tbody></table>
-            </div>
-            <div style="padding: 15px; text-align: center; color: #6b7280; font-size: 0.85rem; background: #f9fafb; border-top: 1px solid var(--c-red-border); z-index:2; position:relative;" id="emptyCashOutMsg">
-                No cash out entries
+        <div class="ledger-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Description</th>
+                        <th>Category / Source</th>
+                        <th>Cash In (₹)</th>
+                        <th>Cash Out (₹)</th>
+                        <th>Balance (₹)</th>
+                        <th class="admin-col admin-hidden">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="ledgerBody">
+                    <!-- Rows injected via JS -->
+                </tbody>
+                <tfoot class="table-totals">
+                    <tr>
+                        <td id="tfootColspan" colspan="3" style="text-align: right; font-size: 0.75rem;">TOTALS</td>
+                        <td class="text-green" id="totalCashInCol">₹0.00</td>
+                        <td class="text-red" id="totalCashOutCol">₹0.00</td>
+                        <td style="color: #2563eb;" id="totalBalanceCol">₹0.00</td>
+                        <td class="admin-col admin-hidden"></td>
+                    </tr>
+                </tfoot>
+            </table>
+            <!-- Pagination Section -->
+            <div class="pagination">
+                <button class="btn" onclick="prevPage()">Previous</button>
+                <span id="pageInfo" style="font-size:0.9rem; font-weight:bold;">Page 1</span>
+                <button class="btn" onclick="nextPage()">Next</button>
             </div>
         </div>
     </div>
@@ -349,8 +305,8 @@
 
 <!-- Cash Out Modal -->
 <div class="modal-overlay" id="cashOutModal">
-    <div class="modal-box">
-        <div class="modal-header">
+    <div class="modal-box" style="padding: 25px;">
+        <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
             Record Cash Out
             <button class="close-btn" onclick="closeModal()">×</button>
         </div>
@@ -379,6 +335,34 @@
     </div>
 </div>
 
+<!-- Breakdown Dialog Box (Replaces Accordions) -->
+<div class="modal-overlay" id="breakdownModal">
+    <div class="modal-box modal-box-large">
+        <div class="modal-header">
+            <span id="breakdownTitle">Breakdown</span>
+            <button class="close-btn" onclick="closeBreakdownModal()">×</button>
+        </div>
+        <div style="flex: 1; overflow-y: auto; padding: 0;">
+            <table style="width: 100%; border-collapse: collapse; margin: 0;">
+                <thead style="position: sticky; top: 0; z-index: 5;">
+                    <tr>
+                        <th style="padding: 15px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">Date</th>
+                        <th style="padding: 15px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">Description</th>
+                        <th style="padding: 15px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; text-align: right;">Amount (₹)</th>
+                        <th style="padding: 15px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; text-align: center;" class="admin-col admin-hidden">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="breakdownTableBody">
+                    <!-- Dynamic breakdown rows injected here -->
+                </tbody>
+            </table>
+        </div>
+        <div style="padding: 20px; text-align: right; background: #f9fafb; border-top: 1px solid #e5e7eb; font-size: 1.1rem; font-weight: bold;">
+            Total: <span id="breakdownTotalAmount">₹0.00</span>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
     const db = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
@@ -389,6 +373,11 @@
     // Cache to hold db data for fast filtering
     let currentMode = 'Daily';
     let allEntries = []; 
+    let filteredEntries = [];
+    
+    // Pagination state
+    let currentPage = 1;
+    const rowsPerPage = 10;
 
     // --- Sidebar Logic ---
     let sidebarTimer;
@@ -416,13 +405,6 @@
         }
     }
 
-    // --- Accordion Logic ---
-    window.toggleAccordion = function(contentId, headerEl) {
-        const content = document.getElementById(contentId);
-        content.classList.toggle('open');
-        headerEl.classList.toggle('open');
-    }
-
     // --- Auth Check ---
     async function checkAuth() {
         const { data } = await db.auth.getSession();
@@ -433,12 +415,9 @@
             let displayEmail = currentUserEmail.split('@')[0];
             document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
             
-            // Handle Admin Roles
             if (currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase()) {
                 isAdmin = true;
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
-                
-                // Show Admin Columns & Sections
                 document.querySelectorAll('.admin-col').forEach(el => el.classList.remove('admin-hidden'));
                 const summarySection = document.getElementById('adminSummarySection');
                 if (summarySection) summarySection.style.display = 'block';
@@ -446,15 +425,6 @@
         }
     }
     window.logOut = async () => { await db.auth.signOut(); window.location.href = 'login.html'; }
-
-    // --- Modal Logic ---
-    window.openModal = () => document.getElementById('cashOutModal').style.display = 'flex';
-    window.closeModal = () => {
-        document.getElementById('cashOutModal').style.display = 'none';
-        document.getElementById('outDesc').value = '';
-        document.getElementById('outAmount').value = '';
-        document.getElementById('outCategory').value = 'General';
-    };
 
     // --- Formatting Utils ---
     const formatCurr = (num) => '₹' + parseFloat(num || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -464,7 +434,7 @@
     };
     const formatDateObj = (dateStr) => {
         const d = new Date(dateStr);
-        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     };
 
     // --- View Mode Toggle ---
@@ -492,31 +462,28 @@
         fetchCashbook(false);
     };
 
-    // --- Main Fetch & Render Logic ---
+    // --- Data Fetch & Processing Logic ---
+    window.triggerRefresh = function() {
+        currentPage = 1;
+        fetchCashbook(true);
+    }
+
     window.fetchCashbook = async function(forceRefresh = false) {
         try {
             if (forceRefresh || allEntries.length === 0) {
                 const { data, error } = await db.from('cashbook_entries').select('*').order('created_at', { ascending: true });
                 if (error) {
-                    console.warn("Table cashbook_entries might not exist or error occurred.", error.message);
+                    console.warn("Error loading entries.", error.message);
                     return;
                 }
                 allEntries = data || [];
             }
 
-            let lifeIn = 0; let lifeOut = 0;
-            let lifeBilling = 0; let lifeAccessories = 0; let lifeAdvances = 0; 
-            let lifeStore = 0; let lifeManual = 0;
-            
-            let periodIn = 0; let periodOut = 0;
-            let periodInCount = 0; let periodOutCount = 0;
-            
-            const ledgerHtml = [];
-            const cashInHtml = [];
-            const cashOutHtml = [];
-            
+            let lifeIn = 0, lifeOut = 0;
+            let lifeBilling = 0, lifeAccessories = 0, lifeAdvances = 0; 
+            let lifeStore = 0, lifeManual = 0;
             let runningBalance = 0;
-
+            
             let targetDate, fromDate, toDate;
             let subtitleText = '';
             
@@ -529,22 +496,17 @@
                 subtitleText = `Period: ${fromDate || 'Start'} to ${toDate || 'End'}`;
             }
             
-            const ledgerSubtitleEl = document.getElementById('ledgerSubtitle');
-            if (ledgerSubtitleEl) {
-                ledgerSubtitleEl.innerText = subtitleText;
-            }
+            document.getElementById('ledgerSubtitle').innerText = subtitleText;
+
+            filteredEntries = [];
+            let periodIn = 0, periodOut = 0;
+            let periodInCount = 0, periodOutCount = 0;
 
             allEntries.forEach(row => {
                 const rowDate = row.date || new Date(row.created_at).toISOString().split('T')[0];
                 const amt = parseFloat(row.amount) || 0;
 
-                let isVisible = false;
-                if (currentMode === 'Daily') {
-                    isVisible = (rowDate === targetDate);
-                } else {
-                    isVisible = (!fromDate || rowDate >= fromDate) && (!toDate || rowDate <= toDate);
-                }
-
+                // Lifetime totals & Sequential Running Balance
                 if (row.type === 'in') {
                     lifeIn += amt;
                     runningBalance += amt;
@@ -558,84 +520,57 @@
                     else lifeManual += amt;
                 }
 
+                // Tag rows with their computed balance and pure date
+                row.calculatedBalance = runningBalance;
+                row.rowDate = rowDate;
+
+                // Check Visibility based on current mode
+                let isVisible = false;
+                if (currentMode === 'Daily') {
+                    isVisible = (rowDate === targetDate);
+                } else {
+                    isVisible = (!fromDate || rowDate >= fromDate) && (!toDate || rowDate <= toDate);
+                }
+
                 if (isVisible) {
-                    let pillClass = 'pill-general';
-                    if(row.category === 'Billing' || row.category === 'Repair Sales' || row.category === 'Advances') pillClass = 'pill-billing';
-                    if(row.category === 'Accessories') pillClass = 'pill-accessories';
-                    if(row.type === 'out') pillClass = 'pill-admin';
-
-                    // Admin Delete Action for Cash Out Entries
-                    let deleteBtn = '';
-                    if (isAdmin && row.type === 'out') {
-                        deleteBtn = `<button class="action-delete" onclick="deleteCashOut('${row.id}')" title="Delete Cash Out Entry">🗑️</button>`;
-                    }
-
-                    const rowHtml = `
-                        <tr>
-                            <td>
-                                <div>${formatDateObj(row.date || row.created_at)}</div>
-                                <div style="font-size:0.75rem; color:#9ca3af;">${formatTime(row.created_at)}</div>
-                            </td>
-                            <td>${row.description}</td>
-                            <td><span class="pill ${pillClass}">${row.category}</span></td>
-                            <td class="${row.type === 'in' ? 'text-green' : ''}">${row.type === 'in' ? formatCurr(amt) : '—'}</td>
-                            <td class="${row.type === 'out' ? 'text-red' : ''}">${row.type === 'out' ? formatCurr(amt) : '—'}</td>
-                            <td style="font-weight:bold;">${formatCurr(runningBalance)}</td>
-                            <td class="admin-col ${isAdmin ? '' : 'admin-hidden'}" style="text-align:center;">${deleteBtn}</td>
-                        </tr>
-                    `;
-                    ledgerHtml.push(rowHtml);
-
+                    // Push to top (unshift) so latest is top, or you can keep ascending order and reverse later. 
+                    // Usually ledgers show oldest at top or newest at top. Let's push to front so newest is at the top of the table.
+                    filteredEntries.unshift(row);
+                    
                     if (row.type === 'in') {
                         periodIn += amt;
                         periodInCount++;
-                        cashInHtml.push(`
-                            <tr>
-                                <td style="width: 25%; color: #6b7280;">${formatDateObj(rowDate)}</td>
-                                <td style="width: 55%;">${row.description}</td>
-                                <td style="width: 20%; text-align: right;" class="text-green">${formatCurr(amt)}</td>
-                            </tr>
-                        `);
                     } else {
                         periodOut += amt;
                         periodOutCount++;
-                        cashOutHtml.push(`
-                            <tr>
-                                <td style="width: 20%; color: #6b7280;">${formatDateObj(rowDate)}</td>
-                                <td style="width: 55%;">${row.description}</td>
-                                <td style="width: 15%; text-align: right;" class="text-red">${formatCurr(amt)}</td>
-                                <td class="admin-col ${isAdmin ? '' : 'admin-hidden'}" style="width: 10%; text-align:right;">${deleteBtn}</td>
-                            </tr>
-                        `);
                     }
                 }
             });
 
-            // Update DOM - Top Cards
+            // Update Top Cards
             document.getElementById('dailyCashIn').innerText = formatCurr(periodIn);
             document.getElementById('cashInCount').innerText = `${periodInCount} transactions`;
             document.getElementById('dailyCashOut').innerText = formatCurr(periodOut);
             document.getElementById('cashOutCount').innerText = `${periodOutCount} transactions`;
-            document.getElementById('dailyClosing').innerText = formatCurr(runningBalance);
-
-            // Update DOM - Ledger Table
-            document.getElementById('ledgerBody').innerHTML = ledgerHtml.join('') || '<tr><td colspan="7" style="text-align:center; padding: 30px; color: #6b7280;">No transactions found for this date range.</td></tr>';
-            document.getElementById('totalCashInCol').innerText = formatCurr(periodIn);
-            document.getElementById('totalCashOutCol').innerText = formatCurr(periodOut);
-            document.getElementById('totalBalanceCol').innerText = formatCurr(runningBalance);
-
-            // Update DOM - Breakdowns
-            document.getElementById('cashInBreakdownBody').innerHTML = cashInHtml.join('');
-            document.getElementById('bdTotalCashIn').innerText = formatCurr(periodIn);
             
-            document.getElementById('cashOutBreakdownBody').innerHTML = cashOutHtml.join('');
-            if(periodOutCount > 0) {
-                document.getElementById('emptyCashOutMsg').innerHTML = `Total Cash Out <span style="margin-left: 20px; color: var(--c-red-text); font-weight:bold; font-size:1rem;">${formatCurr(periodOut)}</span>`;
+            // Closing balance should be the final running balance of the LAST entry visible on that day, or just current runningBalance if today
+            // If the filtered array has items, the newest item is at index 0 (since we unshifted). Its calculatedBalance is the closing balance for that period.
+            if(filteredEntries.length > 0) {
+                document.getElementById('dailyClosing').innerText = formatCurr(filteredEntries[0].calculatedBalance);
             } else {
-                document.getElementById('emptyCashOutMsg').innerHTML = `No cash out entries`;
+                document.getElementById('dailyClosing').innerText = "₹0.00";
             }
 
-            // Update DOM - Lifetime Summary
+            // Update Table Totals
+            document.getElementById('totalCashInCol').innerText = formatCurr(periodIn);
+            document.getElementById('totalCashOutCol').innerText = formatCurr(periodOut);
+            if(filteredEntries.length > 0) {
+                document.getElementById('totalBalanceCol').innerText = formatCurr(filteredEntries[0].calculatedBalance);
+            } else {
+                document.getElementById('totalBalanceCol').innerText = "₹0.00";
+            }
+
+            // Lifetime Summary Update
             document.getElementById('lifeTotalIn').innerText = formatCurr(lifeIn);
             document.getElementById('lifeTotalOut').innerText = formatCurr(lifeOut);
             document.getElementById('lifeNet').innerText = formatCurr(lifeIn - lifeOut);
@@ -645,79 +580,148 @@
             document.getElementById('lifeStore').innerText = formatCurr(lifeStore);
             document.getElementById('lifeManual').innerText = formatCurr(lifeManual);
 
+            renderLedgerTable();
+
         } catch(e) { console.error("Error formatting cashbook: ", e); }
     }
 
-    // --- Prompt WhatsApp Share with Number Input ---
-    window.promptWhatsAppShare = async function() {
-        let phoneNum = prompt("Enter WhatsApp contact number (with country code, e.g. 919876543210):");
-        if (!phoneNum) return; // Cancelled
+    // --- Ledger Rendering & Pagination ---
+    function renderLedgerTable() {
+        const tbody = document.getElementById('ledgerBody');
+        tbody.innerHTML = '';
 
-        // Clean phone number (remove spaces, symbols)
-        phoneNum = phoneNum.replace(/\D/g, '');
+        if(filteredEntries.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 30px; color: #6b7280;">No transactions found for this date range.</td></tr>`;
+            document.getElementById('pageInfo').innerText = `Page 1 of 1`;
+            return;
+        }
 
-        // Prepare UI for clean PDF generation
-        document.body.classList.add('pdf-mode');
-        document.querySelectorAll('.accordion-content').forEach(el => el.classList.add('open'));
-        document.querySelectorAll('.accordion-header').forEach(el => el.classList.add('open'));
+        const start = (currentPage - 1) * rowsPerPage;
+        const paginated = filteredEntries.slice(start, start + rowsPerPage);
 
-        const element = document.getElementById('printContent');
-        const filename = `GSM_Cashbook_${currentMode}_${new Date().toISOString().split('T')[0]}.pdf`;
+        paginated.forEach(row => {
+            let pillClass = 'pill-general';
+            if(row.category === 'Billing' || row.category === 'Repair Sales' || row.category === 'Advances') pillClass = 'pill-billing';
+            if(row.category === 'Accessories') pillClass = 'pill-accessories';
+            if(row.type === 'out') pillClass = 'pill-admin';
 
-        const opt = {
-            margin:       0.3,
-            filename:     filename,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true, windowWidth: 1200 },
-            jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-        };
-
-        try {
-            // Generate PDF Blob
-            const pdfBlob = await html2pdf().set(opt).from(element).outputPdf('blob');
-            const file = new File([pdfBlob], filename, { type: 'application/pdf' });
-
-            let sharedSuccessfully = false;
-
-            // Try Web Share API with files if supported (e.g. Mobile phones, Safari)
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                try {
-                    await navigator.share({
-                        title: 'GSM Cashbook Report',
-                        text: `Here is the Cashbook report (${currentMode}).`,
-                        files: [file]
-                    });
-                    sharedSuccessfully = true;
-                } catch (shareErr) {
-                    console.log("User cancelled share or API error:", shareErr);
-                }
+            let deleteBtn = '';
+            if (isAdmin && row.type === 'out') {
+                deleteBtn = `<button class="action-delete" onclick="deleteCashOut('${row.id}')" title="Delete Entry">🗑️</button>`;
             }
 
-            // Fallback or secondary step: Trigger automatic download + open WhatsApp Web with prefilled text
-            if (!sharedSuccessfully) {
-                // Download file locally so they can attach it easily
-                html2pdf().set(opt).from(element).save();
-            }
+            tbody.innerHTML += `
+                <tr>
+                    <td>
+                        <div>${formatDateObj(row.rowDate)}</div>
+                        <div style="font-size:0.75rem; color:#9ca3af;">${formatTime(row.created_at)}</div>
+                    </td>
+                    <td>${row.description}</td>
+                    <td><span class="pill ${pillClass}">${row.category}</span></td>
+                    <td class="${row.type === 'in' ? 'text-green' : ''}">${row.type === 'in' ? formatCurr(row.amount) : '—'}</td>
+                    <td class="${row.type === 'out' ? 'text-red' : ''}">${row.type === 'out' ? formatCurr(row.amount) : '—'}</td>
+                    <td style="font-weight:bold;">${formatCurr(row.calculatedBalance)}</td>
+                    <td class="admin-col ${isAdmin ? '' : 'admin-hidden'}" style="text-align:center;">${deleteBtn}</td>
+                </tr>
+            `;
+        });
 
-            // Open WhatsApp chat directly with the specified number
-            const message = encodeURIComponent(`Hello, here is the Cashbook report (${currentMode}) from GSM Solutions.`);
-            const whatsappUrl = `https://wa.me/${phoneNum}?text=${message}`;
-            window.open(whatsappUrl, '_blank');
+        document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(filteredEntries.length / rowsPerPage) || 1}`;
+    }
 
-            if(!sharedSuccessfully) {
-                alert("PDF file downloaded! Your WhatsApp chat has opened. Please attach the downloaded PDF file to send it.");
-            }
-
-        } catch(err) {
-            console.error("PDF WhatsApp generation error:", err);
-            alert("An error occurred while generating the PDF report.");
-        } finally {
-            // Restore UI to standard view
-            document.body.classList.remove('pdf-mode');
+    window.prevPage = function() {
+        if (currentPage > 1) {
+            currentPage--;
+            renderLedgerTable();
+        }
+    }
+    
+    window.nextPage = function() {
+        if (currentPage < Math.ceil(filteredEntries.length / rowsPerPage)) {
+            currentPage++;
+            renderLedgerTable();
         }
     }
 
-    // --- Save Cash Out ---
+    // --- Breakdowns via Modals ---
+    window.openBreakdownModal = function(type) {
+        const tbody = document.getElementById('breakdownTableBody');
+        tbody.innerHTML = '';
+        
+        const items = filteredEntries.filter(e => e.type === type);
+        let total = 0;
+
+        document.getElementById('breakdownTitle').innerText = type === 'in' ? '📈 Cash In Breakdown' : '📉 Cash Out Breakdown';
+        
+        if(items.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:30px; color:#6b7280;">No entries found for this category.</td></tr>`;
+        } else {
+            items.forEach(item => {
+                total += parseFloat(item.amount) || 0;
+                
+                let delBtn = '';
+                if(isAdmin && type === 'out') {
+                    delBtn = `<button class="action-delete" onclick="deleteCashOut('${item.id}'); closeBreakdownModal();" title="Delete">🗑️</button>`;
+                }
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="padding:15px 20px; border-bottom:1px solid #e5e7eb;">${formatDateObj(item.rowDate)}</td>
+                        <td style="padding:15px 20px; border-bottom:1px solid #e5e7eb;">
+                            <span style="display:block;">${item.description}</span>
+                            <span style="font-size:0.75rem; color:gray;">${item.category}</span>
+                        </td>
+                        <td style="padding:15px 20px; border-bottom:1px solid #e5e7eb; text-align:right; font-weight:bold;" class="${type === 'in' ? 'text-green' : 'text-red'}">${formatCurr(item.amount)}</td>
+                        <td style="padding:15px 20px; border-bottom:1px solid #e5e7eb; text-align:center;" class="admin-col ${isAdmin ? '' : 'admin-hidden'}">${delBtn}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        const totEl = document.getElementById('breakdownTotalAmount');
+        totEl.innerText = formatCurr(total);
+        totEl.className = type === 'in' ? 'text-green' : 'text-red';
+
+        document.getElementById('breakdownModal').style.display = 'flex';
+    }
+
+    window.closeBreakdownModal = function() {
+        document.getElementById('breakdownModal').style.display = 'none';
+    }
+
+    // --- Export to Excel ---
+    window.exportToExcel = function() {
+        if(filteredEntries.length === 0) return alert("No data to export for this period.");
+
+        // Create clean export dataset based on visible filteredEntries
+        const exportData = filteredEntries.map(row => ({
+            "Date": row.rowDate,
+            "Time": new Date(row.created_at).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'}),
+            "Description": row.description,
+            "Category": row.category,
+            "Cash In": row.type === 'in' ? parseFloat(row.amount) : 0,
+            "Cash Out": row.type === 'out' ? parseFloat(row.amount) : 0,
+            "Running Balance": parseFloat(row.calculatedBalance)
+        }));
+
+        // Convert to SheetJS Workbook
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Cashbook");
+
+        // Download File
+        XLSX.writeFile(workbook, `GSM_Cashbook_${currentMode}_${new Date().getTime()}.xlsx`);
+    }
+
+    // --- Cash Out Modal ---
+    window.openModal = () => document.getElementById('cashOutModal').style.display = 'flex';
+    window.closeModal = () => {
+        document.getElementById('cashOutModal').style.display = 'none';
+        document.getElementById('outDesc').value = '';
+        document.getElementById('outAmount').value = '';
+        document.getElementById('outCategory').value = 'General';
+    };
+
     window.saveCashOut = async function() {
         const desc = document.getElementById('outDesc').value.trim();
         const category = document.getElementById('outCategory').value;
@@ -740,13 +744,12 @@
             const { error } = await db.from('cashbook_entries').insert([entry]);
             if(error) throw error;
             closeModal();
-            fetchCashbook(true); 
+            triggerRefresh(); 
         } catch(e) {
             alert("Error saving: " + e.message);
         }
     }
 
-    // --- Delete Cash Out (Admin Only) ---
     window.deleteCashOut = async function(id) {
         if (!isAdmin) return alert("Unauthorized. Admins only.");
         if (!confirm("Are you sure you want to delete this cash out entry? This will affect your total balance.")) return;
@@ -754,7 +757,7 @@
         try {
             const { error } = await db.from('cashbook_entries').delete().eq('id', id);
             if (error) throw error;
-            fetchCashbook(true); // Force refresh to update calculations
+            triggerRefresh(); // Force refresh to update calculations
         } catch (e) {
             alert("Error deleting entry: " + e.message);
         }
