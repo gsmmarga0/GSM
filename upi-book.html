@@ -34,7 +34,6 @@
 
         .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg-color); z-index: 10; padding: 20px 30px;}
         
-        /* Top Navigation Date */
         .top-nav-date { text-align: right; font-size: 0.85rem; color: #6b7280; font-weight: 500; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
 
         /* Header & Filters */
@@ -70,7 +69,6 @@
         /* Table Styles */
         .table-card { background: white; border-radius: 8px; border: 1px solid var(--border-color); padding: 0; overflow: hidden; margin-bottom: 50px;}
         .table-header-title { padding: 15px 20px; font-size: 0.9rem; font-weight: bold; color: #374151; border-bottom: 1px solid var(--border-color); display: flex; gap: 10px; align-items: center;}
-        .table-header-title span { font-weight: normal; color: #6b7280; font-size: 0.8rem; }
         
         table { width: 100%; border-collapse: collapse; text-align: left; }
         th { padding: 15px 20px; font-size: 0.85rem; color: #6b7280; font-weight: 600; border-bottom: 1px solid var(--border-color); }
@@ -79,14 +77,12 @@
         .col-upi { font-weight: bold; color: var(--c-blue); }
         .col-card { font-weight: bold; color: var(--c-purple); }
 
-        /* Group Headers and Footers */
         .group-header { background: #f9fafb; font-size: 0.75rem; font-weight: bold; color: #4b5563; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e5e7eb;}
         .group-header td { padding: 10px 20px; color: #4b5563; border: none;}
         
         .table-footer { background: #111827; font-weight: bold; color: white; font-size: 0.9rem;}
         .table-footer td { padding: 15px 20px; color: white; border: none;}
 
-        /* Badges */
         .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: inline-block;}
         .badge-repair { background: var(--c-green-light); color: var(--c-green); }
         .badge-accessories { background: #f3e8ff; color: #6b21a8; }
@@ -113,7 +109,6 @@
     <a href="users.html" class="nav-item admin-only" style="display: none; color: #2563eb; font-weight:bold;">👥 Manage Users</a>
     <div style="flex-grow: 1;"></div> 
     
-    <!-- Redesigned Logout -->
     <div class="nav-item" onclick="logOut()" style="color: black !important; font-weight: bold; cursor: pointer; border-top: 1px solid var(--border-color); padding-top: 15px; margin: 10px 20px; display: flex; justify-content: space-between; align-items: center;">
         <span id="userNameDisplay">User</span> 
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -150,7 +145,6 @@
         </div>
     </div>
 
-    <!-- Stats Grid -->
     <div class="stats-grid">
         <div class="stat-card stat-card-main">
             <h3>Total UPI Received</h3>
@@ -174,11 +168,10 @@
         </div>
     </div>
 
-    <!-- Table Card -->
     <div class="table-card">
         <div class="table-header-title">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--c-blue);"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
-            Digital Transactions <span id="tableDateRangeDisplay"></span>
+            Digital Transactions <span id="tableDateRangeDisplay" style="margin-left:8px; font-weight:normal; color:gray;"></span>
         </div>
         <table>
             <thead>
@@ -200,11 +193,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    // Project Specific Supabase Configuration
-    const supabaseUrl = 'https://cvxjvicpefggheiojmtn.supabase.co';
-    const supabaseKey = 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I';
-    const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-
+    const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
     const ADMIN_EMAIL = 'faizan@gsmsolution.com'; 
     let currentUserEmail = '';
 
@@ -215,22 +204,17 @@
         sidebarTimer = setTimeout(() => {
             const sb = document.getElementById('sidebar');
             const btn = document.getElementById('sidebarToggle');
-            if(sb && btn) {
-                sb.classList.add('collapsed');
-                btn.classList.add('sidebar-collapsed-btn');
-            }
+            if(sb && btn) { sb.classList.add('collapsed'); btn.classList.add('sidebar-collapsed-btn'); }
         }, 5000);
     }
     window.clearSidebarTimer = function() { clearTimeout(sidebarTimer); }
-
     window.toggleSidebar = function() {
         const sb = document.getElementById('sidebar');
         const btn = document.getElementById('sidebarToggle');
         if(sb && btn) {
             sb.classList.toggle('collapsed');
             btn.classList.toggle('sidebar-collapsed-btn');
-            if(!sb.classList.contains('collapsed')) resetSidebarTimer();
-            else clearSidebarTimer();
+            if(!sb.classList.contains('collapsed')) resetSidebarTimer(); else clearSidebarTimer();
         }
     }
 
@@ -251,7 +235,6 @@
             let displayEmail = currentUserEmail.split('@')[0];
             document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
             
-            // Show Admin Tabs
             if (currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase()) {
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
             }
@@ -272,7 +255,6 @@
         return 'badge-accessories';
     }
 
-    // FETCH DYNAMICALLY FROM REPAIRS AND ACCESSORIES TABLES (Including Split UPI)
     window.fetchMappedData = async function() {
         const fromDate = document.getElementById('filterFromDate').value;
         const toDate = document.getElementById('filterToDate').value;
@@ -282,33 +264,32 @@
 
         try {
             // 1. Fetch from upi_transactions ledger directly
-            // This captures pure UPI payments, Split UPI payments, and Settled Credit via UPI
-            const { data: upiLedger } = await supabaseClient
-                .from('upi_transactions')
-                .select('*');
+            const { data: upiLedger } = await supabaseClient.from('upi_transactions').select('*');
 
             upiLedger?.forEach(u => {
                 let amt = parseFloat(u.amount) || 0;
-                let timestamp = u.created_at;
-                let dateStr = u.date || new Date(timestamp).toISOString().split('T')[0];
+                let timestamp = u.created_at || null;
+                
+                // Fortified Date Construction to prevent Invalid Date crashes
+                let parseDate = u.date || (timestamp ? timestamp.split('T')[0] : '1970-01-01');
+                let parseTime = u.time || '00:00:00';
+                
+                let dateObj = timestamp ? new Date(timestamp) : new Date(`${parseDate}T${parseTime}`);
+                if (isNaN(dateObj.getTime())) dateObj = new Date(); 
 
                 unifiedData.push({
-                    dateObj: new Date(timestamp),
-                    dateStr: dateStr,
-                    timeStr: u.time || new Date(timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' }),
-                    description: u.description,
+                    dateObj: dateObj,
+                    dateStr: parseDate,
+                    timeStr: u.time || (timestamp ? new Date(timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' }) : '00:00'),
+                    description: u.description || 'UPI Payment',
                     source: u.source || 'Repair Payment',
                     upi: amt,
                     card: 0
                 });
             });
 
-            // 2. Fetch Accessories Invoices (Paid via pure UPI or Card)
-            // (Note: Split accessories payments, if implemented later via upi_transactions, will be caught above)
-            const { data: accessories } = await supabaseClient
-                .from('accessories_invoices')
-                .select('*')
-                .in('payment_mode', ['UPI', 'Card']);
+            // 2. Fetch Accessories Invoices
+            const { data: accessories } = await supabaseClient.from('accessories_invoices').select('*').in('payment_mode', ['UPI', 'Card']);
 
             accessories?.forEach(a => {
                 let amt = parseFloat(a.total_amt) || 0;
@@ -316,9 +297,11 @@
                 let card = a.payment_mode === 'Card' ? amt : 0;
                 
                 let dateStr = a.date || new Date(a.created_at).toISOString().split('T')[0];
+                let dateObj = new Date(a.created_at || a.date);
+                if (isNaN(dateObj.getTime())) dateObj = new Date();
 
                 unifiedData.push({
-                    dateObj: new Date(a.created_at || a.date),
+                    dateObj: dateObj,
                     dateStr: dateStr,
                     timeStr: new Date(a.created_at).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' }),
                     description: `Acc. Invoice #${a.invoice_no} (${a.customer_name})`,
@@ -343,22 +326,11 @@
     }
 
     function calculateStats(data) {
-        let totals = {
-            upiAmount: 0, upiCount: 0,
-            cardAmount: 0, cardCount: 0,
-            repairTotal: 0,
-            accessoriesTotal: 0
-        };
+        let totals = { upiAmount: 0, upiCount: 0, cardAmount: 0, cardCount: 0, repairTotal: 0, accessoriesTotal: 0 };
 
         data.forEach(item => {
-            if (item.upi > 0) {
-                totals.upiAmount += item.upi;
-                totals.upiCount += 1;
-            }
-            if (item.card > 0) {
-                totals.cardAmount += item.card;
-                totals.cardCount += 1;
-            }
+            if (item.upi > 0) { totals.upiAmount += item.upi; totals.upiCount += 1; }
+            if (item.card > 0) { totals.cardAmount += item.card; totals.cardCount += 1; }
 
             let rowTotal = item.upi + item.card;
             if (item.source === 'Repair Payment' || item.source === 'Advance Towards Repair') {
@@ -370,10 +342,8 @@
 
         document.getElementById('statTotalUPI').innerText = formatMoney(totals.upiAmount);
         document.getElementById('statCountUPI').innerText = `${totals.upiCount} transactions`;
-
         document.getElementById('statTotalCard').innerText = formatMoney(totals.cardAmount);
         document.getElementById('statCountCard').innerText = `${totals.cardCount} transactions`;
-
         document.getElementById('statRepairAmount').innerText = formatMoney(totals.repairTotal);
         document.getElementById('statAccessoriesAmount').innerText = formatMoney(totals.accessoriesTotal);
     }
@@ -387,25 +357,18 @@
             return;
         }
 
-        // Group by Date for headers
         const groupedData = {};
         data.forEach(item => {
             if (!groupedData[item.dateStr]) groupedData[item.dateStr] = [];
             groupedData[item.dateStr].push(item);
         });
 
-        let grandUpi = 0;
-        let grandCard = 0;
+        let grandUpi = 0; let grandCard = 0;
 
         for (const [dateStr, transactions] of Object.entries(groupedData)) {
             let dayUpi = 0, dayCard = 0;
+            transactions.forEach(t => { dayUpi += t.upi; dayCard += t.card; });
 
-            transactions.forEach(t => {
-                dayUpi += t.upi;
-                dayCard += t.card;
-            });
-
-            // Create Day Header
             const dateObj = new Date(dateStr);
             const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
             
@@ -418,11 +381,8 @@
             `;
             tbody.appendChild(headerRow);
 
-            // Create Rows
             transactions.forEach(item => {
-                grandUpi += item.upi;
-                grandCard += item.card;
-
+                grandUpi += item.upi; grandCard += item.card;
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${item.dateStr}</td>
@@ -436,7 +396,6 @@
             });
         }
 
-        // Create Footer for Period Total
         const footerRow = document.createElement('tr');
         footerRow.className = 'table-footer';
         footerRow.innerHTML = `
@@ -447,7 +406,6 @@
         tbody.appendChild(footerRow);
     }
 
-    // Initialize App
     document.addEventListener("DOMContentLoaded", async () => {
         await checkAuth();
         resetSidebarTimer();
