@@ -100,7 +100,9 @@
     <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
     <a href="index.html" class="nav-item">⏳ Pending Orders</a>
     <a href="repair-completed.html" class="nav-item">✅ Repair Completed</a>
+    <a href="goods-delivered.html" class="nav-item">📦 Goods Delivered</a>
     <a href="repair-refusal.html" class="nav-item">🚫 Repair Refusal</a>
+    <a href="customers.html" class="nav-item">👥 Customers</a>
     <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
     <a href="upi-book.html" class="nav-item active">📖 UPI Book</a>
     <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
@@ -198,7 +200,11 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
+    // Project Specific Supabase Configuration
+    const supabaseUrl = 'https://cvxjvicpefggheiojmtn.supabase.co';
+    const supabaseKey = 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I';
+    const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+
     const ADMIN_EMAIL = 'faizan@gsmsolution.com'; 
     let currentUserEmail = '';
 
@@ -245,6 +251,7 @@
             let displayEmail = currentUserEmail.split('@')[0];
             document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
             
+            // Show Admin Tabs
             if (currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase()) {
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
             }
@@ -265,7 +272,7 @@
         return 'badge-accessories';
     }
 
-    // FETCH MAPPED DATA WITH UPI NOTES SUPPORT
+    // FETCH DYNAMICALLY FROM REPAIRS AND ACCESSORIES TABLES (Including Split UPI)
     window.fetchMappedData = async function() {
         const fromDate = document.getElementById('filterFromDate').value;
         const toDate = document.getElementById('filterToDate').value;
@@ -274,7 +281,8 @@
         let unifiedData = [];
 
         try {
-            // 1. Fetch Repair Orders (Delivered & Paid via UPI/Card) from upi_transactions ledger or repairOrders directly
+            // 1. Fetch from upi_transactions ledger directly
+            // This captures pure UPI payments, Split UPI payments, and Settled Credit via UPI
             const { data: upiLedger } = await supabaseClient
                 .from('upi_transactions')
                 .select('*');
@@ -288,14 +296,15 @@
                     dateObj: new Date(timestamp),
                     dateStr: dateStr,
                     timeStr: u.time || new Date(timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' }),
-                    description: u.description, // Includes notes mapped from modal input
+                    description: u.description,
                     source: u.source || 'Repair Payment',
                     upi: amt,
                     card: 0
                 });
             });
 
-            // 2. Fetch Accessories Invoices (Paid via UPI/Card)
+            // 2. Fetch Accessories Invoices (Paid via pure UPI or Card)
+            // (Note: Split accessories payments, if implemented later via upi_transactions, will be caught above)
             const { data: accessories } = await supabaseClient
                 .from('accessories_invoices')
                 .select('*')
@@ -378,6 +387,7 @@
             return;
         }
 
+        // Group by Date for headers
         const groupedData = {};
         data.forEach(item => {
             if (!groupedData[item.dateStr]) groupedData[item.dateStr] = [];
@@ -395,6 +405,7 @@
                 dayCard += t.card;
             });
 
+            // Create Day Header
             const dateObj = new Date(dateStr);
             const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
             
@@ -407,6 +418,7 @@
             `;
             tbody.appendChild(headerRow);
 
+            // Create Rows
             transactions.forEach(item => {
                 grandUpi += item.upi;
                 grandCard += item.card;
@@ -424,6 +436,7 @@
             });
         }
 
+        // Create Footer for Period Total
         const footerRow = document.createElement('tr');
         footerRow.className = 'table-footer';
         footerRow.innerHTML = `
@@ -434,6 +447,7 @@
         tbody.appendChild(footerRow);
     }
 
+    // Initialize App
     document.addEventListener("DOMContentLoaded", async () => {
         await checkAuth();
         resetSidebarTimer();
