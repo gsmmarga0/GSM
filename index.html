@@ -188,6 +188,11 @@
                     <input type="text" id="devicePassword" placeholder="e.g. 1234 or Pattern">
                 </div>
 
+                <div class="form-group">
+                    <label>Approx Estimate (₹)</label>
+                    <input type="number" id="approxEstimate" placeholder="0.00" step="0.01">
+                </div>
+
                 <div class="form-group" style="grid-column: 1 / -1;">
                     <label>Model & Problem Description</label>
                     <input type="text" id="problemDesc" placeholder="e.g. iPhone 13 - Screen Replacement">
@@ -209,6 +214,7 @@
                         <th>Customer</th>
                         <th>Model / Problem</th>
                         <th>Password</th>
+                        <th>Approx Est. (₹)</th>
                         <th style="text-align: center;">Action</th>
                     </tr>
                 </thead>
@@ -503,7 +509,7 @@
         tbody.innerHTML = '';
 
         if(dataToRender.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: gray;">No pending orders found.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: gray;">No pending orders found.</td></tr>`;
             document.getElementById('pageInfo').innerText = `Page 1 of 1`;
             return;
         }
@@ -534,6 +540,7 @@
                     </td>
                     <td>${order.problemDesc || '-'}</td>
                     <td style="color:#ef4444; font-weight:bold; letter-spacing:1px;">${order.devicePassword || '-'}</td>
+                    <td style="font-weight:bold; color:#059669;">₹${order.approxEstimate || 0}</td>
                     <td style="text-align: center; white-space: nowrap;">
                         ${actionHtml}
                     </td>
@@ -579,7 +586,6 @@
             contactNo = document.getElementById('newCustMobile').value.trim();
             if(!custName || !contactNo) return alert("Please fill in New Customer details.");
             
-            // Add to Customers DB
             const { error: custErr } = await supabaseClient.from('customers').insert([{ name: custName, mobile: contactNo }]);
             if(!custErr) fetchCustomers(); 
         } else {
@@ -591,6 +597,7 @@
         let jobNoVal = document.getElementById('jobNo').value.trim();
         let problemDesc = document.getElementById('problemDesc').value.trim();
         let devicePassword = document.getElementById('devicePassword').value.trim();
+        let approxEstimate = parseFloat(document.getElementById('approxEstimate').value) || 0;
         let currentDate = new Date().toISOString().split('T')[0];
 
         if(!jobNoVal) return alert("Job Number is missing. Please close and reopen the form.");
@@ -601,6 +608,7 @@
             jobNo: jobNoVal,
             problemDesc: problemDesc,
             devicePassword: devicePassword,
+            approxEstimate: approxEstimate,
             date: currentDate,
             status: "Pending",
             createdBy: currentUserEmail.split('@')[0]
@@ -620,6 +628,7 @@
             document.getElementById('newCustMobile').value = '';
             document.getElementById('problemDesc').value = '';
             document.getElementById('devicePassword').value = '';
+            document.getElementById('approxEstimate').value = '';
             
             toggleForm();
             fetchOrders();
