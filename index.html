@@ -92,6 +92,10 @@
         .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         .btn-confirm { padding: 10px 20px; border-radius: 6px; border: none; background: #10b981; color: white; cursor: pointer; font-weight: bold; }
         .btn-save { padding: 10px 20px; border-radius: 6px; border: none; background: #2563eb; color: white; cursor: pointer; font-weight: bold; }
+        
+        /* Edit icon in table */
+        .edit-pen { cursor: pointer; font-size: 0.95rem; margin-left: 8px; color: #6b7280; transition: color 0.2s; }
+        .edit-pen:hover { color: #2563eb; }
     </style>
 </head>
 <body>
@@ -255,7 +259,7 @@
     </div>
 </div>
 
-<!-- EDIT MODAL (ADMIN ONLY) -->
+<!-- EDIT MODAL (AVAILABLE TO ALL USERS) -->
 <div class="modal-overlay" id="modalEdit">
     <div class="modal-container">
         <h2 class="modal-title">Edit Order Details</h2>
@@ -523,12 +527,15 @@
             
             let actionHtml = `<button class="btn-bill" onclick="openBillingModal('${order.id}', '${order.jobNo}', '${order.customerName}')">Repair Complete ✓</button>`;
             
+            // Delete button remains admin-only
             if (isAdmin) {
                 actionHtml += `
-                    <button class="btn-icon" style="color:#2563eb; margin-left: 10px;" onclick="openEditModal('${order.id}', '${order.jobNo}', '${problemSafe}', '${passwordSafe}')" title="Edit Problem/Password">✏️</button>
-                    <button class="btn-icon" style="color:#ef4444;" onclick="deleteOrder('${order.id}', '${order.jobNo}')" title="Delete Order">🗑️</button>
+                    <button class="btn-icon" style="color:#ef4444; margin-left: 10px;" onclick="deleteOrder('${order.id}', '${order.jobNo}')" title="Delete Order">🗑️</button>
                 `;
             }
+
+            // Edit icon is available to everyone
+            const editIconHtml = `<span class="edit-pen" onclick="openEditModal('${order.id}', '${order.jobNo}', '${problemSafe}', '${passwordSafe}')" title="Edit Problem/Password">✏️</span>`;
 
             tbody.innerHTML += `
                 <tr>
@@ -538,7 +545,10 @@
                         ${order.customerName}<br>
                         <div style="font-size: 0.95rem; color: #111827; font-weight: 600; margin-top: 3px;">${order.contactNo}</div>
                     </td>
-                    <td>${order.problemDesc || '-'}</td>
+                    <td>
+                        ${order.problemDesc || '-'}
+                        ${editIconHtml}
+                    </td>
                     <td style="color:#ef4444; font-weight:bold; letter-spacing:1px;">${order.devicePassword || '-'}</td>
                     <td style="font-weight:bold; color:#059669;">₹${order.approxEstimate || 0}</td>
                     <td style="text-align: center; white-space: nowrap;">
@@ -701,6 +711,7 @@
         }
     }
 
+    // Accessible to all users
     window.openEditModal = function(id, jobNo, currentProblem, currentPassword) {
         editOrderId = id;
         document.getElementById('editSubtitle').innerText = `Editing details for Job No: ${jobNo}`;
