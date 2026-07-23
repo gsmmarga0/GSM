@@ -33,14 +33,25 @@
         th { padding: 15px; background: #f9fafb; font-size: 0.85rem; color: #4b5563; border-bottom: 1px solid var(--border-color); }
         td { padding: 15px; font-size: 0.9rem; border-bottom: 1px solid var(--border-color); color: #111827; }
         
+        /* New Table Specific Styles */
+        .editable-cell { cursor: pointer; display: flex; justify-content: space-between; align-items: flex-start; padding: 6px; border-radius: 4px; transition: background 0.2s; border: 1px solid transparent; }
+        .editable-cell:hover { background: #f9fafb; border-color: #e5e7eb; }
+        .edit-icon { font-size: 0.85rem; color: #9ca3af; margin-left: 8px; opacity: 0; transition: opacity 0.2s, color 0.2s; }
+        .editable-cell:hover .edit-icon { opacity: 1; color: #2563eb; }
+        
+        .notify-wrapper { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: bold; color: #4b5563; margin-bottom: 10px; justify-content: center; background: #f3f4f6; padding: 6px 10px; border-radius: 6px; border: 1px solid #e5e7eb; cursor: pointer; transition: 0.2s;}
+        .notify-wrapper:hover { background: #e5e7eb; }
+        .notify-wrapper input { cursor: pointer; width: 14px; height: 14px; margin: 0; }
+        .notify-wrapper.notified { background: #dcfce7; border-color: #bbf7d0; color: #166534; }
+
         .status-btn { border: none; padding: 8px 16px; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; transition: 0.2s; width: 160px; background-color: #3b82f6;}
         .status-btn:hover { opacity: 0.85; }
-
         .btn-icon { background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; padding: 5px; border-radius: 4px; transition: 0.2s; }
         .btn-icon:hover { background: #fef2f2; transform: scale(1.1); }
 
         .pagination { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: white; border-top: 1px solid var(--border-color); }
 
+        /* Modal Styles */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(2px); }
         .modal-container { background: white; padding: 25px; border-radius: 12px; width: 450px; max-width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         .modal-title { font-size: 1.2rem; font-weight: bold; margin: 0 0 5px 0; }
@@ -111,9 +122,9 @@
                         <th>Date & Time</th>
                         <th>Job No.</th>
                         <th>Customer</th>
-                        <th>Model / Problem</th>
-                        <th>Password</th>
-                        <th>Repair Notes</th>
+                        <th style="width: 18%;">Model / Problem</th>
+                        <th style="width: 12%;">Password</th>
+                        <th style="width: 18%;">Repair Notes</th>
                         <th>Est. Bill (₹)</th>
                         <th style="text-align: center;">Delivery Status / Action</th>
                     </tr>
@@ -234,6 +245,13 @@
     }
     async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
 
+    // Helper to escape HTML characters so data-val attributes don't break
+    function escapeHtml(text) {
+        if (!text) return '';
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+        return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+
     async function fetchCompletedOrders() {
         const { data, error } = await supabaseClient
             .from('repairOrders')
@@ -263,7 +281,8 @@
 
         paginatedItems.forEach(order => {
             const deleteBtnHtml = isAdmin ? `<button class="btn-icon" onclick="deleteOrder('${order.id}', '${order.jobNo}')" title="Delete Order">🗑️</button>` : '';
-            const safeCustName = order.customerName ? order.customerName.replace(/'/g, "\\'") : '';
+            const safeCustName = escapeHtml(order.customerName);
+            const isNotified = order.customer_notified ? true : false;
 
             tbody.innerHTML += `
                 <tr>
@@ -272,12 +291,48 @@
                         <span style="font-size: 0.8rem; color: #6b7280;">${order.time || ''}</span>
                     </td>
                     <td><strong>${order.jobNo}</strong></td>
-                    <td>${order.customerName}<br><small style="color:gray;">${order.contactNo}</small></td>
-                    <td>${order.problemDesc || '-'}</td>
-                    <td style="color:#ef4444; font-weight:bold; letter-spacing:1px;">${order.devicePassword || '-'}</td>
-                    <td style="color:#4b5563;">${order.repairNotes || '-'}</td>
-                    <td style="font-weight:bold; color:#059669;">₹${order.estimateAmount || 0}</td>
+                    <td>
+                        ${order.customerName}<br>
+                        <div style="color:#111827; font-weight:700; font-size:1rem; margin-top:3px; letter-spacing:0.5px;">${order.contactNo}</div>
+                    </td>
+                    
+                    <!-- Editable Problem Description -->
+                    <td>
+                        <div class="editable-cell" data-val="${escapeHtml(order.problemDesc)}" onclick="editField('${order.id}', 'problemDesc', this.getAttribute('data-val'), 'Model / Problem')">
+                            <span>${escapeHtml(order.problemDesc) || '-'}</span>
+                            <span class="edit-icon">✎</span>
+                        </div>
+                    </td>
+                    
+                    <!-- Editable Password -->
+                    <td>
+                        <div class="editable-cell" style="color:#ef4444; font-weight:bold; letter-spacing:1px;" data-val="${escapeHtml(order.devicePassword)}" onclick="editField('${order.id}', 'devicePassword', this.getAttribute('data-val'), 'Password')">
+                            <span>${escapeHtml(order.devicePassword) || '-'}</span>
+                            <span class="edit-icon">✎</span>
+                        </div>
+                    </td>
+                    
+                    <!-- Editable Repair Notes -->
+                    <td>
+                        <div class="editable-cell" data-val="${escapeHtml(order.repairNotes)}" onclick="editField('${order.id}', 'repairNotes', this.getAttribute('data-val'), 'Repair Notes')">
+                            <span style="color:#4b5563;">${escapeHtml(order.repairNotes) || '-'}</span>
+                            <span class="edit-icon">✎</span>
+                        </div>
+                    </td>
+                    
+                    <!-- Editable Est. Bill -->
+                    <td>
+                        <div class="editable-cell" style="font-weight:bold; color:#059669;" data-val="${order.estimateAmount || 0}" onclick="editField('${order.id}', 'estimateAmount', this.getAttribute('data-val'), 'Est. Bill (₹)')">
+                            <span>₹${order.estimateAmount || 0}</span>
+                            <span class="edit-icon">✎</span>
+                        </div>
+                    </td>
+                    
                     <td style="text-align: center;">
+                        <label class="notify-wrapper ${isNotified ? 'notified' : ''}">
+                            <input type="checkbox" onchange="confirmNotify('${order.id}', this)" ${isNotified ? 'checked' : ''}>
+                            Waiting for pickup
+                        </label>
                         <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
                             <button class="status-btn" onclick="openDeliveryModal('${order.id}', '${order.jobNo}', '${safeCustName}', '${order.contactNo}', '${order.estimateAmount || 0}')">Deliver Device</button>
                             ${deleteBtnHtml}
@@ -287,6 +342,66 @@
         });
 
         document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(dataToRender.length / rowsPerPage) || 1}`;
+    }
+
+    // Edit Field Logic
+    window.editField = async function(id, fieldName, currentValue, label) {
+        const newVal = prompt(`Update ${label}:`, currentValue);
+        
+        // Check if user clicked Cancel or if value didn't change
+        if (newVal !== null && newVal.trim() !== String(currentValue).trim()) {
+            let valueToSave = newVal;
+            
+            // Validate numbers for the bill column
+            if (fieldName === 'estimateAmount') {
+                valueToSave = parseFloat(newVal);
+                if (isNaN(valueToSave)) {
+                    alert("Please enter a valid number for Estimated Bill.");
+                    return;
+                }
+            }
+
+            try {
+                const updateData = {};
+                updateData[fieldName] = valueToSave;
+                await supabaseClient.from('repairOrders').update(updateData).eq('id', id);
+                fetchCompletedOrders(); // Refresh table
+            } catch(err) {
+                alert("Error updating field: " + err.message);
+            }
+        }
+    }
+
+    // Checkbox Notification Logic
+    window.confirmNotify = async function(id, checkboxElement) {
+        const isChecked = checkboxElement.checked;
+        
+        if(isChecked) {
+            if(confirm("Have you successfully informed the customer that their device is ready for pickup?")) {
+                try {
+                    await supabaseClient.from('repairOrders').update({ customer_notified: true }).eq('id', id);
+                    fetchCompletedOrders(); // Refresh to apply green styling
+                } catch(err) {
+                    checkboxElement.checked = false;
+                    alert("Error updating status: " + err.message);
+                }
+            } else {
+                checkboxElement.checked = false; // Revert if they click cancel
+            }
+        } else {
+            // Unchecking
+            if(confirm("Are you sure you want to remove the 'Waiting for pickup' status?")) {
+                try {
+                    await supabaseClient.from('repairOrders').update({ customer_notified: false }).eq('id', id);
+                    fetchCompletedOrders();
+                } catch(err) {
+                    checkboxElement.checked = true;
+                    alert("Error updating status: " + err.message);
+                }
+            } else {
+                checkboxElement.checked = true; // Revert
+            }
+        }
     }
 
     window.searchTable = function() {
@@ -413,15 +528,12 @@
                     }
                 } 
                 else if(deliveryPaymentMode === 'Credit') {
-                    // Check if customer exists by mobile
                     const { data: custData, error: custErr } = await supabaseClient.from('customers').select('*').eq('mobile', deliveryCustomerMobile);
                     
                     if (custData && custData.length > 0) {
-                        // Exists -> Add to balance
                         let currentBal = parseFloat(custData[0].credit_balance) || 0;
                         await supabaseClient.from('customers').update({ credit_balance: currentBal + finalAmount }).eq('id', custData[0].id);
                     } else {
-                        // New -> Create Customer with balance
                         await supabaseClient.from('customers').insert([{ name: deliveryCustomer, mobile: deliveryCustomerMobile, credit_balance: finalAmount }]);
                     }
                 }
