@@ -34,6 +34,7 @@
 
         .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg-color); z-index: 10; padding: 20px 30px;}
         
+        /* Top Navigation Date */
         .top-nav-date { text-align: right; font-size: 0.85rem; color: #6b7280; font-weight: 500; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
 
         /* Header & Filters */
@@ -69,6 +70,7 @@
         /* Table Styles */
         .table-card { background: white; border-radius: 8px; border: 1px solid var(--border-color); padding: 0; overflow: hidden; margin-bottom: 50px;}
         .table-header-title { padding: 15px 20px; font-size: 0.9rem; font-weight: bold; color: #374151; border-bottom: 1px solid var(--border-color); display: flex; gap: 10px; align-items: center;}
+        .table-header-title span { font-weight: normal; color: #6b7280; font-size: 0.8rem; }
         
         table { width: 100%; border-collapse: collapse; text-align: left; }
         th { padding: 15px 20px; font-size: 0.85rem; color: #6b7280; font-weight: 600; border-bottom: 1px solid var(--border-color); }
@@ -77,12 +79,19 @@
         .col-upi { font-weight: bold; color: var(--c-blue); }
         .col-card { font-weight: bold; color: var(--c-purple); }
 
+        /* Group Headers and Footers */
         .group-header { background: #f9fafb; font-size: 0.75rem; font-weight: bold; color: #4b5563; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e5e7eb;}
         .group-header td { padding: 10px 20px; color: #4b5563; border: none;}
         
         .table-footer { background: #111827; font-weight: bold; color: white; font-size: 0.9rem;}
         .table-footer td { padding: 15px 20px; color: white; border: none;}
 
+        /* Pagination Styles */
+        .pagination { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: white; border-top: 1px solid var(--border-color); }
+        .pagination .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; border: 1px solid var(--border-color); background: white; font-size: 0.85rem;}
+        .pagination .btn:hover { background: #f3f4f6; }
+
+        /* Badges */
         .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: inline-block;}
         .badge-repair { background: var(--c-green-light); color: var(--c-green); }
         .badge-accessories { background: #f3e8ff; color: #6b21a8; }
@@ -145,6 +154,7 @@
         </div>
     </div>
 
+    <!-- Stats Grid -->
     <div class="stats-grid">
         <div class="stat-card stat-card-main">
             <h3>Total UPI Received</h3>
@@ -168,6 +178,7 @@
         </div>
     </div>
 
+    <!-- Table Card -->
     <div class="table-card">
         <div class="table-header-title">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--c-blue);"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
@@ -188,14 +199,30 @@
                 <!-- Transactions injected here -->
             </tbody>
         </table>
+        
+        <!-- Pagination Section -->
+        <div class="pagination">
+            <button class="btn" onclick="prevPage()">Previous</button>
+            <span id="pageInfo" style="font-size:0.9rem; font-weight:bold;">Page 1</span>
+            <button class="btn" onclick="nextPage()">Next</button>
+        </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
+    // Project Specific Supabase Configuration
+    const supabaseUrl = 'https://cvxjvicpefggheiojmtn.supabase.co';
+    const supabaseKey = 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I';
+    const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+
     const ADMIN_EMAIL = 'faizan@gsmsolution.com'; 
     let currentUserEmail = '';
+
+    // Global Pagination State
+    let allUpiData = [];
+    let currentPage = 1;
+    const rowsPerPage = 20;
 
     // Sidebar Hover Timers
     let sidebarTimer;
@@ -204,17 +231,22 @@
         sidebarTimer = setTimeout(() => {
             const sb = document.getElementById('sidebar');
             const btn = document.getElementById('sidebarToggle');
-            if(sb && btn) { sb.classList.add('collapsed'); btn.classList.add('sidebar-collapsed-btn'); }
+            if(sb && btn) {
+                sb.classList.add('collapsed');
+                btn.classList.add('sidebar-collapsed-btn');
+            }
         }, 5000);
     }
     window.clearSidebarTimer = function() { clearTimeout(sidebarTimer); }
+
     window.toggleSidebar = function() {
         const sb = document.getElementById('sidebar');
         const btn = document.getElementById('sidebarToggle');
         if(sb && btn) {
             sb.classList.toggle('collapsed');
             btn.classList.toggle('sidebar-collapsed-btn');
-            if(!sb.classList.contains('collapsed')) resetSidebarTimer(); else clearSidebarTimer();
+            if(!sb.classList.contains('collapsed')) resetSidebarTimer();
+            else clearSidebarTimer();
         }
     }
 
@@ -235,6 +267,7 @@
             let displayEmail = currentUserEmail.split('@')[0];
             document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
             
+            // Show Admin Tabs
             if (currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase()) {
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
             }
@@ -255,6 +288,7 @@
         return 'badge-accessories';
     }
 
+    // FETCH DYNAMICALLY FROM REPAIRS AND ACCESSORIES TABLES
     window.fetchMappedData = async function() {
         const fromDate = document.getElementById('filterFromDate').value;
         const toDate = document.getElementById('filterToDate').value;
@@ -270,7 +304,6 @@
                 let amt = parseFloat(u.amount) || 0;
                 let timestamp = u.created_at || null;
                 
-                // Fortified Date Construction to prevent Invalid Date crashes
                 let parseDate = u.date || (timestamp ? timestamp.split('T')[0] : '1970-01-01');
                 let parseTime = u.time || '00:00:00';
                 
@@ -317,8 +350,12 @@
             // Sort by Date/Time ascending
             unifiedData.sort((a, b) => a.dateObj - b.dateObj);
 
-            renderTable(unifiedData);
-            calculateStats(unifiedData);
+            // Store globally for pagination
+            allUpiData = unifiedData;
+            currentPage = 1;
+            
+            calculateStats(allUpiData);
+            renderPaginatedTable();
 
         } catch (error) {
             console.error("Error fetching mapped data:", error.message);
@@ -348,22 +385,51 @@
         document.getElementById('statAccessoriesAmount').innerText = formatMoney(totals.accessoriesTotal);
     }
 
-    function renderTable(data) {
+    // --- Pagination Functions ---
+    window.prevPage = function() {
+        if (currentPage > 1) {
+            currentPage--;
+            renderPaginatedTable();
+        }
+    }
+    
+    window.nextPage = function() {
+        if (currentPage < Math.ceil(allUpiData.length / rowsPerPage)) {
+            currentPage++;
+            renderPaginatedTable();
+        }
+    }
+
+    function renderPaginatedTable() {
+        const start = (currentPage - 1) * rowsPerPage;
+        const paginatedData = allUpiData.slice(start, start + rowsPerPage);
+
+        // Calculate overall period totals for the footer to ensure accuracy across pages
+        let periodUpi = 0, periodCard = 0;
+        allUpiData.forEach(item => {
+            periodUpi += item.upi;
+            periodCard += item.card;
+        });
+
+        renderTable(paginatedData, periodUpi, periodCard, allUpiData.length);
+    }
+
+    function renderTable(data, periodUpi, periodCard, totalItems) {
         const tbody = document.getElementById('dataTableBody');
         tbody.innerHTML = '';
 
-        if (data.length === 0) {
+        if (totalItems === 0) {
             tbody.innerHTML = `<tr><td colspan="6" class="no-data">No UPI or Card transactions found for this date range.</td></tr>`;
+            document.getElementById('pageInfo').innerText = `Page 1 of 1`;
             return;
         }
 
+        // Group the data specifically for this page chunk
         const groupedData = {};
         data.forEach(item => {
             if (!groupedData[item.dateStr]) groupedData[item.dateStr] = [];
             groupedData[item.dateStr].push(item);
         });
-
-        let grandUpi = 0; let grandCard = 0;
 
         for (const [dateStr, transactions] of Object.entries(groupedData)) {
             let dayUpi = 0, dayCard = 0;
@@ -375,14 +441,13 @@
             const headerRow = document.createElement('tr');
             headerRow.className = 'group-header';
             headerRow.innerHTML = `
-                <td colspan="4">${formattedDate}</td>
-                <td style="text-align: right;">DAY UPI: ${formatMoney(dayUpi)}</td>
-                <td style="text-align: right;">DAY CARD: ${formatMoney(dayCard)}</td>
+                <td colspan="4">${formattedDate} <span style="text-transform:none; font-weight:normal; color:#9ca3af; margin-left:10px;">(Page Subtotal)</span></td>
+                <td style="text-align: right;">${formatMoney(dayUpi)}</td>
+                <td style="text-align: right;">${formatMoney(dayCard)}</td>
             `;
             tbody.appendChild(headerRow);
 
             transactions.forEach(item => {
-                grandUpi += item.upi; grandCard += item.card;
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${item.dateStr}</td>
@@ -400,10 +465,12 @@
         footerRow.className = 'table-footer';
         footerRow.innerHTML = `
             <td colspan="4" style="text-align: right;">PERIOD TOTAL</td>
-            <td style="text-align: right;">${formatMoney(grandUpi)}</td>
-            <td style="text-align: right;">${formatMoney(grandCard)}</td>
+            <td style="text-align: right;">${formatMoney(periodUpi)}</td>
+            <td style="text-align: right;">${formatMoney(periodCard)}</td>
         `;
         tbody.appendChild(footerRow);
+        
+        document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(totalItems / rowsPerPage) || 1}`;
     }
 
     document.addEventListener("DOMContentLoaded", async () => {
