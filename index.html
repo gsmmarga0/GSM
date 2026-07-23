@@ -540,7 +540,10 @@
 
             tbody.innerHTML += `
                 <tr>
-                    <td>${order.date}</td>
+                    <td>
+                        ${order.date}<br>
+                        <span style="font-size: 0.8rem; color: #6b7280;">${order.time || ''}</span>
+                    </td>
                     <td><strong>${order.jobNo}</strong></td>
                     <td>
                         ${order.customerName}<br>
@@ -610,6 +613,7 @@
         let devicePassword = document.getElementById('devicePassword').value.trim();
         let approxEstimate = parseFloat(document.getElementById('approxEstimate').value) || 0;
         let currentDate = new Date().toISOString().split('T')[0];
+        let currentTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
         if(!jobNoVal) return alert("Job Number is missing. Please close and reopen the form.");
 
@@ -621,6 +625,7 @@
             devicePassword: devicePassword,
             approxEstimate: approxEstimate,
             date: currentDate,
+            time: currentTime,
             status: "Pending",
             createdBy: currentUserEmail.split('@')[0]
         };
