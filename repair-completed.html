@@ -108,7 +108,7 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Date</th>
+                        <th>Date & Time</th>
                         <th>Job No.</th>
                         <th>Customer</th>
                         <th>Model / Problem</th>
@@ -267,7 +267,10 @@
 
             tbody.innerHTML += `
                 <tr>
-                    <td>${order.date}</td>
+                    <td>
+                        ${order.date}<br>
+                        <span style="font-size: 0.8rem; color: #6b7280;">${order.time || ''}</span>
+                    </td>
                     <td><strong>${order.jobNo}</strong></td>
                     <td>${order.customerName}<br><small style="color:gray;">${order.contactNo}</small></td>
                     <td>${order.problemDesc || '-'}</td>
