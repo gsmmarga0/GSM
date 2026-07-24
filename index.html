@@ -37,12 +37,6 @@
         .btn-bill:hover { background: #059669; opacity: 0.9;}
         .btn-np { background: #ef4444; color: white; border: none; font-weight: bold; padding: 10px 20px; border-radius: 6px; cursor: pointer; transition: 0.2s;}
         .btn-np:hover { background: #dc2626; }
-        
-        .btn-pickup { background: #6b7280; color: white; border: none; font-weight: bold; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; margin-right: 5px; }
-        .btn-pickup:hover { background: #4b5563; }
-        .btn-notified { background: #22c55e; color: white; border: none; font-weight: bold; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; margin-right: 5px; }
-        .btn-notified:hover { background: #16a34a; }
-        .btn-notified:disabled { cursor: not-allowed; opacity: 0.9; }
 
         .btn-icon { background: transparent; border: none; cursor: pointer; font-size: 1.1rem; vertical-align: middle; transition: 0.2s; padding: 4px; }
         .btn-icon:hover { opacity: 0.7; transform: scale(1.1); }
@@ -220,7 +214,7 @@
 
                     <div id="customerCreateMode" style="display: none; gap: 15px;">
                         <input type="text" id="newCustName" placeholder="Full Name" style="flex:1;">
-                        <input type="text" id="newCustMobile" placeholder="10-digit Mobile" style="flex:1;">
+                        <input type="text" id="newCustMobile" value="+91" placeholder="Mobile Number" style="flex:1;">
                     </div>
                 </div>
 
@@ -576,19 +570,8 @@
                 actionHtml = `<button class="btn-bill" onclick="openBillingModal('${order.id}', '${order.jobNo}', '${order.customerName}', '${order.contactNo}')">Repair Complete ✓</button>`;
             } else if (order.status === 'Repair Completed') {
                 
-                // Pickup Notification Button Logic
-                let pickupBtn = '';
-                if (order.notified_pickup) {
-                    if (isAdmin) {
-                        pickupBtn = `<button class="btn-notified" onclick="reverseNotify('${order.id}')" title="Click to undo (Admin Only)">Notified ✓</button>`;
-                    } else {
-                        pickupBtn = `<button class="btn-notified" disabled>Notified ✓</button>`;
-                    }
-                } else {
-                    pickupBtn = `<button class="btn-pickup" onclick="notifyPickup('${order.id}', '${order.jobNo}', '${order.customerName}', '${order.contactNo}')">Waiting for Pickup</button>`;
-                }
-
-                actionHtml = pickupBtn + `<button class="btn-bill" style="background:#2563eb;" onclick="markGoodsDelivered('${order.id}')">Deliver Goods 📦</button>`;
+                // Simplified Deliver Button (WhatsApp automation removed)
+                actionHtml = `<button class="btn-bill" style="background:#2563eb;" onclick="markGoodsDelivered('${order.id}')">Deliver Goods 📦</button>`;
                 
             } else if (order.status === 'Goods Delivered') {
                 actionHtml = `<span class="status-badge" style="background:#dcfce7; color:#166534;">Delivered</span>`;
@@ -675,39 +658,6 @@
         }
     }
 
-    window.notifyPickup = async function(id, jobNo, name, mobile) {
-        if(!confirm(`Send automated WhatsApp pickup notification to ${name}?`)) return;
-
-        try {
-            // 1. Update DB immediately to show UI feedback
-            await supabaseClient.from('repairOrders').update({ notified_pickup: true }).eq('id', id);
-            
-            // 2. Trigger your new edge function for WhatsApp pickup message
-            if (mobile) {
-                supabaseClient.functions.invoke('send-whatsapp-pickup', {
-                    body: { phone: mobile, customerName: name, jobNo: jobNo }
-                }).then(({ error }) => {
-                    if (error) console.error("WhatsApp failed:", error);
-                });
-            }
-            
-            fetchOrders(); 
-        } catch(err) {
-            alert("Error sending notification: " + err.message);
-        }
-    }
-
-    window.reverseNotify = async function(id) {
-        if(!confirm("Reverse the notification status? (Admin Only)")) return;
-        try {
-            await supabaseClient.from('repairOrders').update({ notified_pickup: false }).eq('id', id);
-            fetchOrders();
-        } catch(err) {
-            alert("Error updating status: " + err.message);
-        }
-    }
-
-
     window.prevPage = function() { 
         if (currentPage > 1) { currentPage--; renderOrdersTable(); } 
     }
@@ -752,8 +702,19 @@
         let custName = ''; let contactNo = '';
         if (isNewCustomerMode) {
             custName = document.getElementById('newCustName').value.trim();
-            contactNo = document.getElementById('newCustMobile').value.trim();
-            if(!custName || !contactNo) return alert("Please fill in New Customer details.");
+            let rawContact = document.getElementById('newCustMobile').value.trim();
+            
+            if(!custName || !rawContact) return alert("Please fill in New Customer details.");
+            
+            // Automatically clean and enforce +91 prefix
+            rawContact = rawContact.replace(/\s+/g, '');
+            if (rawContact.startsWith('+91')) {
+                contactNo = rawContact;
+            } else if (rawContact.startsWith('91') && rawContact.length === 12) {
+                contactNo = '+' + rawContact;
+            } else {
+                contactNo = '+91' + rawContact;
+            }
             
             const { error: custErr } = await supabaseClient.from('customers').insert([{ name: custName, mobile: contactNo }]);
             if(!custErr) fetchCustomers(); 
@@ -775,7 +736,7 @@
         const orderData = {
             customerName: custName, contactNo: contactNo, jobNo: jobNoVal, problemDesc: problemDesc,
             devicePassword: devicePassword, approxEstimate: approxEstimate, date: currentDate, time: currentTime,
-            status: "Pending", createdBy: currentUserEmail.split('@')[0], notified_pickup: false
+            status: "Pending", createdBy: currentUserEmail.split('@')[0]
         };
 
         try {
@@ -784,7 +745,7 @@
             
             alert("Repair order added successfully!");
             
-            document.getElementById('custSearchInput').value = ''; document.getElementById('selectedCustName').value = ''; document.getElementById('selectedCustMobile').value = ''; document.getElementById('newCustName').value = ''; document.getElementById('newCustMobile').value = ''; document.getElementById('problemDesc').value = ''; document.getElementById('devicePassword').value = ''; document.getElementById('approxEstimate').value = '';
+            document.getElementById('custSearchInput').value = ''; document.getElementById('selectedCustName').value = ''; document.getElementById('selectedCustMobile').value = ''; document.getElementById('newCustName').value = ''; document.getElementById('newCustMobile').value = '+91'; document.getElementById('problemDesc').value = ''; document.getElementById('devicePassword').value = ''; document.getElementById('approxEstimate').value = '';
             
             toggleForm();
             switchTab('Pending');
@@ -802,7 +763,6 @@
     }
 
     window.closeBillingModal = function() { document.getElementById('modalBilling').style.display = 'none'; }
-
 
     window.markRepairNP = async function() {
         if(!confirm("Are you sure you want to mark this device as Repair Not Possible (NP)?")) return;
