@@ -38,7 +38,6 @@
         .btn-np { background: #ef4444; color: white; border: none; font-weight: bold; padding: 10px 20px; border-radius: 6px; cursor: pointer; transition: 0.2s;}
         .btn-np:hover { background: #dc2626; }
         
-        /* New Pickup Buttons */
         .btn-pickup { background: #6b7280; color: white; border: none; font-weight: bold; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; margin-right: 5px; }
         .btn-pickup:hover { background: #4b5563; }
         .btn-notified { background: #22c55e; color: white; border: none; font-weight: bold; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; margin-right: 5px; }
@@ -331,6 +330,9 @@
     const ADMIN_EMAIL = 'faizan@gsmsolution.com';
     let currentUserEmail = '';
     let isAdmin = false;
+    
+    // --- ADD YOUR FAST2SMS API KEY HERE ---
+    const FAST2SMS_API_KEY = 'UwNJEfdTu4LFOv1sCmAj75na6h9qiB0KkzWbgSplyoM2tPXQcxt7JCpUQgRwzMFo03IKYn1Gl5EHDZka'; 
     
     let allOrdersData = [];
     let filteredOrdersData = [];
@@ -629,7 +631,69 @@
         document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(filteredOrdersData.length / rowsPerPage) || 1}`;
     }
 
-    // --- NEW NOTIFICATION SYSTEM FUNCTIONS ---
+    // --- FAST2SMS SEND TEXT FUNCTION ---
+    async function sendFast2SMS(mobile, name, jobNo) {
+        if (!FAST2SMS_API_KEY || FAST2SMS_API_KEY === 'UwNJEfdTu4LFOv1sCmAj75na6h9qiB0KkzWbgSplyoM2tPXQcxt7JCpUQgRwzMFo03IKYn1Gl5EHDZka') {
+            console.warn("Fast2SMS API Key is missing. SMS not sent.");
+            return;
+        }
+
+        const message = `Hello ${name}, your device (Job No: ${jobNo}) is successfully repaired and ready for pickup. - GSM SOLUTIONS`;
+        
+        try {
+            const response = await fetch("https://www.fast2sms.com/dev/bulkV2", {
+                method: "POST",
+                headers: {
+                    "authorization": FAST2SMS_API_KEY,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    route: "q",
+                    message: message,
+                    language: "english",
+                    flash: 0,
+                    numbers: mobile
+                })
+            });
+            const data = await response.json();
+            if(!data.return) {
+                console.error("Fast2SMS Error:", data);
+                alert("Failed to send SMS via Fast2SMS: " + (data.message || "Unknown error"));
+            } else {
+                console.log("SMS Sent Successfully:", data);
+            }
+        } catch(err) {
+            console.error("SMS Request Failed", err);
+        }
+    }
+
+    // --- MODIFIED CONFIRM BILLING ---
+    window.confirmBilling = async function() {
+        const estimateAmount = parseFloat(document.getElementById('billEstimateAmount').value) || 0;
+        const notes = document.getElementById('billRepairNotes').value.trim();
+
+        try {
+            // Update Supabase Database
+            await supabaseClient.from('repairOrders').update({ 
+                status: 'Repair Completed', 
+                estimateAmount: estimateAmount, 
+                repairNotes: notes 
+            }).eq('id', billingOrderId);
+            
+            // Trigger Fast2SMS immediately upon completion
+            if (billingCustomerMobile) {
+                await sendFast2SMS(billingCustomerMobile, billingCustomerName, billingJobNo);
+            }
+
+            closeBillingModal();
+            fetchOrders(); 
+            alert("Repair marked as complete & SMS sent to customer!");
+        } catch (err) { 
+            alert("Error completing repair: " + err.message); 
+        }
+    }
+
+
     window.notifyPickup = async function(id, jobNo, name, mobile) {
         if(!confirm(`Send automated WhatsApp pickup notification to ${name}?`)) return;
 
@@ -758,17 +822,6 @@
 
     window.closeBillingModal = function() { document.getElementById('modalBilling').style.display = 'none'; }
 
-    window.confirmBilling = async function() {
-        const estimateAmount = parseFloat(document.getElementById('billEstimateAmount').value) || 0;
-        const notes = document.getElementById('billRepairNotes').value.trim();
-
-        try {
-            await supabaseClient.from('repairOrders').update({ status: 'Repair Completed', estimateAmount: estimateAmount, repairNotes: notes }).eq('id', billingOrderId);
-            closeBillingModal();
-            fetchOrders(); 
-            alert("Repair marked as complete! Ready for pickup notification.");
-        } catch (err) { alert("Error completing repair: " + err.message); }
-    }
 
     window.markRepairNP = async function() {
         if(!confirm("Are you sure you want to mark this device as Repair Not Possible (NP)?")) return;
