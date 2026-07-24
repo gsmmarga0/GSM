@@ -3,7 +3,7 @@ name: Deploy Supabase Edge Function
 on:
   push:
     branches:
-      - main # Change this if your default branch is named 'master'
+      - main
     paths:
       - 'supabase/functions/**'
 
@@ -24,5 +24,5 @@ jobs:
         with:
           version: latest
 
-      - name: Deploy send-whatsapp-bill
-        run: supabase functions deploy send-whatsapp-bill --project-ref $PROJECT_ID
+      - name: Deploy All Functions
+        run: supabase functions deploy --project-ref $PROJECT_ID
