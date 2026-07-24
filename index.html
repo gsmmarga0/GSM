@@ -294,8 +294,13 @@
     let allPendingOrders = [];
     let customersList = [];
     let isNewCustomerMode = false;
+    
+    // NEW TRACKING VARIABLES
     let billingOrderId = null;
     let editOrderId = null;
+    let billingJobNo = '';
+    let billingCustomerName = '';
+    let billingCustomerMobile = '';
     
     // Pagination State
     let currentPage = 1;
@@ -526,7 +531,8 @@
             const problemSafe = order.problemDesc ? order.problemDesc.replace(/'/g, "\\'") : '';
             const passwordSafe = order.devicePassword ? order.devicePassword.replace(/'/g, "\\'") : '';
             
-            let actionHtml = `<button class="btn-bill" onclick="openBillingModal('${order.id}', '${order.jobNo}', '${order.customerName}')">Repair Complete ✓</button>`;
+            // PASSING MOBILE NUMBER TO MODAL
+            let actionHtml = `<button class="btn-bill" onclick="openBillingModal('${order.id}', '${order.jobNo}', '${order.customerName}', '${order.contactNo}')">Repair Complete ✓</button>`;
             
             // Delete button remains admin-only
             if (isAdmin) {
@@ -654,8 +660,14 @@
     };
 
     // --- Completion Modals ---
-    window.openBillingModal = function(id, jobNo, customer) {
+    
+    // UPDATED TO RECEIVE MOBILE NUMBER
+    window.openBillingModal = function(id, jobNo, customer, mobile) {
         billingOrderId = id;
+        billingJobNo = jobNo;
+        billingCustomerName = customer;
+        billingCustomerMobile = mobile;
+        
         document.getElementById('billingSubtitle').innerText = `Job No: ${jobNo} | Customer: ${customer}`;
         document.getElementById('billEstimateAmount').value = '';
         document.getElementById('billRepairNotes').value = '';
@@ -668,20 +680,38 @@
         document.getElementById('modalBilling').style.display = 'none';
     }
 
+    // UPDATED TO TRIGGER WHATSAPP
     window.confirmBilling = async function() {
         const estimateAmount = parseFloat(document.getElementById('billEstimateAmount').value) || 0;
         const notes = document.getElementById('billRepairNotes').value.trim();
 
         try {
+            // 1. Update the database first
             await supabaseClient.from('repairOrders').update({ 
                 status: 'Repair Completed', 
                 estimateAmount: estimateAmount,
                 repairNotes: notes
             }).eq('id', billingOrderId);
 
+            // 2. Trigger WhatsApp in the background
+            if (billingCustomerMobile) {
+                supabaseClient.functions.invoke('send-whatsapp-repair', {
+                    body: {
+                        phone: billingCustomerMobile,
+                        customerName: billingCustomerName,
+                        jobNo: billingJobNo,
+                        amount: estimateAmount
+                    }
+                }).then(({ error }) => {
+                    if (error) console.error("WhatsApp failed:", error);
+                });
+            }
+
+            // 3. Close and refresh UI
             closeBillingModal();
             fetchOrders(); 
-            alert("Order marked as completed and moved to the Repair Completed tab!");
+            alert("Repair marked as complete! WhatsApp notification sent to customer.");
+            
         } catch (err) {
             alert("Error completing repair: " + err.message);
         }
