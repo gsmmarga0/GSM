@@ -37,12 +37,19 @@
         .btn-bill:hover { background: #059669; opacity: 0.9;}
         .btn-np { background: #ef4444; color: white; border: none; font-weight: bold; padding: 10px 20px; border-radius: 6px; cursor: pointer; transition: 0.2s;}
         .btn-np:hover { background: #dc2626; }
+        
+        /* New Pickup Buttons */
+        .btn-pickup { background: #6b7280; color: white; border: none; font-weight: bold; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; margin-right: 5px; }
+        .btn-pickup:hover { background: #4b5563; }
+        .btn-notified { background: #22c55e; color: white; border: none; font-weight: bold; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; margin-right: 5px; }
+        .btn-notified:hover { background: #16a34a; }
+        .btn-notified:disabled { cursor: not-allowed; opacity: 0.9; }
+
         .btn-icon { background: transparent; border: none; cursor: pointer; font-size: 1.1rem; vertical-align: middle; transition: 0.2s; padding: 4px; }
         .btn-icon:hover { opacity: 0.7; transform: scale(1.1); }
 
         .dashboard-padding { padding: 20px 30px; }
         
-        /* Stats Grid updated for 4 statuses */
         .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px; }
         .stat-card { background: white; padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
         .stat-card h3 { margin: 0 0 10px 0; font-size: 0.85rem; font-weight: 600; }
@@ -52,7 +59,6 @@
         .c-green { color: #059669; background: #ecfdf5; border-color: #a7f3d0; }
         .c-red { color: #ef4444; background: #fef2f2; border-color: #fecaca; }
 
-        /* Tabs Styling */
         .tabs-container { display: flex; gap: 25px; border-bottom: 2px solid var(--border-color); margin-bottom: 25px; padding-bottom: 0; }
         .tab-btn { background: transparent; border: none; padding: 10px 5px; font-size: 0.95rem; font-weight: 500; color: #6b7280; cursor: pointer; display: flex; align-items: center; gap: 8px; position: relative; }
         .tab-btn::after { content: ''; position: absolute; bottom: -2px; left: 0; width: 100%; height: 3px; background: transparent; transition: background 0.3s; border-radius: 3px 3px 0 0; }
@@ -80,19 +86,15 @@
         .form-group input { padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; background: #fdfdfd; }
         input[readonly] { background-color: #f3f4f6 !important; color: #6b7280; font-weight: bold; cursor: not-allowed; }
 
-        /* Searchable Customer Dropdown Styles */
         .search-select-container { position: relative; width: 100%; }
         .search-select-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem; outline: none; box-sizing: border-box; background: white url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%239ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>') no-repeat right 10px center; padding-right: 35px; }
         .search-select-input:focus { border-color: #9ca3af; }
         .search-select-list { display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--border-color); max-height: 200px; overflow-y: auto; z-index: 50; list-style: none; padding: 0; margin: 0; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 6px; margin-top: 5px; }
         .search-select-list li { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f3f4f6; font-size: 0.85rem; color: #374151; }
-        .search-select-list li:last-child { border-bottom: none; }
         .search-select-list li:hover { background: #f3f4f6; color: #111827; }
 
-        /* Global Search Dropdown */
         #globalSearchResults { position: absolute; top: 110%; right: 0; width: 300px; background: white; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: none; z-index: 1000; list-style: none; padding: 0; margin: 0; overflow: hidden; }
         #globalSearchResults li { padding: 12px 15px; border-bottom: 1px solid #f3f4f6; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; }
-        #globalSearchResults li:last-child { border-bottom: none; }
         #globalSearchResults li:hover { background: #f9fafb; }
         #globalSearchResults li.no-results { justify-content: center; color: #6b7280; font-style: italic; }
 
@@ -100,10 +102,8 @@
         table { width: 100%; border-collapse: collapse; text-align: left; }
         th { padding: 15px; background: #f9fafb; font-size: 0.85rem; color: #4b5563; border-bottom: 1px solid var(--border-color); }
         td { padding: 15px; font-size: 0.9rem; border-bottom: 1px solid var(--border-color); color: #111827; }
-        
         .pagination { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: white; border-top: 1px solid var(--border-color); }
 
-        /* Modals */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(2px); }
         .modal-container { background: white; padding: 25px; border-radius: 12px; width: 450px; max-width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         .modal-title { font-size: 1.2rem; font-weight: bold; margin: 0 0 5px 0; }
@@ -111,19 +111,14 @@
         .billing-row { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
         .billing-row label { font-weight: bold; color: #374151; font-size: 0.9rem;}
         .billing-row input { text-align: right; width: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-weight: bold; outline: none;}
-        
         .notes-input { width: 100%; box-sizing: border-box; padding: 10px; margin-top: 8px; border: 1px solid #d1d5db; border-radius: 6px; outline: none; font-family: inherit;}
         .notes-input:focus { border-color: #9ca3af; }
-
         .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         .btn-confirm { padding: 10px 20px; border-radius: 6px; border: none; background: #10b981; color: white; cursor: pointer; font-weight: bold; }
         .btn-save { padding: 10px 20px; border-radius: 6px; border: none; background: #2563eb; color: white; cursor: pointer; font-weight: bold; }
         
-        /* Edit icon in table */
         .edit-pen { cursor: pointer; font-size: 0.95rem; margin-left: 8px; color: #6b7280; transition: color 0.2s; }
         .edit-pen:hover { color: #2563eb; }
-        
-        /* Badge for delivered/refused items */
         .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; display: inline-block;}
     </style>
 </head>
@@ -161,21 +156,16 @@
             <p>Manage customer repair orders</p>
         </div>
         <div class="header-right">
-            <!-- Global Job Search -->
             <div style="position: relative;">
                 <input type="text" id="globalJobSearch" class="search-bar search-bar-global" placeholder="🔍 Track Any Job No..." oninput="debounceGlobalSearch()">
                 <ul id="globalSearchResults"></ul>
             </div>
-            
-            <!-- Local Search & Add -->
             <input type="text" id="searchInput" class="search-bar" placeholder="Search current list..." onkeyup="applyFilters()">
             <button class="btn btn-primary" onclick="toggleForm()">+ New Order</button>
         </div>
     </div>
 
     <div class="dashboard-padding">
-        
-        <!-- 4 Stat Cards -->
         <div class="stats-grid">
             <div class="stat-card c-orange">
                 <h3 style="color: #d97706;">Pending</h3>
@@ -195,7 +185,6 @@
             </div>
         </div>
 
-        <!-- Dynamic Tabs -->
         <div class="tabs-container">
             <button class="tab-btn active" id="tab-Pending" onclick="switchTab('Pending')">
                 <span class="dot dot-pending"></span> Pending <span class="tab-badge" id="badge-Pending">0</span>
@@ -215,15 +204,12 @@
         <!-- NEW ORDER FORM -->
         <div class="form-card" id="orderFormCard">
             <div class="form-grid-2">
-                
-                <!-- CUSTOMER SELECTION / CREATION MODULE -->
                 <div class="form-group col-span-2" style="grid-column: 1 / -1; border-bottom: 1px solid #e5e7eb; padding-bottom: 15px; margin-bottom: 5px;">
                     <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <label style="margin:0;">Customer Details <span>*</span></label>
                         <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.75rem; background: #f9fafb;" onclick="toggleCustomerMode()" id="btnToggleCustomerMode">➕ Create New Customer</button>
                     </div>
                     
-                    <!-- Search Mode -->
                     <div id="customerSelectMode">
                         <div class="search-select-container">
                             <input type="text" id="custSearchInput" class="search-select-input" placeholder="🔍 Search existing customer by Name or Mobile..." oninput="filterCustomerSearch()" onfocus="openCustomerDropdown()">
@@ -233,7 +219,6 @@
                         </div>
                     </div>
 
-                    <!-- Create Mode -->
                     <div id="customerCreateMode" style="display: none; gap: 15px;">
                         <input type="text" id="newCustName" placeholder="Full Name" style="flex:1;">
                         <input type="text" id="newCustMobile" placeholder="10-digit Mobile" style="flex:1;">
@@ -266,7 +251,6 @@
             </div>
         </div>
 
-        <!-- TABLE WITH PAGINATION -->
         <div class="table-card">
             <table>
                 <thead>
@@ -317,7 +301,7 @@
     </div>
 </div>
 
-<!-- EDIT MODAL (AVAILABLE TO ALL USERS) -->
+<!-- EDIT MODAL -->
 <div class="modal-overlay" id="modalEdit">
     <div class="modal-container">
         <h2 class="modal-title">Edit Order Details</h2>
@@ -353,21 +337,17 @@
     let customersList = [];
     let isNewCustomerMode = false;
     
-    // Default Tab
     let currentTab = 'Pending';
     
-    // TRACKING VARIABLES
     let billingOrderId = null;
     let editOrderId = null;
     let billingJobNo = '';
     let billingCustomerName = '';
     let billingCustomerMobile = '';
     
-    // Pagination State
     let currentPage = 1;
     const rowsPerPage = 10;
 
-    // --- Sidebar Logic ---
     let sidebarTimer;
     window.resetSidebarTimer = function() {
         clearTimeout(sidebarTimer);
@@ -407,7 +387,6 @@
     }
     async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
 
-    // --- Global Job Tracker Logic ---
     let globalSearchTimeout = null;
     function debounceGlobalSearch() {
         clearTimeout(globalSearchTimeout);
@@ -417,11 +396,7 @@
     async function performGlobalSearch() {
         const input = document.getElementById('globalJobSearch').value.trim();
         const resultsList = document.getElementById('globalSearchResults');
-        
-        if (input.length < 3) {
-            resultsList.style.display = 'none';
-            return;
-        }
+        if (input.length < 3) { resultsList.style.display = 'none'; return; }
 
         const { data, error } = await supabaseClient
             .from('repairOrders')
@@ -429,10 +404,7 @@
             .ilike('jobNo', `%${input}%`)
             .limit(5);
 
-        if (error) {
-            console.error(error);
-            return;
-        }
+        if (error) { console.error(error); return; }
 
         resultsList.innerHTML = '';
         if (data.length === 0) {
@@ -458,18 +430,14 @@
         resultsList.style.display = 'block';
     }
 
-    // Function to jump to a specific order using tabs
     window.jumpToOrder = function(status, jobNo) {
-        switchTab(status || 'Pending'); // Default to pending if missing
+        switchTab(status || 'Pending'); 
         document.getElementById('searchInput').value = jobNo;
         applyFilters();
-        
-        // Hide dropdown and clear global search
         document.getElementById('globalSearchResults').style.display = 'none';
         document.getElementById('globalJobSearch').value = '';
     }
 
-    // Hide dropdowns on outside click
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.search-select-container')) {
             const list = document.getElementById('customerDropdownList');
@@ -481,13 +449,9 @@
         }
     });
 
-    // --- Customer Database Logic ---
     async function fetchCustomers() {
         const { data } = await supabaseClient.from('customers').select('*').order('name', { ascending: true });
-        if (data) {
-            customersList = data;
-            populateCustomerDropdown();
-        }
+        if (data) { customersList = data; populateCustomerDropdown(); }
     }
 
     function populateCustomerDropdown() {
@@ -534,12 +498,9 @@
         }
     }
 
-    // --- Tab System Logic ---
     window.switchTab = function(tabName) {
         currentTab = tabName;
-        
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        
         const tabId = 'tab-' + tabName.replace(' ', '-');
         const element = document.getElementById(tabId);
         if(element) element.classList.add('active');
@@ -555,27 +516,19 @@
 
     window.applyFilters = function() {
         const input = document.getElementById("searchInput").value.toLowerCase();
-        
         filteredOrdersData = allOrdersData.filter(order => {
             const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc} ${order.devicePassword}`.toLowerCase();
             const matchesSearch = combinedString.includes(input);
             const matchesTab = (order.status || 'Pending') === currentTab;
             return matchesSearch && matchesTab;
         });
-        
         currentPage = 1;
         renderOrdersTable();
     }
 
-    // --- Main Fetch & Render Logic ---
     async function fetchOrders() {
-        const { data, error } = await supabaseClient
-            .from('repairOrders')
-            .select('*')
-            .order('created_at', { ascending: false });
-            
+        const { data, error } = await supabaseClient.from('repairOrders').select('*').order('created_at', { ascending: false });
         if (error) return console.error(error);
-        
         allOrdersData = data || [];
         updateStats(allOrdersData);
         applyFilters();
@@ -618,27 +571,36 @@
             const problemSafe = order.problemDesc ? order.problemDesc.replace(/'/g, "\\'") : '';
             const passwordSafe = order.devicePassword ? order.devicePassword.replace(/'/g, "\\'") : '';
             
-            // Generate Conditional Actions Based on Tab
             let actionHtml = '';
             
             if (order.status === 'Pending') {
                 actionHtml = `<button class="btn-bill" onclick="openBillingModal('${order.id}', '${order.jobNo}', '${order.customerName}', '${order.contactNo}')">Repair Complete ✓</button>`;
             } else if (order.status === 'Repair Completed') {
-                actionHtml = `<button class="btn-bill" style="background:#2563eb;" onclick="markGoodsDelivered('${order.id}')">Deliver Goods 📦</button>`;
+                
+                // Pickup Notification Button Logic
+                let pickupBtn = '';
+                if (order.notified_pickup) {
+                    if (isAdmin) {
+                        pickupBtn = `<button class="btn-notified" onclick="reverseNotify('${order.id}')" title="Click to undo (Admin Only)">Notified ✓</button>`;
+                    } else {
+                        pickupBtn = `<button class="btn-notified" disabled>Notified ✓</button>`;
+                    }
+                } else {
+                    pickupBtn = `<button class="btn-pickup" onclick="notifyPickup('${order.id}', '${order.jobNo}', '${order.customerName}', '${order.contactNo}')">Waiting for Pickup</button>`;
+                }
+
+                actionHtml = pickupBtn + `<button class="btn-bill" style="background:#2563eb;" onclick="markGoodsDelivered('${order.id}')">Deliver Goods 📦</button>`;
+                
             } else if (order.status === 'Goods Delivered') {
                 actionHtml = `<span class="status-badge" style="background:#dcfce7; color:#166534;">Delivered</span>`;
             } else if (order.status === 'Repair Refusal') {
                 actionHtml = `<span class="status-badge" style="background:#fee2e2; color:#991b1b;">Refused</span>`;
             }
             
-            // Delete button remains admin-only
             if (isAdmin) {
-                actionHtml += `
-                    <button class="btn-icon" style="color:#ef4444; margin-left: 10px;" onclick="deleteOrder('${order.id}', '${order.jobNo}')" title="Delete Order">🗑️</button>
-                `;
+                actionHtml += `<button class="btn-icon" style="color:#ef4444; margin-left: 10px;" onclick="deleteOrder('${order.id}', '${order.jobNo}')" title="Delete Order">🗑️</button>`;
             }
 
-            // Edit icon is available to everyone
             const editIconHtml = `<span class="edit-pen" onclick="openEditModal('${order.id}', '${order.jobNo}', '${problemSafe}', '${passwordSafe}')" title="Edit Problem/Password">✏️</span>`;
 
             tbody.innerHTML += `
@@ -667,22 +629,48 @@
         document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(filteredOrdersData.length / rowsPerPage) || 1}`;
     }
 
-    // Pagination Controls
+    // --- NEW NOTIFICATION SYSTEM FUNCTIONS ---
+    window.notifyPickup = async function(id, jobNo, name, mobile) {
+        if(!confirm(`Send automated WhatsApp pickup notification to ${name}?`)) return;
+
+        try {
+            // 1. Update DB immediately to show UI feedback
+            await supabaseClient.from('repairOrders').update({ notified_pickup: true }).eq('id', id);
+            
+            // 2. Trigger your new edge function for WhatsApp pickup message
+            if (mobile) {
+                supabaseClient.functions.invoke('send-whatsapp-pickup', {
+                    body: { phone: mobile, customerName: name, jobNo: jobNo }
+                }).then(({ error }) => {
+                    if (error) console.error("WhatsApp failed:", error);
+                });
+            }
+            
+            fetchOrders(); 
+        } catch(err) {
+            alert("Error sending notification: " + err.message);
+        }
+    }
+
+    window.reverseNotify = async function(id) {
+        if(!confirm("Reverse the notification status? (Admin Only)")) return;
+        try {
+            await supabaseClient.from('repairOrders').update({ notified_pickup: false }).eq('id', id);
+            fetchOrders();
+        } catch(err) {
+            alert("Error updating status: " + err.message);
+        }
+    }
+
+
     window.prevPage = function() { 
-        if (currentPage > 1) { 
-            currentPage--; 
-            renderOrdersTable();
-        } 
+        if (currentPage > 1) { currentPage--; renderOrdersTable(); } 
     }
     window.nextPage = function() { 
         const maxPage = Math.ceil(filteredOrdersData.length / rowsPerPage);
-        if (currentPage < maxPage) { 
-            currentPage++; 
-            renderOrdersTable();
-        } 
+        if (currentPage < maxPage) { currentPage++; renderOrdersTable(); } 
     }
 
-    // --- Order Logic ---
     window.toggleForm = async function() {
         const form = document.getElementById('orderFormCard');
         if (form.style.display === 'block') {
@@ -697,13 +685,7 @@
 
     async function generateNextJobNo() {
         try {
-            const { data, error } = await supabaseClient
-                .from('repairOrders')
-                .select('jobNo')
-                .ilike('jobNo', 'GSM%')
-                .order('created_at', { ascending: false })
-                .limit(100);
-
+            const { data, error } = await supabaseClient.from('repairOrders').select('jobNo').ilike('jobNo', 'GSM%').order('created_at', { ascending: false }).limit(100);
             let maxNum = 0;
             if (data && data.length > 0) {
                 data.forEach(order => {
@@ -717,15 +699,12 @@
             const nextNum = maxNum + 1;
             document.getElementById('jobNo').value = `GSM${String(nextNum).padStart(2, '0')}`;
         } catch(err) {
-            console.error("Could not generate job number:", err);
             document.getElementById('jobNo').value = "GSM01";
         }
     }
 
     window.saveOrder = async function() {
-        let custName = '';
-        let contactNo = '';
-
+        let custName = ''; let contactNo = '';
         if (isNewCustomerMode) {
             custName = document.getElementById('newCustName').value.trim();
             contactNo = document.getElementById('newCustMobile').value.trim();
@@ -749,16 +728,9 @@
         if(!jobNoVal) return alert("Job Number is missing. Please close and reopen the form.");
 
         const orderData = {
-            customerName: custName,
-            contactNo: contactNo,
-            jobNo: jobNoVal,
-            problemDesc: problemDesc,
-            devicePassword: devicePassword,
-            approxEstimate: approxEstimate,
-            date: currentDate,
-            time: currentTime,
-            status: "Pending",
-            createdBy: currentUserEmail.split('@')[0]
+            customerName: custName, contactNo: contactNo, jobNo: jobNoVal, problemDesc: problemDesc,
+            devicePassword: devicePassword, approxEstimate: approxEstimate, date: currentDate, time: currentTime,
+            status: "Pending", createdBy: currentUserEmail.split('@')[0], notified_pickup: false
         };
 
         try {
@@ -767,77 +739,35 @@
             
             alert("Repair order added successfully!");
             
-            // Clear form
-            document.getElementById('custSearchInput').value = '';
-            document.getElementById('selectedCustName').value = '';
-            document.getElementById('selectedCustMobile').value = '';
-            document.getElementById('newCustName').value = '';
-            document.getElementById('newCustMobile').value = '';
-            document.getElementById('problemDesc').value = '';
-            document.getElementById('devicePassword').value = '';
-            document.getElementById('approxEstimate').value = '';
+            document.getElementById('custSearchInput').value = ''; document.getElementById('selectedCustName').value = ''; document.getElementById('selectedCustMobile').value = ''; document.getElementById('newCustName').value = ''; document.getElementById('newCustMobile').value = ''; document.getElementById('problemDesc').value = ''; document.getElementById('devicePassword').value = ''; document.getElementById('approxEstimate').value = '';
             
             toggleForm();
             switchTab('Pending');
             fetchOrders();
-        } catch (error) { 
-            alert("Error saving order: " + error.message); 
-        }
+        } catch (error) { alert("Error saving order: " + error.message); }
     };
 
-    // --- Completion & Update Modals ---
-    
     window.openBillingModal = function(id, jobNo, customer, mobile) {
-        billingOrderId = id;
-        billingJobNo = jobNo;
-        billingCustomerName = customer;
-        billingCustomerMobile = mobile;
-        
+        billingOrderId = id; billingJobNo = jobNo; billingCustomerName = customer; billingCustomerMobile = mobile;
         document.getElementById('billingSubtitle').innerText = `Job No: ${jobNo} | Customer: ${customer}`;
         document.getElementById('billEstimateAmount').value = '';
         document.getElementById('billRepairNotes').value = '';
-        
         document.getElementById('modalBilling').style.display = 'flex';
         document.getElementById('billEstimateAmount').focus();
     }
 
-    window.closeBillingModal = function() {
-        document.getElementById('modalBilling').style.display = 'none';
-    }
+    window.closeBillingModal = function() { document.getElementById('modalBilling').style.display = 'none'; }
 
     window.confirmBilling = async function() {
         const estimateAmount = parseFloat(document.getElementById('billEstimateAmount').value) || 0;
         const notes = document.getElementById('billRepairNotes').value.trim();
 
         try {
-            // Update the DB
-            await supabaseClient.from('repairOrders').update({ 
-                status: 'Repair Completed', 
-                estimateAmount: estimateAmount,
-                repairNotes: notes
-            }).eq('id', billingOrderId);
-
-            // WhatsApp Webhook Trigger
-            if (billingCustomerMobile) {
-                supabaseClient.functions.invoke('send-whatsapp-repair', {
-                    body: {
-                        phone: billingCustomerMobile,
-                        customerName: billingCustomerName,
-                        jobNo: billingJobNo,
-                        amount: estimateAmount
-                    }
-                }).then(({ error }) => {
-                    if (error) console.error("WhatsApp failed:", error);
-                });
-            }
-
+            await supabaseClient.from('repairOrders').update({ status: 'Repair Completed', estimateAmount: estimateAmount, repairNotes: notes }).eq('id', billingOrderId);
             closeBillingModal();
             fetchOrders(); 
-            alert("Repair marked as complete! WhatsApp notification sent to customer.");
-            
-        } catch (err) {
-            alert("Error completing repair: " + err.message);
-        }
+            alert("Repair marked as complete! Ready for pickup notification.");
+        } catch (err) { alert("Error completing repair: " + err.message); }
     }
 
     window.markRepairNP = async function() {
@@ -845,17 +775,11 @@
         const notes = document.getElementById('billRepairNotes').value.trim();
 
         try {
-            await supabaseClient.from('repairOrders').update({ 
-                status: 'Repair Refusal', 
-                repairNotes: notes
-            }).eq('id', billingOrderId);
-
+            await supabaseClient.from('repairOrders').update({ status: 'Repair Refusal', repairNotes: notes }).eq('id', billingOrderId);
             closeBillingModal();
             fetchOrders(); 
             alert("Order moved to Repair Refusal!");
-        } catch (err) {
-            alert("Error updating order: " + err.message);
-        }
+        } catch (err) { alert("Error updating order: " + err.message); }
     }
 
     window.markGoodsDelivered = async function(id) {
@@ -863,9 +787,7 @@
         try {
             await supabaseClient.from('repairOrders').update({ status: 'Goods Delivered' }).eq('id', id);
             fetchOrders();
-        } catch (err) {
-            alert("Error updating order: " + err.message);
-        }
+        } catch (err) { alert("Error updating order: " + err.message); }
     }
 
     window.deleteOrder = async function(id, jobNo) {
@@ -874,12 +796,9 @@
             const { error } = await supabaseClient.from('repairOrders').delete().eq('id', id);
             if (error) throw error;
             fetchOrders();
-        } catch (err) {
-            alert("Error deleting order: " + err.message);
-        }
+        } catch (err) { alert("Error deleting order: " + err.message); }
     }
 
-    // Accessible to all users
     window.openEditModal = function(id, jobNo, currentProblem, currentPassword) {
         editOrderId = id;
         document.getElementById('editSubtitle').innerText = `Editing details for Job No: ${jobNo}`;
@@ -888,26 +807,18 @@
         document.getElementById('modalEdit').style.display = 'flex';
     }
 
-    window.closeEditModal = function() {
-        document.getElementById('modalEdit').style.display = 'none';
-    }
+    window.closeEditModal = function() { document.getElementById('modalEdit').style.display = 'none'; }
 
     window.saveEditOrder = async function() {
         const newProblem = document.getElementById('editProblemDesc').value.trim();
         const newPassword = document.getElementById('editDevicePassword').value.trim();
 
         try {
-            const { error } = await supabaseClient.from('repairOrders').update({ 
-                problemDesc: newProblem,
-                devicePassword: newPassword
-            }).eq('id', editOrderId);
-
+            const { error } = await supabaseClient.from('repairOrders').update({ problemDesc: newProblem, devicePassword: newPassword }).eq('id', editOrderId);
             if (error) throw error;
             closeEditModal();
             fetchOrders(); 
-        } catch (err) {
-            alert("Error updating order: " + err.message);
-        }
+        } catch (err) { alert("Error updating order: " + err.message); }
     }
 
     document.addEventListener("DOMContentLoaded", async () => {
