@@ -123,33 +123,11 @@
         .btn-confirm { padding: 10px 20px; border-radius: 6px; border: none; background: #10b981; color: white; cursor: pointer; font-weight: bold; }
         .btn-save { padding: 10px 20px; border-radius: 6px; border: none; background: #2563eb; color: white; cursor: pointer; font-weight: bold; }
         
-        .edit-pen { cursor: pointer; font-size: 0.95rem; margin-left: 8px; color: #6b7280; transition: color 0.2s; }
-        .edit-pen:hover { color: #2563eb; }
         .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; display: inline-block;}
         
-        /* Editable Amount Field Styling */
-        .editable-amount {
-            width: 70px;
-            padding: 4px 6px;
-            border: 1px solid transparent;
-            border-radius: 4px;
-            font-size: 0.9rem;
-            font-weight: bold;
-            color: inherit;
-            background: transparent;
-            margin-left: 2px;
-            transition: 0.2s;
-        }
-        .editable-amount:hover {
-            border-color: #d1d5db;
-            background: #f9fafb;
-        }
-        .editable-amount:focus {
-            border-color: #10b981;
-            background: white;
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
-        }
+        /* Unified Pencil Styling */
+        .edit-pen { cursor: pointer; display: inline-block; width: 14px; height: 14px; margin-left: 6px; vertical-align: middle; color: #9ca3af; transition: 0.2s; }
+        .edit-pen:hover { color: #2563eb; }
     </style>
 </head>
 <body>
@@ -354,7 +332,6 @@
                 <button type="button" class="seg-btn" id="btnSplit" onclick="selectPaymentMode('Split', this)">Split</button>
             </div>
 
-            <!-- UPI Account / Reference Input -->
             <div id="upiDetailsSection" style="display: none; margin-top: 15px; border-top: 1px solid #e5e7eb; padding-top: 15px;">
                 <label style="font-weight:bold; color: #374151; font-size: 0.9rem;">UPI Account Received In (Note)</label>
                 <input type="text" id="upiReferenceNote" class="notes-input" placeholder="e.g. Shop QR, Personal GPay, etc.">
@@ -666,7 +643,6 @@
     window.applyFilters = function() {
         const input = document.getElementById("searchInput").value.toLowerCase();
         
-        // Before filtering, sort appropriately based on the active tab
         filteredOrdersData = allOrdersData.filter(order => {
             const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc} ${order.devicePassword}`.toLowerCase();
             const matchesSearch = combinedString.includes(input);
@@ -679,7 +655,12 @@
 
         // Smart Sorting Logic
         filteredOrdersData.sort((a, b) => {
-            if (currentTab === 'Repair Completed') {
+            if (currentTab === 'Goods Delivered') {
+                // Latest GD Date/Time on Top
+                const timeA = a.gd_timestamp ? new Date(a.gd_timestamp).getTime() : new Date(a.created_at || 0).getTime();
+                const timeB = b.gd_timestamp ? new Date(b.gd_timestamp).getTime() : new Date(b.created_at || 0).getTime();
+                return timeB - timeA;
+            } else if (currentTab === 'Repair Completed') {
                 // Latest RC Date/Time on Top
                 const timeA = a.rc_timestamp ? new Date(a.rc_timestamp).getTime() : new Date(a.created_at || 0).getTime();
                 const timeB = b.rc_timestamp ? new Date(b.rc_timestamp).getTime() : new Date(b.created_at || 0).getTime();
@@ -726,8 +707,7 @@
     }
 
     // Function to dynamically update inline amounts
-    window.updateInlineEstimate = async function(id, val, status) {
-        const num = parseFloat(val) || 0;
+    window.updateInlineEstimate = async function(id, num, status) {
         try {
             if(status === 'Pending') {
                 await supabaseClient.from('repairOrders').update({ approxEstimate: num }).eq('id', id);
@@ -738,9 +718,22 @@
                 const idx = allOrdersData.findIndex(o => o.id == id);
                 if(idx > -1) allOrdersData[idx].estimateAmount = num;
             }
+            renderOrdersTable();
         } catch (e) {
             console.error("Error updating amount", e);
             alert("Failed to update amount in database.");
+        }
+    }
+
+    window.promptUpdateEstimate = async function(id, status, currentVal) {
+        let newVal = prompt("Enter new amount (₹):", currentVal);
+        if (newVal !== null) {
+            let num = parseFloat(newVal);
+            if (!isNaN(num)) {
+                await updateInlineEstimate(id, num, status);
+            } else {
+                alert("Please enter a valid numeric amount.");
+            }
         }
     }
 
@@ -757,6 +750,9 @@
         const start = (currentPage - 1) * rowsPerPage;
         const paginatedItems = filteredOrdersData.slice(start, start + rowsPerPage);
 
+        // Unified professional SVG pencil icon
+        const pencilSVG = `<svg class="edit-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
+
         paginatedItems.forEach(order => {
             const problemSafe = escapeStr(order.problemDesc);
             const passwordSafe = escapeStr(order.devicePassword);
@@ -771,7 +767,6 @@
             let displayAmountHtml = '';
             let rowStyle = '';
             
-            // Build the notes HTML to append under the Problem Description
             let notesHtml = '';
             if (order.repairNotes) {
                 notesHtml = `<div style="font-size: 0.75rem; color: #4b5563; margin-top: 6px; background: #f3f4f6; padding: 5px 8px; border-radius: 4px; display: inline-block;"><strong>Notes:</strong> ${notesSafe}</div>`;
@@ -779,21 +774,27 @@
 
             if (order.status === 'Pending') {
                 displayAmount = order.approxEstimate || 0;
-                displayAmountHtml = `<div style="display:flex; align-items:center; color:#059669; font-weight:bold;">₹<input type="number" class="editable-amount" value="${displayAmount}" onchange="updateInlineEstimate('${orderIdSafe}', this.value, 'Pending')"></div>`;
+                displayAmountHtml = `<span style="font-weight:bold; color:#059669;">₹${displayAmount}</span>`;
+                if (isAdmin) {
+                    displayAmountHtml += `<span onclick="promptUpdateEstimate('${orderIdSafe}', 'Pending', ${displayAmount})">${pencilSVG}</span>`;
+                }
                 actionHtml = `<button class="btn-bill" onclick="openBillingModal('${orderIdSafe}', '${jobNoSafe}', '${customerNameSafe}', '${contactNoSafe}')">Repair Complete ✓</button>`;
             
             } else if (order.status === 'Repair Completed') {
                 displayAmount = order.estimateAmount || order.approxEstimate || 0;
-                displayAmountHtml = `<div style="display:flex; align-items:center; color:#059669; font-weight:bold;">₹<input type="number" class="editable-amount" value="${displayAmount}" onchange="updateInlineEstimate('${orderIdSafe}', this.value, 'Repair Completed')"></div>`;
+                displayAmountHtml = `<span style="font-weight:bold; color:#059669;">₹${displayAmount}</span>`;
+                if (isAdmin) {
+                    displayAmountHtml += `<span onclick="promptUpdateEstimate('${orderIdSafe}', 'Repair Completed', ${displayAmount})">${pencilSVG}</span>`;
+                }
                 actionHtml = `<button class="btn-bill" style="background:#2563eb;" onclick="openDeliveryModal('${orderIdSafe}', '${jobNoSafe}', ${displayAmount}, '${customerNameSafe}', '${contactNoSafe}', '${order.status}')">Deliver Goods 📦</button>`;
             
             } else if (order.status === 'Goods Delivered') {
-                displayAmount = order.estimateAmount || order.approxEstimate || 0;
+                displayAmount = order.finalAmount || order.estimateAmount || order.approxEstimate || 0;
                 displayAmountHtml = `<span style="font-weight:bold; color:#059669;">₹${displayAmount}</span>`;
                 actionHtml = `<span class="status-badge" style="background:#dcfce7; color:#166534;">Delivered</span>`;
             
             } else if (order.status === 'Delivered (Refused)') {
-                displayAmount = order.estimateAmount || order.approxEstimate || 0;
+                displayAmount = order.finalAmount || order.estimateAmount || order.approxEstimate || 0;
                 displayAmountHtml = `<span style="font-weight:bold; color:#059669;">₹${displayAmount}</span>`;
                 actionHtml = `<span class="status-badge" style="background:#fca5a5; color:#7f1d1d;">Returned (Refused)</span>`;
                 rowStyle = 'background-color: #fef2f2;';
@@ -812,14 +813,18 @@
                 actionHtml += `<button class="btn-icon" style="color:#ef4444; margin-top: 5px;" onclick="deleteOrder('${orderIdSafe}', '${jobNoSafe}')" title="Delete Order">🗑️</button>`;
             }
 
-            const editIconHtml = `<span class="edit-pen" onclick="openEditModal('${orderIdSafe}', '${jobNoSafe}', '${problemSafe}', '${passwordSafe}')" title="Edit Problem/Password">✏️</span>`;
+            const editIconHtml = `<span onclick="openEditModal('${orderIdSafe}', '${jobNoSafe}', '${problemSafe}', '${passwordSafe}')" title="Edit Problem/Password">${pencilSVG}</span>`;
 
             tbody.innerHTML += `
                 <tr style="${rowStyle}">
                     <td style="white-space: nowrap;">
                         <div style="font-size: 0.8rem; font-weight: 600; color: #4b5563;">In: ${order.date}</div>
                         <div style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">${order.time || ''}</div>
-                        ${(order.rc_date && (order.status !== 'Pending')) ? `
+                        
+                        ${(order.gd_date && (order.status === 'Goods Delivered' || order.status === 'Delivered (Refused)')) ? `
+                        <div style="font-size: 0.8rem; font-weight: 600; color: #059669; border-top: 1px solid #e5e7eb; padding-top: 4px;">GD: ${order.gd_date}</div>
+                        <div style="font-size: 0.75rem; color: #6b7280;">${order.gd_time || ''}</div>
+                        ` : (order.rc_date && (order.status === 'Repair Completed' || order.status === 'Repair Refusal')) ? `
                         <div style="font-size: 0.8rem; font-weight: 600; color: #2563eb; border-top: 1px solid #e5e7eb; padding-top: 4px;">RC: ${order.rc_date}</div>
                         <div style="font-size: 0.75rem; color: #6b7280;">${order.rc_time || ''}</div>
                         ` : ''}
@@ -929,7 +934,6 @@
         } catch (err) { alert("Error updating order: " + err.message); }
     }
 
-
     window.openDeliveryModal = function(id, jobNo, estimateAmount, customerName, customerMobile, currentStatus) {
         deliveryOrderId = id;
         deliveryJobNo = jobNo;
@@ -1011,21 +1015,31 @@
         } else if (selectedPaymentMethod === 'UPI') { upiAmt = finalAmount;
         } else if (selectedPaymentMethod === 'Credit') { creditAmt = finalAmount; }
 
-        const currentDate = new Date().toISOString().split('T')[0];
-        const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const gdTimestamp = new Date().toISOString();
+        const gdDate = new Date().toISOString().split('T')[0];
+        const gdTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+        
+        // Use the exact date of creation for ledgers, rather than the current delivery date if preferred,
+        // but traditionally cashbook entries are recorded exactly when payment is taken (today).
+        const ledgerDate = new Date().toISOString().split('T')[0];
 
         const newStatus = deliveryCurrentStatus === 'Repair Refusal' ? 'Delivered (Refused)' : 'Goods Delivered';
 
         try {
             const { error: updateError } = await supabaseClient.from('repairOrders').update({ 
-                status: newStatus, finalAmount: finalAmount, paymentMethod: selectedPaymentMethod
+                status: newStatus, 
+                finalAmount: finalAmount, 
+                paymentMethod: selectedPaymentMethod,
+                gd_date: gdDate,
+                gd_time: gdTime,
+                gd_timestamp: gdTimestamp
             }).eq('id', deliveryOrderId);
             if (updateError) throw updateError;
             
             if (finalAmount > 0) {
                 if (cashAmt > 0) {
                     const { error: cashError } = await supabaseClient.from('cashbook_entries').insert([{
-                        date: currentDate, description: `Repair Job No: ${deliveryJobNo}`, category: 'Repair Sales', amount: cashAmt, type: 'in', created_by: currentUserEmail
+                        date: ledgerDate, description: `Repair Job No: ${deliveryJobNo}`, category: 'Repair Sales', amount: cashAmt, type: 'in', created_by: currentUserEmail
                     }]);
                     if (cashError) throw cashError;
                 } 
@@ -1036,7 +1050,7 @@
                     }
 
                     const { error: upiError } = await supabaseClient.from('upi_entries').insert([{
-                        date: currentDate, time: currentTime, description: upiDesc, category: 'Repair Sales', upi_amount: upiAmt, card_amount: 0, created_by: currentUserEmail
+                        date: ledgerDate, time: gdTime, description: upiDesc, category: 'Repair Sales', upi_amount: upiAmt, card_amount: 0, created_by: currentUserEmail
                     }]);
                     if (upiError) throw upiError;
                 }
@@ -1046,7 +1060,7 @@
                     if (!creditCustName) return alert("Please specify the customer name for the Credit (Udhar) tracking.");
                     
                     const { error: creditError } = await supabaseClient.from('customer_credits').insert([{
-                        customer_name: creditCustName, mobile: creditCustMobile, amount: creditAmt, job_no: deliveryJobNo, date: currentDate, type: 'Given', created_by: currentUserEmail
+                        customer_name: creditCustName, mobile: creditCustMobile, amount: creditAmt, job_no: deliveryJobNo, date: ledgerDate, type: 'Given', created_by: currentUserEmail
                     }]);
                     if (creditError) throw creditError;
 
@@ -1060,7 +1074,7 @@
             closeDeliveryModal();
             await fetchOrders(); 
             switchTab('Goods Delivered'); 
-        } catch (err) { alert("Error updating order: " + err.message); }
+        } catch (err) { alert("Error updating order: " + err.message + "\n\nMake sure 'gd_date', 'gd_time', 'gd_timestamp', and 'finalAmount' columns exist."); }
     }
 
     // CASCADE DELETION LOGIC
