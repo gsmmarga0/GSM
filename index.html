@@ -780,13 +780,21 @@
         document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(filteredOrdersData.length / rowsPerPage) || 1}`;
     }
 
-    async function sendFast2SMS(mobile, name, jobNo) {
+    // Configured to send WhatsApp messages using the Edge Function 
+    async function sendFast2SMSWhatsApp(mobile, name, jobNo, billAmount) {
         try {
+            // Note: The edge function should now accept "amount" and "channel: whatsapp"
             const { data, error } = await supabaseClient.functions.invoke('send-fast2sms', {
-                body: { phone: mobile, customerName: name, jobNo: jobNo }
+                body: { 
+                    phone: mobile, 
+                    customerName: name, 
+                    jobNo: jobNo,
+                    amount: billAmount,
+                    channel: 'whatsapp'
+                }
             });
             if (error) { console.error("Edge Function Error:", error); return; }
-        } catch(err) { console.error("SMS Request Failed", err); }
+        } catch(err) { console.error("WhatsApp Request Failed", err); }
     }
 
     window.openBillingModal = function(id, jobNo, customer, mobile) {
@@ -811,7 +819,10 @@
 
             if (updateError) throw updateError;
             
-            if (billingCustomerMobile) { await sendFast2SMS(billingCustomerMobile, billingCustomerName, billingJobNo); }
+            // Sending WhatsApp message on "Confirm & Move"
+            if (billingCustomerMobile) { 
+                await sendFast2SMSWhatsApp(billingCustomerMobile, billingCustomerName, billingJobNo, estimateAmount); 
+            }
 
             closeBillingModal();
             await fetchOrders(); 
