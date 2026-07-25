@@ -104,18 +104,19 @@
         .billing-row { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
         .billing-row label { font-weight: bold; color: #374151; font-size: 0.9rem;}
         .billing-row input, .billing-row select { text-align: right; width: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-weight: bold; outline: none;}
-        
-        /* Grid Payment Selection Styles */
-        .payment-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; margin-bottom: 15px; }
-        .pay-btn { padding: 12px 10px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; font-weight: bold; color: #4b5563; text-align: center; transition: 0.2s;}
-        .pay-btn:hover { background: #f3f4f6; }
-        .pay-btn.active { background: #2563eb; color: white; border-color: #2563eb; }
-        
+
+        /* Segemented Control (Retool matching style) */
+        .segmented-control { display: inline-flex; border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; margin-top: 10px; margin-bottom: 15px; }
+        .seg-btn { padding: 10px 24px; border: none; background: #f9fafb; cursor: pointer; font-weight: bold; color: #4b5563; transition: 0.2s; border-right: 1px solid #d1d5db; font-size: 0.95rem; }
+        .seg-btn:last-child { border-right: none; }
+        .seg-btn:hover { background: #f3f4f6; }
+        .seg-btn.active { background: #111827; color: white; border-color: #111827; }
+
         /* Split Input Group */
         .split-inputs { display: none; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
         .split-group { display: flex; flex-direction: column; }
         .split-group label { font-size: 0.75rem; color: #6b7280; margin-bottom: 4px; display: block; font-weight: 600;}
-        .split-group input { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; text-align: right; font-weight: bold;}
+        .split-group input { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; text-align: right; font-weight: bold; outline: none;}
 
         .notes-input { width: 100%; box-sizing: border-box; padding: 10px; margin-top: 8px; border: 1px solid #d1d5db; border-radius: 6px; outline: none; font-family: inherit;}
         .notes-input:focus { border-color: #9ca3af; }
@@ -227,7 +228,10 @@
 
                     <div id="customerCreateMode" style="display: none; gap: 15px;">
                         <input type="text" id="newCustName" placeholder="Full Name" style="flex:1;">
-                        <input type="text" id="newCustMobile" value="+91" placeholder="Mobile Number" style="flex:1;">
+                        <div style="display:flex; border: 1px solid var(--border-color); border-radius: 6px; overflow:hidden; flex:1;">
+                            <span style="background: #f3f4f6; padding: 10px; color: #6b7280; font-weight: bold; border-right: 1px solid var(--border-color);">+91</span>
+                            <input type="text" id="newCustMobile" placeholder="10-digit mobile number" style="border: none; padding: 10px; outline: none; width: 100%; font-family: inherit;" maxlength="10">
+                        </div>
                     </div>
                 </div>
 
@@ -266,7 +270,7 @@
                         <th>Customer</th>
                         <th>Model / Problem</th>
                         <th>Password</th>
-                        <th>Approx Est. (₹)</th>
+                        <th id="thEstimate">Approx Est. (₹)</th>
                         <th style="text-align: center;">Action</th>
                     </tr>
                 </thead>
@@ -320,13 +324,13 @@
                 <input type="number" id="deliveryAmount" placeholder="0" style="width: 100%;">
             </div>
 
-            <!-- Payment Method Grid -->
+            <!-- Segmented Control for Payment Method -->
             <label style="color: #374151; font-weight:bold; font-size: 0.9rem; margin-top:20px; display:block;">Select Payment Method</label>
-            <div class="payment-grid" id="paymentGrid">
-                <div class="pay-btn active" id="btnCash" onclick="selectPaymentMode('Cash', this)">💵 Cash</div>
-                <div class="pay-btn" id="btnUPI" onclick="selectPaymentMode('UPI', this)">📱 UPI</div>
-                <div class="pay-btn" id="btnCredit" onclick="selectPaymentMode('Credit', this)">💳 Credit</div>
-                <div class="pay-btn" id="btnSplit" onclick="selectPaymentMode('Split', this)">🔀 Split Payment</div>
+            <div class="segmented-control" id="paymentGrid">
+                <button type="button" class="seg-btn active" id="btnCash" onclick="selectPaymentMode('Cash', this)">Cash</button>
+                <button type="button" class="seg-btn" id="btnUPI" onclick="selectPaymentMode('UPI', this)">UPI</button>
+                <button type="button" class="seg-btn" id="btnCredit" onclick="selectPaymentMode('Credit', this)">Credit</button>
+                <button type="button" class="seg-btn" id="btnSplit" onclick="selectPaymentMode('Split', this)">Split</button>
             </div>
 
             <!-- Split Payment Inputs -->
@@ -563,10 +567,17 @@
         if(element) element.classList.add('active');
         
         const desc = document.getElementById('tabDescription');
-        if(tabName === 'Pending') desc.innerText = "Showing all pending service orders awaiting repair.";
-        if(tabName === 'Repair Completed') desc.innerText = "Showing all items where repairs have successfully concluded.";
-        if(tabName === 'Goods Delivered') desc.innerText = "Showing history of completed & returned items.";
-        if(tabName === 'Repair Refusal') desc.innerText = "Showing orders marked as refused or cancelled.";
+        const thEstimate = document.getElementById('thEstimate');
+
+        if(tabName === 'Pending') {
+            desc.innerText = "Showing all pending service orders awaiting repair.";
+            thEstimate.innerText = "Approx Est. (₹)";
+        } else {
+            thEstimate.innerText = "Balance Amount (₹)";
+            if(tabName === 'Repair Completed') desc.innerText = "Showing all items where repairs have successfully concluded.";
+            if(tabName === 'Goods Delivered') desc.innerText = "Showing history of completed & returned items.";
+            if(tabName === 'Repair Refusal') desc.innerText = "Showing orders marked as refused or cancelled.";
+        }
 
         applyFilters();
     }
@@ -629,16 +640,19 @@
             const passwordSafe = order.devicePassword ? order.devicePassword.replace(/'/g, "\\'") : '';
             
             let actionHtml = '';
+            let displayAmount = 0;
             
             if (order.status === 'Pending') {
+                displayAmount = order.approxEstimate || 0;
                 actionHtml = `<button class="btn-bill" onclick="openBillingModal('${order.id}', '${order.jobNo}', '${order.customerName}', '${order.contactNo}')">Repair Complete ✓</button>`;
             } else if (order.status === 'Repair Completed') {
-                const estimatePass = order.estimateAmount || order.approxEstimate || 0;
-                actionHtml = `<button class="btn-bill" style="background:#2563eb;" onclick="openDeliveryModal('${order.id}', '${order.jobNo}', ${estimatePass})">Deliver Goods 📦</button>`;
-                
+                displayAmount = order.estimateAmount || order.approxEstimate || 0;
+                actionHtml = `<button class="btn-bill" style="background:#2563eb;" onclick="openDeliveryModal('${order.id}', '${order.jobNo}', ${displayAmount})">Deliver Goods 📦</button>`;
             } else if (order.status === 'Goods Delivered') {
+                displayAmount = order.estimateAmount || order.approxEstimate || 0;
                 actionHtml = `<span class="status-badge" style="background:#dcfce7; color:#166534;">Delivered</span>`;
             } else if (order.status === 'Repair Refusal') {
+                displayAmount = order.estimateAmount || order.approxEstimate || 0;
                 actionHtml = `<span class="status-badge" style="background:#fee2e2; color:#991b1b;">Refused</span>`;
             }
             
@@ -664,7 +678,7 @@
                         ${editIconHtml}
                     </td>
                     <td style="color:#ef4444; font-weight:bold; letter-spacing:1px;">${order.devicePassword || '-'}</td>
-                    <td style="font-weight:bold; color:#059669;">₹${order.approxEstimate || 0}</td>
+                    <td style="font-weight:bold; color:#059669;">₹${displayAmount}</td>
                     <td style="text-align: center; white-space: nowrap;">
                         ${actionHtml}
                     </td>
@@ -681,13 +695,11 @@
             });
             if (error) {
                 console.error("Edge Function Error:", error);
-                alert("Failed to send SMS: " + error.message);
                 return;
             }
             console.log("SMS Sent Successfully:", data);
         } catch(err) {
             console.error("SMS Request Failed", err);
-            alert("Failed to connect to the SMS server.");
         }
     }
 
@@ -708,13 +720,11 @@
 
             closeBillingModal();
             fetchOrders(); 
-            alert("Repair marked as complete & SMS sent to customer!");
         } catch (err) { 
             alert("Error completing repair: " + err.message); 
         }
     }
 
-    // --- NEW DELIVERY FUNCTIONS & PAYMENT GRID ---
     window.openDeliveryModal = function(id, jobNo, estimateAmount) {
         deliveryOrderId = id;
         deliveryJobNo = jobNo;
@@ -736,8 +746,8 @@
     window.selectPaymentMode = function(mode, element) {
         selectedPaymentMethod = mode;
         
-        // Manage active states visually
-        document.querySelectorAll('.pay-btn').forEach(btn => btn.classList.remove('active'));
+        // Manage active states visually for the segmented control
+        document.querySelectorAll('.seg-btn').forEach(btn => btn.classList.remove('active'));
         if (element) element.classList.add('active');
 
         // Toggle visibility between Split inputs vs Main Final Amount
@@ -777,7 +787,7 @@
         const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
         try {
-            // 1. Update the Order status (Added error checking here!)
+            // 1. Update the Order status
             const { error: updateError } = await supabaseClient.from('repairOrders').update({ 
                 status: 'Goods Delivered',
                 finalAmount: finalAmount,
@@ -825,7 +835,7 @@
             console.error(err);
             alert("Error updating order: " + err.message + "\n\nDid you forget to add 'finalAmount' and 'paymentMethod' to your Supabase table?"); 
         }
-    }    // -----------------------------
+    }
 
     window.prevPage = function() { 
         if (currentPage > 1) { currentPage--; renderOrdersTable(); } 
@@ -873,16 +883,9 @@
             custName = document.getElementById('newCustName').value.trim();
             let rawContact = document.getElementById('newCustMobile').value.trim();
             
-            if(!custName || !rawContact) return alert("Please fill in New Customer details.");
+            if(!custName || rawContact.length !== 10) return alert("Please provide a valid Customer Name and a 10-digit Mobile Number.");
             
-            rawContact = rawContact.replace(/\s+/g, '');
-            if (rawContact.startsWith('+91')) {
-                contactNo = rawContact;
-            } else if (rawContact.startsWith('91') && rawContact.length === 12) {
-                contactNo = '+' + rawContact;
-            } else {
-                contactNo = '+91' + rawContact;
-            }
+            contactNo = '+91' + rawContact;
             
             const { error: custErr } = await supabaseClient.from('customers').insert([{ name: custName, mobile: contactNo }]);
             if(!custErr) fetchCustomers(); 
@@ -911,9 +914,7 @@
             const { error: orderError } = await supabaseClient.from('repairOrders').insert([orderData]);
             if (orderError) throw orderError;
             
-            alert("Repair order added successfully!");
-            
-            document.getElementById('custSearchInput').value = ''; document.getElementById('selectedCustName').value = ''; document.getElementById('selectedCustMobile').value = ''; document.getElementById('newCustName').value = ''; document.getElementById('newCustMobile').value = '+91'; document.getElementById('problemDesc').value = ''; document.getElementById('devicePassword').value = ''; document.getElementById('approxEstimate').value = '';
+            document.getElementById('custSearchInput').value = ''; document.getElementById('selectedCustName').value = ''; document.getElementById('selectedCustMobile').value = ''; document.getElementById('newCustName').value = ''; document.getElementById('newCustMobile').value = ''; document.getElementById('problemDesc').value = ''; document.getElementById('devicePassword').value = ''; document.getElementById('approxEstimate').value = '';
             
             toggleForm();
             switchTab('Pending');
@@ -940,7 +941,6 @@
             await supabaseClient.from('repairOrders').update({ status: 'Repair Refusal', repairNotes: notes }).eq('id', billingOrderId);
             closeBillingModal();
             fetchOrders(); 
-            alert("Order moved to Repair Refusal!");
         } catch (err) { alert("Error updating order: " + err.message); }
     }
 
