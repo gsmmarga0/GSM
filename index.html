@@ -409,6 +409,7 @@
 
     let deliveryOrderId = null;
     let deliveryJobNo = '';
+    let deliveryCurrentStatus = '';
     let selectedPaymentMethod = 'Cash'; 
     
     let currentPage = 1;
@@ -486,7 +487,7 @@
                 let statusColor = '#3b82f6'; 
                 if (job.status === 'Repair Completed') statusColor = '#f59e0b'; 
                 else if (job.status === 'Repair Refusal') statusColor = '#ef4444'; 
-                else if (job.status === 'Goods Delivered') statusColor = '#10b981'; 
+                else if (job.status === 'Goods Delivered' || job.status === 'Delivered (Refused)') statusColor = '#10b981'; 
 
                 resultsList.innerHTML += `
                     <li>
@@ -503,6 +504,9 @@
     }
 
     window.jumpToOrder = function(status, jobNo) {
+        // Map the refused status strictly to the Goods Delivered tab for jumping
+        if (status === 'Delivered (Refused)') status = 'Goods Delivered';
+        
         switchTab(status || 'Pending'); 
         document.getElementById('searchInput').value = jobNo;
         applyFilters();
@@ -638,7 +642,12 @@
         filteredOrdersData = allOrdersData.filter(order => {
             const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc} ${order.devicePassword}`.toLowerCase();
             const matchesSearch = combinedString.includes(input);
-            const matchesTab = (order.status || 'Pending') === currentTab;
+            
+            // Allow the red highlighted 'Delivered (Refused)' to show up in the Goods Delivered tab
+            const matchesTab = currentTab === 'Goods Delivered' 
+                ? (order.status === 'Goods Delivered' || order.status === 'Delivered (Refused)') 
+                : (order.status || 'Pending') === currentTab;
+                
             return matchesSearch && matchesTab;
         });
         currentPage = 1;
@@ -646,9 +655,18 @@
     }
 
     async function fetchOrders() {
-        const { data, error } = await supabaseClient.from('repairOrders').select('*').order('created_at', { ascending: false });
+        const { data, error } = await supabaseClient.from('repairOrders').select('*');
         if (error) return console.error(error);
+        
         allOrdersData = data || [];
+        
+        // Strict JavaScript sorting to ensure all data is sorted by Date and Time (Latest on Top)
+        allOrdersData.sort((a, b) => {
+            const dateA = new Date(a.created_at || a.date).getTime();
+            const dateB = new Date(b.created_at || b.date).getTime();
+            return dateB - dateA;
+        });
+        
         updateStats(allOrdersData);
         applyFilters();
     }
@@ -658,7 +676,7 @@
         data.forEach(order => {
             if(order.status === 'Pending') pending++;
             if(order.status === 'Repair Completed') completed++;
-            if(order.status === 'Goods Delivered') delivered++;
+            if(order.status === 'Goods Delivered' || order.status === 'Delivered (Refused)') delivered++;
             if(order.status === 'Repair Refusal') refusal++;
         });
         
@@ -697,6 +715,7 @@
             
             let actionHtml = '';
             let displayAmount = 0;
+            let rowStyle = '';
             
             // Build the notes HTML to append under the Problem Description
             let notesHtml = '';
@@ -709,17 +728,21 @@
                 actionHtml = `<button class="btn-bill" onclick="openBillingModal('${orderIdSafe}', '${jobNoSafe}', '${customerNameSafe}', '${contactNoSafe}')">Repair Complete ✓</button>`;
             } else if (order.status === 'Repair Completed') {
                 displayAmount = order.estimateAmount || order.approxEstimate || 0;
-                actionHtml = `<button class="btn-bill" style="background:#2563eb;" onclick="openDeliveryModal('${orderIdSafe}', '${jobNoSafe}', ${displayAmount}, '${customerNameSafe}', '${contactNoSafe}')">Deliver Goods 📦</button>`;
+                actionHtml = `<button class="btn-bill" style="background:#2563eb;" onclick="openDeliveryModal('${orderIdSafe}', '${jobNoSafe}', ${displayAmount}, '${customerNameSafe}', '${contactNoSafe}', '${order.status}')">Deliver Goods 📦</button>`;
             } else if (order.status === 'Goods Delivered') {
                 displayAmount = order.estimateAmount || order.approxEstimate || 0;
                 actionHtml = `<span class="status-badge" style="background:#dcfce7; color:#166534;">Delivered</span>`;
+            } else if (order.status === 'Delivered (Refused)') {
+                displayAmount = order.estimateAmount || order.approxEstimate || 0;
+                // Red highlight and badge for orders delivered from the refusal tab
+                actionHtml = `<span class="status-badge" style="background:#fca5a5; color:#7f1d1d;">Returned (Refused)</span>`;
+                rowStyle = 'background-color: #fef2f2;';
             } else if (order.status === 'Repair Refusal') {
                 displayAmount = order.estimateAmount || order.approxEstimate || 0;
-                // Added the Deliver Goods button inside the Repair Refusal tab
                 actionHtml = `
                     <div style="display:flex; flex-direction:column; gap:8px; align-items:center;">
                         <span class="status-badge" style="background:#fee2e2; color:#991b1b;">Refused</span>
-                        <button class="btn-bill" style="background:#2563eb; font-size: 0.75rem; padding: 5px 10px;" onclick="openDeliveryModal('${orderIdSafe}', '${jobNoSafe}', ${displayAmount}, '${customerNameSafe}', '${contactNoSafe}')">Deliver Goods 📦</button>
+                        <button class="btn-bill" style="background:#2563eb; font-size: 0.75rem; padding: 5px 10px;" onclick="openDeliveryModal('${orderIdSafe}', '${jobNoSafe}', ${displayAmount}, '${customerNameSafe}', '${contactNoSafe}', '${order.status}')">Deliver Goods 📦</button>
                     </div>`;
             }
             
@@ -730,7 +753,7 @@
             const editIconHtml = `<span class="edit-pen" onclick="openEditModal('${orderIdSafe}', '${jobNoSafe}', '${problemSafe}', '${passwordSafe}')" title="Edit Problem/Password">✏️</span>`;
 
             tbody.innerHTML += `
-                <tr>
+                <tr style="${rowStyle}">
                     <td>
                         ${order.date}<br>
                         <span style="font-size: 0.8rem; color: #6b7280;">${order.time || ''}</span>
@@ -814,9 +837,11 @@
     }
 
 
-    window.openDeliveryModal = function(id, jobNo, estimateAmount, customerName, customerMobile) {
+    window.openDeliveryModal = function(id, jobNo, estimateAmount, customerName, customerMobile, currentStatus) {
         deliveryOrderId = id;
         deliveryJobNo = jobNo;
+        deliveryCurrentStatus = currentStatus; // Tracks whether this was opened from the Refusal tab
+        
         document.getElementById('deliverySubtitle').innerText = `Job No: ${jobNo} | ${customerName}`;
         
         document.getElementById('deliveryAmount').value = estimateAmount || '';
@@ -887,9 +912,12 @@
         const currentDate = new Date().toISOString().split('T')[0];
         const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
+        // Change the status distinctly if it was delivered straight out of the Refusal tab
+        const newStatus = deliveryCurrentStatus === 'Repair Refusal' ? 'Delivered (Refused)' : 'Goods Delivered';
+
         try {
             const { error: updateError } = await supabaseClient.from('repairOrders').update({ 
-                status: 'Goods Delivered', finalAmount: finalAmount, paymentMethod: selectedPaymentMethod
+                status: newStatus, finalAmount: finalAmount, paymentMethod: selectedPaymentMethod
             }).eq('id', deliveryOrderId);
             if (updateError) throw updateError;
             
