@@ -126,6 +126,30 @@
         .edit-pen { cursor: pointer; font-size: 0.95rem; margin-left: 8px; color: #6b7280; transition: color 0.2s; }
         .edit-pen:hover { color: #2563eb; }
         .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; display: inline-block;}
+        
+        /* Editable Amount Field Styling */
+        .editable-amount {
+            width: 70px;
+            padding: 4px 6px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: inherit;
+            background: transparent;
+            margin-left: 2px;
+            transition: 0.2s;
+        }
+        .editable-amount:hover {
+            border-color: #d1d5db;
+            background: #f9fafb;
+        }
+        .editable-amount:focus {
+            border-color: #10b981;
+            background: white;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+        }
     </style>
 </head>
 <body>
@@ -330,7 +354,7 @@
                 <button type="button" class="seg-btn" id="btnSplit" onclick="selectPaymentMode('Split', this)">Split</button>
             </div>
 
-            <!-- New UPI Account / Reference Input -->
+            <!-- UPI Account / Reference Input -->
             <div id="upiDetailsSection" style="display: none; margin-top: 15px; border-top: 1px solid #e5e7eb; padding-top: 15px;">
                 <label style="font-weight:bold; color: #374151; font-size: 0.9rem;">UPI Account Received In (Note)</label>
                 <input type="text" id="upiReferenceNote" class="notes-input" placeholder="e.g. Shop QR, Personal GPay, etc.">
@@ -460,7 +484,6 @@
     }
     async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
 
-    // Robust HTML Escaping Function to prevent HTML injection in onclick handlers
     const escapeStr = (str) => {
         if (!str) return '';
         return String(str)
@@ -510,9 +533,7 @@
     }
 
     window.jumpToOrder = function(status, jobNo) {
-        // Map the refused status strictly to the Goods Delivered tab for jumping
         if (status === 'Delivered (Refused)') status = 'Goods Delivered';
-        
         switchTab(status || 'Pending'); 
         document.getElementById('searchInput').value = jobNo;
         applyFilters();
@@ -602,7 +623,6 @@
         document.getElementById('creditCustomerDropdownList').style.display = 'none';
     }
 
-
     window.toggleCustomerMode = function() {
         isNewCustomerMode = !isNewCustomerMode;
         if (isNewCustomerMode) {
@@ -645,17 +665,33 @@
 
     window.applyFilters = function() {
         const input = document.getElementById("searchInput").value.toLowerCase();
+        
+        // Before filtering, sort appropriately based on the active tab
         filteredOrdersData = allOrdersData.filter(order => {
             const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc} ${order.devicePassword}`.toLowerCase();
             const matchesSearch = combinedString.includes(input);
-            
-            // Allow the red highlighted 'Delivered (Refused)' to show up in the Goods Delivered tab
             const matchesTab = currentTab === 'Goods Delivered' 
                 ? (order.status === 'Goods Delivered' || order.status === 'Delivered (Refused)') 
                 : (order.status || 'Pending') === currentTab;
                 
             return matchesSearch && matchesTab;
         });
+
+        // Smart Sorting Logic
+        filteredOrdersData.sort((a, b) => {
+            if (currentTab === 'Repair Completed') {
+                // Latest RC Date/Time on Top
+                const timeA = a.rc_timestamp ? new Date(a.rc_timestamp).getTime() : new Date(a.created_at || 0).getTime();
+                const timeB = b.rc_timestamp ? new Date(b.rc_timestamp).getTime() : new Date(b.created_at || 0).getTime();
+                return timeB - timeA;
+            } else {
+                // Default: Latest Order Created on Top
+                const timeA = new Date(a.created_at || 0).getTime();
+                const timeB = new Date(b.created_at || 0).getTime();
+                return timeB - timeA;
+            }
+        });
+
         currentPage = 1;
         renderOrdersTable();
     }
@@ -665,14 +701,6 @@
         if (error) return console.error(error);
         
         allOrdersData = data || [];
-        
-        // Strict JavaScript sorting to ensure all data is sorted by Date and Time (Latest on Top)
-        allOrdersData.sort((a, b) => {
-            const dateA = new Date(a.created_at || a.date).getTime();
-            const dateB = new Date(b.created_at || b.date).getTime();
-            return dateB - dateA;
-        });
-        
         updateStats(allOrdersData);
         applyFilters();
     }
@@ -695,6 +723,25 @@
         document.getElementById('badge-Completed').innerText = completed;
         document.getElementById('badge-Delivered').innerText = delivered;
         document.getElementById('badge-Refusal').innerText = refusal;
+    }
+
+    // Function to dynamically update inline amounts
+    window.updateInlineEstimate = async function(id, val, status) {
+        const num = parseFloat(val) || 0;
+        try {
+            if(status === 'Pending') {
+                await supabaseClient.from('repairOrders').update({ approxEstimate: num }).eq('id', id);
+                const idx = allOrdersData.findIndex(o => o.id == id);
+                if(idx > -1) allOrdersData[idx].approxEstimate = num;
+            } else {
+                await supabaseClient.from('repairOrders').update({ estimateAmount: num }).eq('id', id);
+                const idx = allOrdersData.findIndex(o => o.id == id);
+                if(idx > -1) allOrdersData[idx].estimateAmount = num;
+            }
+        } catch (e) {
+            console.error("Error updating amount", e);
+            alert("Failed to update amount in database.");
+        }
     }
 
     function renderOrdersTable() {
@@ -721,6 +768,7 @@
             
             let actionHtml = '';
             let displayAmount = 0;
+            let displayAmountHtml = '';
             let rowStyle = '';
             
             // Build the notes HTML to append under the Problem Description
@@ -731,20 +779,28 @@
 
             if (order.status === 'Pending') {
                 displayAmount = order.approxEstimate || 0;
+                displayAmountHtml = `<div style="display:flex; align-items:center; color:#059669; font-weight:bold;">₹<input type="number" class="editable-amount" value="${displayAmount}" onchange="updateInlineEstimate('${orderIdSafe}', this.value, 'Pending')"></div>`;
                 actionHtml = `<button class="btn-bill" onclick="openBillingModal('${orderIdSafe}', '${jobNoSafe}', '${customerNameSafe}', '${contactNoSafe}')">Repair Complete ✓</button>`;
+            
             } else if (order.status === 'Repair Completed') {
                 displayAmount = order.estimateAmount || order.approxEstimate || 0;
+                displayAmountHtml = `<div style="display:flex; align-items:center; color:#059669; font-weight:bold;">₹<input type="number" class="editable-amount" value="${displayAmount}" onchange="updateInlineEstimate('${orderIdSafe}', this.value, 'Repair Completed')"></div>`;
                 actionHtml = `<button class="btn-bill" style="background:#2563eb;" onclick="openDeliveryModal('${orderIdSafe}', '${jobNoSafe}', ${displayAmount}, '${customerNameSafe}', '${contactNoSafe}', '${order.status}')">Deliver Goods 📦</button>`;
+            
             } else if (order.status === 'Goods Delivered') {
                 displayAmount = order.estimateAmount || order.approxEstimate || 0;
+                displayAmountHtml = `<span style="font-weight:bold; color:#059669;">₹${displayAmount}</span>`;
                 actionHtml = `<span class="status-badge" style="background:#dcfce7; color:#166534;">Delivered</span>`;
+            
             } else if (order.status === 'Delivered (Refused)') {
                 displayAmount = order.estimateAmount || order.approxEstimate || 0;
-                // Red highlight and badge for orders delivered from the refusal tab
+                displayAmountHtml = `<span style="font-weight:bold; color:#059669;">₹${displayAmount}</span>`;
                 actionHtml = `<span class="status-badge" style="background:#fca5a5; color:#7f1d1d;">Returned (Refused)</span>`;
                 rowStyle = 'background-color: #fef2f2;';
+            
             } else if (order.status === 'Repair Refusal') {
                 displayAmount = order.estimateAmount || order.approxEstimate || 0;
+                displayAmountHtml = `<span style="font-weight:bold; color:#059669;">₹${displayAmount}</span>`;
                 actionHtml = `
                     <div style="display:flex; flex-direction:column; gap:8px; align-items:center;">
                         <span class="status-badge" style="background:#fee2e2; color:#991b1b;">Refused</span>
@@ -760,9 +816,13 @@
 
             tbody.innerHTML += `
                 <tr style="${rowStyle}">
-                    <td>
-                        ${order.date}<br>
-                        <span style="font-size: 0.8rem; color: #6b7280;">${order.time || ''}</span>
+                    <td style="white-space: nowrap;">
+                        <div style="font-size: 0.8rem; font-weight: 600; color: #4b5563;">In: ${order.date}</div>
+                        <div style="font-size: 0.75rem; color: #6b7280; margin-bottom: 4px;">${order.time || ''}</div>
+                        ${(order.rc_date && (order.status !== 'Pending')) ? `
+                        <div style="font-size: 0.8rem; font-weight: 600; color: #2563eb; border-top: 1px solid #e5e7eb; padding-top: 4px;">RC: ${order.rc_date}</div>
+                        <div style="font-size: 0.75rem; color: #6b7280;">${order.rc_time || ''}</div>
+                        ` : ''}
                     </td>
                     <td><strong>${order.jobNo}</strong></td>
                     <td>
@@ -776,7 +836,7 @@
                         ${notesHtml}
                     </td>
                     <td style="color:#ef4444; font-weight:bold; letter-spacing:1px;">${order.devicePassword || '-'}</td>
-                    <td style="font-weight:bold; color:#059669;">₹${displayAmount}</td>
+                    <td>${displayAmountHtml}</td>
                     <td style="text-align: center; white-space: nowrap;">
                         ${actionHtml}
                     </td>
@@ -786,10 +846,8 @@
         document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(filteredOrdersData.length / rowsPerPage) || 1}`;
     }
 
-    // Configured to send WhatsApp messages using the Edge Function 
     async function sendFast2SMSWhatsApp(mobile, name, jobNo, billAmount) {
         try {
-            // Note: The edge function should now accept "amount" and "channel: whatsapp"
             const { data, error } = await supabaseClient.functions.invoke('send-fast2sms', {
                 body: { 
                     phone: mobile, 
@@ -817,15 +875,23 @@
     window.confirmBilling = async function() {
         const estimateAmount = parseFloat(document.getElementById('billEstimateAmount').value) || 0;
         const notes = document.getElementById('billRepairNotes').value.trim();
+        
+        const rcTimestamp = new Date().toISOString();
+        const rcDate = new Date().toISOString().split('T')[0];
+        const rcTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
         try {
             const { error: updateError } = await supabaseClient.from('repairOrders').update({ 
-                status: 'Repair Completed', estimateAmount: estimateAmount, repairNotes: notes 
+                status: 'Repair Completed', 
+                estimateAmount: estimateAmount, 
+                repairNotes: notes,
+                rc_date: rcDate,
+                rc_time: rcTime,
+                rc_timestamp: rcTimestamp
             }).eq('id', billingOrderId);
 
             if (updateError) throw updateError;
             
-            // Sending WhatsApp message on "Confirm & Move"
             if (billingCustomerMobile) { 
                 await sendFast2SMSWhatsApp(billingCustomerMobile, billingCustomerName, billingJobNo, estimateAmount); 
             }
@@ -833,16 +899,26 @@
             closeBillingModal();
             await fetchOrders(); 
             switchTab('Repair Completed');
-        } catch (err) { alert("Error completing repair: " + err.message + "\n\nMake sure 'estimateAmount' and 'repairNotes' columns exist in your Supabase table."); }
+        } catch (err) { 
+            alert("Error completing repair: " + err.message + "\n\nMake sure 'rc_date', 'rc_time', and 'rc_timestamp' columns exist in your Supabase table."); 
+        }
     }
 
     window.markRepairNP = async function() {
         if(!confirm("Are you sure you want to mark this device as Repair Not Possible (NP)?")) return;
         const notes = document.getElementById('billRepairNotes').value.trim();
+        
+        const rcTimestamp = new Date().toISOString();
+        const rcDate = new Date().toISOString().split('T')[0];
+        const rcTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
         try {
             const { error: updateError } = await supabaseClient.from('repairOrders').update({ 
-                status: 'Repair Refusal', repairNotes: notes 
+                status: 'Repair Refusal', 
+                repairNotes: notes,
+                rc_date: rcDate,
+                rc_time: rcTime,
+                rc_timestamp: rcTimestamp
             }).eq('id', billingOrderId);
 
             if (updateError) throw updateError;
@@ -857,7 +933,7 @@
     window.openDeliveryModal = function(id, jobNo, estimateAmount, customerName, customerMobile, currentStatus) {
         deliveryOrderId = id;
         deliveryJobNo = jobNo;
-        deliveryCurrentStatus = currentStatus; // Tracks whether this was opened from the Refusal tab
+        deliveryCurrentStatus = currentStatus; 
         
         document.getElementById('deliverySubtitle').innerText = `Job No: ${jobNo} | ${customerName}`;
         
@@ -866,7 +942,6 @@
         document.getElementById('splitUPI').value = '';
         document.getElementById('splitCredit').value = '';
         
-        // Reset and clear UPI Note field
         document.getElementById('upiReferenceNote').value = '';
 
         document.getElementById('creditCustSearch').value = `${customerName} (${customerMobile})`;
@@ -902,7 +977,6 @@
         document.querySelectorAll('.seg-btn').forEach(btn => btn.classList.remove('active'));
         if (element) element.classList.add('active');
 
-        // Show the UPI Details section if UPI or Split is selected
         if (mode === 'UPI' || mode === 'Split') {
             document.getElementById('upiDetailsSection').style.display = 'block';
         } else {
@@ -940,7 +1014,6 @@
         const currentDate = new Date().toISOString().split('T')[0];
         const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-        // Change the status distinctly if it was delivered straight out of the Refusal tab
         const newStatus = deliveryCurrentStatus === 'Repair Refusal' ? 'Delivered (Refused)' : 'Goods Delivered';
 
         try {
@@ -957,7 +1030,6 @@
                     if (cashError) throw cashError;
                 } 
                 if (upiAmt > 0) {
-                    // Combine Job No and UPI Note for Database description
                     let upiDesc = `Repair Job No: ${deliveryJobNo}`;
                     if (upiNote) {
                         upiDesc += ` - UPI Acc: ${upiNote}`;
