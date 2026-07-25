@@ -51,8 +51,13 @@
         .modal-subtitle { font-size: 0.85rem; color: #6b7280; margin: 0 0 20px 0; padding-bottom: 15px; border-bottom: 1px solid #e5e7eb;}
         .billing-row { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
         .billing-row label { font-weight: bold; color: #374151; font-size: 0.9rem;}
-        .billing-row input, .billing-row select { text-align: right; width: 150px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-weight: bold; outline: none;}
+        .billing-row input { text-align: right; width: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-weight: bold; outline: none;}
         
+        /* Custom Payment Toggle */
+        .payment-toggle { display: flex; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; width: 158px; }
+        .toggle-option { flex: 1; text-align: center; padding: 8px 0; cursor: pointer; font-weight: bold; background: white; color: #374151; transition: 0.2s; font-size: 0.95rem; }
+        .toggle-option.active { background: #111827; color: white; }
+
         .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         .btn-confirm { padding: 10px 20px; border-radius: 6px; border: none; background: #2563eb; color: white; cursor: pointer; font-weight: bold; }
     </style>
@@ -137,10 +142,12 @@
 
             <div class="billing-row">
                 <label>Payment Mode</label>
-                <select id="settleMode">
-                    <option value="Cash">Cash</option>
-                    <option value="UPI">UPI</option>
-                </select>
+                <div class="payment-toggle">
+                    <div class="toggle-option active" id="modeCash" onclick="setPaymentMode('Cash')">Cash</div>
+                    <div class="toggle-option" id="modeUPI" onclick="setPaymentMode('UPI')">UPI</div>
+                </div>
+                <!-- Hidden input to store value -->
+                <input type="hidden" id="settleModeValue" value="Cash">
             </div>
         </div>
         
@@ -291,8 +298,11 @@
             // Use the dynamically calculated due instead of the static database column
             let due = c.display_due; 
             
-            // REMOVED the 'if (due > 0)' restriction so the Settle button is ALWAYS visible
-            let actionHtml = `<button class="btn-settle" onclick="openSettleModal(${c.id}, '${escapeStr(c.name)}', '${escapeStr(c.mobile)}', ${due})">Settle Due</button>`;
+            let actionHtml = '';
+            // Only show Settle Due if balance is strictly greater than 0
+            if (due > 0) {
+                actionHtml += `<button class="btn-settle" onclick="openSettleModal(${c.id}, '${escapeStr(c.name)}', '${escapeStr(c.mobile)}', ${due})">Settle Due</button>`;
+            }
             
             actionHtml += `<button class="btn-history" onclick="openHistoryModal('${escapeStr(c.mobile)}', '${escapeStr(c.name)}')">📜 History</button>`;
 
@@ -389,6 +399,17 @@
 
 
     // --- SETTLE MODAL LOGIC ---
+    window.setPaymentMode = function(mode) {
+        document.getElementById('settleModeValue').value = mode;
+        if (mode === 'Cash') {
+            document.getElementById('modeCash').classList.add('active');
+            document.getElementById('modeUPI').classList.remove('active');
+        } else {
+            document.getElementById('modeUPI').classList.add('active');
+            document.getElementById('modeCash').classList.remove('active');
+        }
+    }
+
     window.openSettleModal = function(id, name, mobile, due) {
         settleCustId = id;
         settleCustName = name;
@@ -396,6 +417,10 @@
         document.getElementById('settleSubtitle').innerText = `Settling dues for: ${name}`;
         document.getElementById('currentDueAmount').innerText = due.toFixed(2);
         document.getElementById('settleAmount').value = due;
+        
+        // Reset to Cash by default when opening
+        setPaymentMode('Cash');
+        
         document.getElementById('modalSettle').style.display = 'flex';
     }
 
@@ -406,7 +431,7 @@
     window.confirmSettlement = async function() {
         const amount = parseFloat(document.getElementById('settleAmount').value) || 0;
         const currentDue = parseFloat(document.getElementById('currentDueAmount').innerText);
-        const mode = document.getElementById('settleMode').value;
+        const mode = document.getElementById('settleModeValue').value;
 
         if (amount <= 0 || amount > currentDue) return alert("Please enter a valid settlement amount that is not more than the current due.");
 
