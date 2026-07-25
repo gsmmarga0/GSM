@@ -851,21 +851,29 @@
         document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(filteredOrdersData.length / rowsPerPage) || 1}`;
     }
 
-    async function sendFast2SMSWhatsApp(mobile, name, jobNo, billAmount) {
+    async function sendRepairCompleteSMS(mobile, name, jobNo, billAmount) {
         try {
-            const { data, error } = await supabaseClient.functions.invoke('send-fast2sms', {
+            // Invoking the new Juvlon Edge Function
+            const { data, error } = await supabaseClient.functions.invoke('send-juvlon-sms', {
                 body: { 
                     phone: mobile, 
                     customerName: name, 
                     jobNo: jobNo,
-                    amount: billAmount,
-                    channel: 'whatsapp'
+                    amount: billAmount
                 }
             });
-            if (error) { console.error("Edge Function Error:", error); return; }
-        } catch(err) { console.error("WhatsApp Request Failed", err); }
+            
+            if (error) { 
+                console.error("Edge Function Error:", error); 
+                alert("Failed to trigger SMS function. Check console for details.");
+                return; 
+            }
+            
+            console.log("SMS Sent Successfully:", data);
+        } catch(err) { 
+            console.error("SMS Request Failed", err); 
+        }
     }
-
     window.openBillingModal = function(id, jobNo, customer, mobile) {
         billingOrderId = id; billingJobNo = jobNo; billingCustomerName = customer; billingCustomerMobile = mobile;
         document.getElementById('billingSubtitle').innerText = `Job No: ${jobNo} | Customer: ${customer}`;
