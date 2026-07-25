@@ -182,7 +182,7 @@
             <!-- EXPORT EXCEL BUTTON -->
             <button class="btn btn-excel" onclick="exportToExcel()">📊 Export Excel</button>
 
-            <!-- REFRESH BUTTON (Fixed) -->
+            <!-- REFRESH BUTTON -->
             <button class="btn" onclick="triggerRefresh()">↻ Refresh</button>
             <button class="btn btn-black" onclick="openModal()">+ Cash Out</button>
         </div>
@@ -469,7 +469,13 @@
     window.fetchCashbook = async function(forceRefresh = false) {
         try {
             if (forceRefresh || allEntries.length === 0) {
-                const { data, error } = await db.from('cashbook_entries').select('*').order('created_at', { ascending: true });
+                // Ensure dates are sorted correctly for the running balance logic
+                const { data, error } = await db
+                    .from('cashbook_entries')
+                    .select('*')
+                    .order('date', { ascending: true })
+                    .order('created_at', { ascending: true });
+                
                 if (error) {
                     console.warn("Error loading entries.", error.message);
                     return;
@@ -531,9 +537,7 @@
                 }
 
                 if (isVisible) {
-                    // Push to top (unshift) so latest is top, or you can keep ascending order and reverse later. 
-                    // Usually ledgers show oldest at top or newest at top. Let's push to front so newest is at the top of the table.
-                    filteredEntries.unshift(row);
+                    filteredEntries.unshift(row); // Puts newest at the top
                     
                     if (row.type === 'in') {
                         periodIn += amt;
@@ -551,8 +555,6 @@
             document.getElementById('dailyCashOut').innerText = formatCurr(periodOut);
             document.getElementById('cashOutCount').innerText = `${periodOutCount} transactions`;
             
-            // Closing balance should be the final running balance of the LAST entry visible on that day, or just current runningBalance if today
-            // If the filtered array has items, the newest item is at index 0 (since we unshifted). Its calculatedBalance is the closing balance for that period.
             if(filteredEntries.length > 0) {
                 document.getElementById('dailyClosing').innerText = formatCurr(filteredEntries[0].calculatedBalance);
             } else {
