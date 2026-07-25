@@ -104,6 +104,19 @@
         .billing-row { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
         .billing-row label { font-weight: bold; color: #374151; font-size: 0.9rem;}
         .billing-row input, .billing-row select { text-align: right; width: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-weight: bold; outline: none;}
+        
+        /* Grid Payment Selection Styles */
+        .payment-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; margin-bottom: 15px; }
+        .pay-btn { padding: 12px 10px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; font-weight: bold; color: #4b5563; text-align: center; transition: 0.2s;}
+        .pay-btn:hover { background: #f3f4f6; }
+        .pay-btn.active { background: #2563eb; color: white; border-color: #2563eb; }
+        
+        /* Split Input Group */
+        .split-inputs { display: none; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+        .split-group { display: flex; flex-direction: column; }
+        .split-group label { font-size: 0.75rem; color: #6b7280; margin-bottom: 4px; display: block; font-weight: 600;}
+        .split-group input { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; text-align: right; font-weight: bold;}
+
         .notes-input { width: 100%; box-sizing: border-box; padding: 10px; margin-top: 8px; border: 1px solid #d1d5db; border-radius: 6px; outline: none; font-family: inherit;}
         .notes-input:focus { border-color: #9ca3af; }
         .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
@@ -301,17 +314,35 @@
         <p class="modal-subtitle" id="deliverySubtitle">Job No: GSM00</p>
         
         <div class="modal-body">
-            <div class="billing-row">
-                <label style="color: #6b7280;">Final Amount Paid (₹)</label>
-                <input type="number" id="deliveryAmount" placeholder="0">
+            <!-- Main Final Amount -->
+            <div class="billing-row" id="mainAmountRow" style="flex-direction: column; align-items: flex-start; margin-bottom: 0;">
+                <label style="color: #6b7280; margin-bottom: 5px;">Final Amount Paid (₹)</label>
+                <input type="number" id="deliveryAmount" placeholder="0" style="width: 100%;">
             </div>
-            <div class="billing-row">
-                <label style="color: #6b7280;">Payment Method</label>
-                <select id="deliveryMethod">
-                    <option value="Cash">Cash</option>
-                    <option value="UPI">UPI</option>
-                    <option value="Credit">Credit</option>
-                </select>
+
+            <!-- Payment Method Grid -->
+            <label style="color: #374151; font-weight:bold; font-size: 0.9rem; margin-top:20px; display:block;">Select Payment Method</label>
+            <div class="payment-grid" id="paymentGrid">
+                <div class="pay-btn active" id="btnCash" onclick="selectPaymentMode('Cash', this)">💵 Cash</div>
+                <div class="pay-btn" id="btnUPI" onclick="selectPaymentMode('UPI', this)">📱 UPI</div>
+                <div class="pay-btn" id="btnCredit" onclick="selectPaymentMode('Credit', this)">💳 Credit</div>
+                <div class="pay-btn" id="btnSplit" onclick="selectPaymentMode('Split', this)">🔀 Split Payment</div>
+            </div>
+
+            <!-- Split Payment Inputs -->
+            <div class="split-inputs" id="splitInputsContainer">
+                <div class="split-group">
+                    <label>Cash (₹)</label>
+                    <input type="number" id="splitCash" placeholder="0">
+                </div>
+                <div class="split-group">
+                    <label>UPI (₹)</label>
+                    <input type="number" id="splitUPI" placeholder="0">
+                </div>
+                <div class="split-group">
+                    <label>Credit (₹)</label>
+                    <input type="number" id="splitCard" placeholder="0">
+                </div>
             </div>
         </div>
         
@@ -369,6 +400,7 @@
     // Delivery variables
     let deliveryOrderId = null;
     let deliveryJobNo = '';
+    let selectedPaymentMethod = 'Cash'; // Default
     
     let currentPage = 1;
     const rowsPerPage = 10;
@@ -601,7 +633,6 @@
             if (order.status === 'Pending') {
                 actionHtml = `<button class="btn-bill" onclick="openBillingModal('${order.id}', '${order.jobNo}', '${order.customerName}', '${order.contactNo}')">Repair Complete ✓</button>`;
             } else if (order.status === 'Repair Completed') {
-                // Modified Deliver Button to open the delivery modal
                 const estimatePass = order.estimateAmount || order.approxEstimate || 0;
                 actionHtml = `<button class="btn-bill" style="background:#2563eb;" onclick="openDeliveryModal('${order.id}', '${order.jobNo}', ${estimatePass})">Deliver Goods 📦</button>`;
                 
@@ -683,15 +714,40 @@
         }
     }
 
-    // --- NEW DELIVERY FUNCTIONS ---
+    // --- NEW DELIVERY FUNCTIONS & PAYMENT GRID ---
     window.openDeliveryModal = function(id, jobNo, estimateAmount) {
         deliveryOrderId = id;
         deliveryJobNo = jobNo;
         document.getElementById('deliverySubtitle').innerText = `Job No: ${jobNo}`;
+        
+        // Reset Inputs
         document.getElementById('deliveryAmount').value = estimateAmount || '';
-        document.getElementById('deliveryMethod').value = 'Cash'; 
+        document.getElementById('splitCash').value = '';
+        document.getElementById('splitUPI').value = '';
+        document.getElementById('splitCard').value = '';
+        
+        // Default to Cash Option UI
+        selectPaymentMode('Cash', document.getElementById('btnCash'));
+        
         document.getElementById('modalDelivery').style.display = 'flex';
         document.getElementById('deliveryAmount').focus();
+    }
+
+    window.selectPaymentMode = function(mode, element) {
+        selectedPaymentMethod = mode;
+        
+        // Manage active states visually
+        document.querySelectorAll('.pay-btn').forEach(btn => btn.classList.remove('active'));
+        if (element) element.classList.add('active');
+
+        // Toggle visibility between Split inputs vs Main Final Amount
+        if (mode === 'Split') {
+            document.getElementById('mainAmountRow').style.display = 'none';
+            document.getElementById('splitInputsContainer').style.display = 'grid';
+        } else {
+            document.getElementById('mainAmountRow').style.display = 'flex';
+            document.getElementById('splitInputsContainer').style.display = 'none';
+        }
     }
 
     window.closeDeliveryModal = function() { 
@@ -699,20 +755,67 @@
     }
 
     window.confirmDelivery = async function() {
-        const finalAmount = parseFloat(document.getElementById('deliveryAmount').value) || 0;
-        const paymentMethod = document.getElementById('deliveryMethod').value;
+        let finalAmount = 0;
+        let cashAmt = 0;
+        let upiAmt = 0;
+        let cardAmt = 0;
+        
+        // Process amounts based on selected mode
+        if (selectedPaymentMethod === 'Split') {
+            cashAmt = parseFloat(document.getElementById('splitCash').value) || 0;
+            upiAmt = parseFloat(document.getElementById('splitUPI').value) || 0;
+            cardAmt = parseFloat(document.getElementById('splitCard').value) || 0;
+            finalAmount = cashAmt + upiAmt + cardAmt; // Derive final amount automatically
+        } else {
+            finalAmount = parseFloat(document.getElementById('deliveryAmount').value) || 0;
+            if (selectedPaymentMethod === 'Cash') cashAmt = finalAmount;
+            if (selectedPaymentMethod === 'UPI') upiAmt = finalAmount;
+            if (selectedPaymentMethod === 'Credit') cardAmt = finalAmount;
+        }
+
+        const currentDate = new Date().toISOString().split('T')[0];
+        const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
         try {
+            // 1. Update the Order status
             await supabaseClient.from('repairOrders').update({ 
                 status: 'Goods Delivered',
                 finalAmount: finalAmount,
-                paymentMethod: paymentMethod
+                paymentMethod: selectedPaymentMethod
             }).eq('id', deliveryOrderId);
             
+            // 2. Insert into Ledger tables
+            if (finalAmount > 0) {
+                // Record Cash Portion
+                if (cashAmt > 0) {
+                    await supabaseClient.from('cashbook_entries').insert([{
+                        date: currentDate,
+                        description: `Repair Job No: ${deliveryJobNo}`,
+                        category: 'Repair Sales',
+                        amount: cashAmt,
+                        type: 'in',
+                        created_by: currentUserEmail
+                    }]);
+                } 
+                
+                // Record Digital Portions (UPI/Card)
+                if (upiAmt > 0 || cardAmt > 0) {
+                    await supabaseClient.from('upi_entries').insert([{
+                        date: currentDate,
+                        time: currentTime,
+                        description: `Repair Job No: ${deliveryJobNo}`,
+                        category: 'Repair Sales',
+                        upi_amount: upiAmt,
+                        card_amount: cardAmt,
+                        created_by: currentUserEmail
+                    }]);
+                }
+            }
+            
+            // 3. Smooth Transition
             closeDeliveryModal();
-            fetchOrders();
-            // Depending on how your other pages work, they should now filter 
-            // the 'repairOrders' table by paymentMethod = 'UPI' or 'Cash'
+            switchTab('Goods Delivered'); // Smoothly glide into the delivered tab
+            fetchOrders(); 
         } catch (err) { 
             alert("Error updating order: " + err.message); 
         }
