@@ -693,10 +693,17 @@
             const contactNoSafe = escapeStr(order.contactNo);
             const jobNoSafe = escapeStr(order.jobNo);
             const orderIdSafe = escapeStr(order.id);
+            const notesSafe = escapeStr(order.repairNotes);
             
             let actionHtml = '';
             let displayAmount = 0;
             
+            // Build the notes HTML to append under the Problem Description
+            let notesHtml = '';
+            if (order.repairNotes) {
+                notesHtml = `<div style="font-size: 0.75rem; color: #4b5563; margin-top: 6px; background: #f3f4f6; padding: 5px 8px; border-radius: 4px; display: inline-block;"><strong>Notes:</strong> ${notesSafe}</div>`;
+            }
+
             if (order.status === 'Pending') {
                 displayAmount = order.approxEstimate || 0;
                 actionHtml = `<button class="btn-bill" onclick="openBillingModal('${orderIdSafe}', '${jobNoSafe}', '${customerNameSafe}', '${contactNoSafe}')">Repair Complete ✓</button>`;
@@ -708,11 +715,16 @@
                 actionHtml = `<span class="status-badge" style="background:#dcfce7; color:#166534;">Delivered</span>`;
             } else if (order.status === 'Repair Refusal') {
                 displayAmount = order.estimateAmount || order.approxEstimate || 0;
-                actionHtml = `<span class="status-badge" style="background:#fee2e2; color:#991b1b;">Refused</span>`;
+                // Added the Deliver Goods button inside the Repair Refusal tab
+                actionHtml = `
+                    <div style="display:flex; flex-direction:column; gap:8px; align-items:center;">
+                        <span class="status-badge" style="background:#fee2e2; color:#991b1b;">Refused</span>
+                        <button class="btn-bill" style="background:#2563eb; font-size: 0.75rem; padding: 5px 10px;" onclick="openDeliveryModal('${orderIdSafe}', '${jobNoSafe}', ${displayAmount}, '${customerNameSafe}', '${contactNoSafe}')">Deliver Goods 📦</button>
+                    </div>`;
             }
             
             if (isAdmin) {
-                actionHtml += `<button class="btn-icon" style="color:#ef4444; margin-left: 10px;" onclick="deleteOrder('${orderIdSafe}', '${jobNoSafe}')" title="Delete Order">🗑️</button>`;
+                actionHtml += `<button class="btn-icon" style="color:#ef4444; margin-top: 5px;" onclick="deleteOrder('${orderIdSafe}', '${jobNoSafe}')" title="Delete Order">🗑️</button>`;
             }
 
             const editIconHtml = `<span class="edit-pen" onclick="openEditModal('${orderIdSafe}', '${jobNoSafe}', '${problemSafe}', '${passwordSafe}')" title="Edit Problem/Password">✏️</span>`;
@@ -731,6 +743,8 @@
                     <td>
                         ${order.problemDesc || '-'}
                         ${editIconHtml}
+                        <br>
+                        ${notesHtml}
                     </td>
                     <td style="color:#ef4444; font-weight:bold; letter-spacing:1px;">${order.devicePassword || '-'}</td>
                     <td style="font-weight:bold; color:#059669;">₹${displayAmount}</td>
