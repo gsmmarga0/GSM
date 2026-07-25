@@ -777,18 +777,20 @@
         const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
         try {
-            // 1. Update the Order status
-            await supabaseClient.from('repairOrders').update({ 
+            // 1. Update the Order status (Added error checking here!)
+            const { error: updateError } = await supabaseClient.from('repairOrders').update({ 
                 status: 'Goods Delivered',
                 finalAmount: finalAmount,
                 paymentMethod: selectedPaymentMethod
             }).eq('id', deliveryOrderId);
             
+            if (updateError) throw updateError;
+            
             // 2. Insert into Ledger tables
             if (finalAmount > 0) {
                 // Record Cash Portion
                 if (cashAmt > 0) {
-                    await supabaseClient.from('cashbook_entries').insert([{
+                    const { error: cashError } = await supabaseClient.from('cashbook_entries').insert([{
                         date: currentDate,
                         description: `Repair Job No: ${deliveryJobNo}`,
                         category: 'Repair Sales',
@@ -796,11 +798,12 @@
                         type: 'in',
                         created_by: currentUserEmail
                     }]);
+                    if (cashError) throw cashError;
                 } 
                 
                 // Record Digital Portions (UPI/Card)
                 if (upiAmt > 0 || cardAmt > 0) {
-                    await supabaseClient.from('upi_entries').insert([{
+                    const { error: upiError } = await supabaseClient.from('upi_entries').insert([{
                         date: currentDate,
                         time: currentTime,
                         description: `Repair Job No: ${deliveryJobNo}`,
@@ -809,18 +812,20 @@
                         card_amount: cardAmt,
                         created_by: currentUserEmail
                     }]);
+                    if (upiError) throw upiError;
                 }
             }
             
             // 3. Smooth Transition
             closeDeliveryModal();
+            await fetchOrders(); // Wait for data to refresh FIRST
             switchTab('Goods Delivered'); // Smoothly glide into the delivered tab
-            fetchOrders(); 
+            
         } catch (err) { 
-            alert("Error updating order: " + err.message); 
+            console.error(err);
+            alert("Error updating order: " + err.message + "\n\nDid you forget to add 'finalAmount' and 'paymentMethod' to your Supabase table?"); 
         }
-    }
-    // -----------------------------
+    }    // -----------------------------
 
     window.prevPage = function() { 
         if (currentPage > 1) { currentPage--; renderOrdersTable(); } 
