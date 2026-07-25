@@ -906,7 +906,7 @@
             if (updateError) throw updateError;
             
             if (billingCustomerMobile) { 
-                await sendFast2SMSWhatsApp(billingCustomerMobile, billingCustomerName, billingJobNo, estimateAmount); 
+                await sendRepairCompleteSMS(billingCustomerMobile, billingCustomerName, billingJobNo, estimateAmount); 
             }
 
             closeBillingModal();
