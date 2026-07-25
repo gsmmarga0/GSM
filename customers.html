@@ -31,6 +31,9 @@
         .btn-primary { background: black; color: white; border: none; }
         .btn-settle { background: #10b981; color: white; border: none; font-weight: bold; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s;}
         .btn-settle:hover { background: #059669; }
+        
+        .btn-history { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; font-weight: bold; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; margin-left: 8px; }
+        .btn-history:hover { background: #e5e7eb; }
 
         .dashboard-padding { padding: 20px 30px; }
 
@@ -148,6 +151,34 @@
     </div>
 </div>
 
+<!-- HISTORY MODAL -->
+<div class="modal-overlay" id="modalHistory">
+    <div class="modal-container" style="width: 600px; max-width: 95%;">
+        <h2 class="modal-title">Credit History</h2>
+        <p class="modal-subtitle" id="historySubtitle">Loading...</p>
+        
+        <div class="table-card" style="max-height: 350px; overflow-y: auto; margin-bottom: 0; box-shadow: none; border: 1px solid #e5e7eb;">
+            <table style="margin-bottom: 0;">
+                <thead style="position: sticky; top: 0; z-index: 10;">
+                    <tr>
+                        <th style="padding: 12px;">Date</th>
+                        <th style="padding: 12px;">Type</th>
+                        <th style="padding: 12px;">Job No / Note</th>
+                        <th style="padding: 12px; text-align: right;">Amount (₹)</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody">
+                    <!-- History Injected Here -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="modal-footer" style="margin-top: 15px;">
+            <button class="btn" onclick="closeHistoryModal()">Close Tab</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
     const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
@@ -162,6 +193,12 @@
     
     let currentPage = 1;
     const rowsPerPage = 10;
+
+    // Secure HTML escaping to prevent string breaks on button clicks
+    const escapeStr = (str) => {
+        if (!str) return '';
+        return String(str).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, " ");
+    };
 
     // Sidebar Logic
     let sidebarTimer;
@@ -203,11 +240,11 @@
         
         allCustomers = data || [];
         
-        // --- Sort by highest credit balance first ---
+        // --- Sort mathematically by highest credit balance first (Top requested feature) ---
         allCustomers.sort((a, b) => {
             const dueA = parseFloat(a.credit_balance) || 0;
             const dueB = parseFloat(b.credit_balance) || 0;
-            return dueB - dueA; // highest numbers float to the top
+            return dueB - dueA; // highest numbers float to the top automatically
         });
         
         filteredCustomers = [...allCustomers]; 
@@ -230,9 +267,14 @@
 
         paginatedItems.forEach(c => {
             let due = parseFloat(c.credit_balance) || 0;
-            let actionHtml = due > 0 
-                ? `<button class="btn-settle" onclick="openSettleModal(${c.id}, '${c.name.replace(/'/g, "\\'")}', '${c.mobile}', ${due})">Settle Due</button>` 
-                : `<span style="color:#9ca3af;">-</span>`;
+            
+            let actionHtml = '';
+            if (due > 0) {
+                actionHtml += `<button class="btn-settle" onclick="openSettleModal(${c.id}, '${escapeStr(c.name)}', '${escapeStr(c.mobile)}', ${due})">Settle Due</button>`;
+            }
+            
+            // New History Button for every customer
+            actionHtml += `<button class="btn-history" onclick="openHistoryModal('${escapeStr(c.mobile)}', '${escapeStr(c.name)}')">📜 History</button>`;
 
             let dateStr = new Date(c.created_at).toLocaleDateString('en-GB');
 
@@ -242,7 +284,7 @@
                     <td>${c.mobile}</td>
                     <td>${dateStr}</td>
                     <td style="font-weight:bold; color: ${due > 0 ? '#ef4444' : '#111827'};">₹${due.toFixed(2)}</td>
-                    <td style="text-align: center;">${actionHtml}</td>
+                    <td style="text-align: center; white-space: nowrap;">${actionHtml}</td>
                 </tr>`;
         });
 
@@ -273,6 +315,60 @@
         } 
     }
 
+    // --- HISTORY MODAL LOGIC ---
+    window.openHistoryModal = async function(mobile, name) {
+        document.getElementById('historySubtitle').innerText = `Transaction history for ${name}`;
+        document.getElementById('historyTableBody').innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px;">Loading history...</td></tr>`;
+        document.getElementById('modalHistory').style.display = 'flex';
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('customer_credits')
+                .select('*')
+                .eq('mobile', mobile)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = '';
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px; color: gray;">No credit history found for this customer.</td></tr>`;
+                return;
+            }
+
+            data.forEach(entry => {
+                const dateStr = new Date(entry.created_at || entry.date).toLocaleDateString('en-GB');
+                const isGiven = entry.type === 'Given';
+                
+                // Color Code: Red for taking udhar, Green for settling
+                const color = isGiven ? '#ef4444' : '#10b981';
+                const sign = isGiven ? '+' : '-';
+                const typeLabel = isGiven ? 'Credit Taken' : 'Settled';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="padding: 12px;">${dateStr}</td>
+                        <td style="padding: 12px;"><span style="font-weight:bold; color:${color};">${typeLabel}</span></td>
+                        <td style="padding: 12px;">${entry.job_no || entry.description || 'Manual Entry'}</td>
+                        <td style="text-align: right; padding: 12px; font-weight:bold; color:${color};">${sign}₹${parseFloat(entry.amount).toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+
+        } catch (err) {
+            document.getElementById('historyTableBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color: red;">Error loading data: ${err.message}</td></tr>`;
+            console.error(err);
+        }
+    }
+
+    window.closeHistoryModal = function() {
+        document.getElementById('modalHistory').style.display = 'none';
+    }
+
+
+    // --- SETTLE MODAL LOGIC ---
     window.openSettleModal = function(id, name, mobile, due) {
         settleCustId = id;
         settleCustName = name;
@@ -292,10 +388,10 @@
         const currentDue = parseFloat(document.getElementById('currentDueAmount').innerText);
         const mode = document.getElementById('settleMode').value;
 
-        if (amount <= 0 || amount > currentDue) return alert("Please enter a valid settlement amount.");
+        if (amount <= 0 || amount > currentDue) return alert("Please enter a valid settlement amount that is not more than the current due.");
 
         try {
-            // 1. Update Customer Balance
+            // 1. Update Customer Balance mathematically
             const newBalance = currentDue - amount;
             await supabaseClient.from('customers').update({ credit_balance: newBalance }).eq('id', settleCustId);
 
@@ -303,17 +399,18 @@
             let currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             let desc = `Credit Settled - ${settleCustName}`;
 
-            // 2. Track in the Customer Credits Table (History)
+            // 2. Track in the Customer Credits Table (History) so it shows up in the modal
             await supabaseClient.from('customer_credits').insert([{
                 customer_name: settleCustName,
                 mobile: settleCustMobile,
                 amount: amount,
                 date: currentDate,
                 type: 'Settled',
+                description: desc,
                 created_by: currentUserEmail
             }]);
             
-            // 3. Record in Main Accounting Ledgers
+            // 3. Record the money coming in natively to Main Accounting Ledgers
             if (mode === 'Cash') {
                 await supabaseClient.from('cashbook_entries').insert([{
                     description: desc, category: 'Repair Sales', amount: amount, type: 'in', 
