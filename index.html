@@ -453,6 +453,16 @@
     }
     async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
 
+    // Robust HTML Escaping Function to prevent HTML injection in onclick handlers
+    const escapeStr = (str) => {
+        if (!str) return '';
+        return String(str)
+            .replace(/\\/g, "\\\\")
+            .replace(/'/g, "\\'")
+            .replace(/"/g, "&quot;")
+            .replace(/\n/g, " ");
+    };
+
     let globalSearchTimeout = null;
     function debounceGlobalSearch() {
         clearTimeout(globalSearchTimeout);
@@ -526,7 +536,7 @@
         const list = document.getElementById('customerDropdownList');
         list.innerHTML = '';
         customersList.forEach(c => {
-            list.innerHTML += `<li onclick="selectCustomer('${c.name.replace(/'/g, "\\'")}', '${c.mobile}')">${c.name} - ${c.mobile}</li>`;
+            list.innerHTML += `<li onclick="selectCustomer('${escapeStr(c.name)}', '${escapeStr(c.mobile)}')">${c.name} - ${c.mobile}</li>`;
         });
     }
 
@@ -556,7 +566,7 @@
         const list = document.getElementById('creditCustomerDropdownList');
         list.innerHTML = '';
         customersList.forEach(c => {
-            list.innerHTML += `<li onclick="selectCreditCustomer('${c.name.replace(/'/g, "\\'")}', '${c.mobile}')">${c.name} - ${c.mobile}</li>`;
+            list.innerHTML += `<li onclick="selectCreditCustomer('${escapeStr(c.name)}', '${escapeStr(c.mobile)}')">${c.name} - ${c.mobile}</li>`;
         });
     }
 
@@ -677,19 +687,22 @@
         const paginatedItems = filteredOrdersData.slice(start, start + rowsPerPage);
 
         paginatedItems.forEach(order => {
-            const problemSafe = order.problemDesc ? order.problemDesc.replace(/'/g, "\\'") : '';
-            const passwordSafe = order.devicePassword ? order.devicePassword.replace(/'/g, "\\'") : '';
-            const customerNameSafe = order.customerName ? order.customerName.replace(/'/g, "\\'") : '';
+            const problemSafe = escapeStr(order.problemDesc);
+            const passwordSafe = escapeStr(order.devicePassword);
+            const customerNameSafe = escapeStr(order.customerName);
+            const contactNoSafe = escapeStr(order.contactNo);
+            const jobNoSafe = escapeStr(order.jobNo);
+            const orderIdSafe = escapeStr(order.id);
             
             let actionHtml = '';
             let displayAmount = 0;
             
             if (order.status === 'Pending') {
                 displayAmount = order.approxEstimate || 0;
-                actionHtml = `<button class="btn-bill" onclick="openBillingModal('${order.id}', '${order.jobNo}', '${customerNameSafe}', '${order.contactNo}')">Repair Complete ✓</button>`;
+                actionHtml = `<button class="btn-bill" onclick="openBillingModal('${orderIdSafe}', '${jobNoSafe}', '${customerNameSafe}', '${contactNoSafe}')">Repair Complete ✓</button>`;
             } else if (order.status === 'Repair Completed') {
                 displayAmount = order.estimateAmount || order.approxEstimate || 0;
-                actionHtml = `<button class="btn-bill" style="background:#2563eb;" onclick="openDeliveryModal('${order.id}', '${order.jobNo}', ${displayAmount}, '${customerNameSafe}', '${order.contactNo}')">Deliver Goods 📦</button>`;
+                actionHtml = `<button class="btn-bill" style="background:#2563eb;" onclick="openDeliveryModal('${orderIdSafe}', '${jobNoSafe}', ${displayAmount}, '${customerNameSafe}', '${contactNoSafe}')">Deliver Goods 📦</button>`;
             } else if (order.status === 'Goods Delivered') {
                 displayAmount = order.estimateAmount || order.approxEstimate || 0;
                 actionHtml = `<span class="status-badge" style="background:#dcfce7; color:#166534;">Delivered</span>`;
@@ -699,10 +712,10 @@
             }
             
             if (isAdmin) {
-                actionHtml += `<button class="btn-icon" style="color:#ef4444; margin-left: 10px;" onclick="deleteOrder('${order.id}', '${order.jobNo}')" title="Delete Order">🗑️</button>`;
+                actionHtml += `<button class="btn-icon" style="color:#ef4444; margin-left: 10px;" onclick="deleteOrder('${orderIdSafe}', '${jobNoSafe}')" title="Delete Order">🗑️</button>`;
             }
 
-            const editIconHtml = `<span class="edit-pen" onclick="openEditModal('${order.id}', '${order.jobNo}', '${problemSafe}', '${passwordSafe}')" title="Edit Problem/Password">✏️</span>`;
+            const editIconHtml = `<span class="edit-pen" onclick="openEditModal('${orderIdSafe}', '${jobNoSafe}', '${problemSafe}', '${passwordSafe}')" title="Edit Problem/Password">✏️</span>`;
 
             tbody.innerHTML += `
                 <tr>
@@ -739,21 +752,53 @@
         } catch(err) { console.error("SMS Request Failed", err); }
     }
 
+    window.openBillingModal = function(id, jobNo, customer, mobile) {
+        billingOrderId = id; billingJobNo = jobNo; billingCustomerName = customer; billingCustomerMobile = mobile;
+        document.getElementById('billingSubtitle').innerText = `Job No: ${jobNo} | Customer: ${customer}`;
+        document.getElementById('billEstimateAmount').value = '';
+        document.getElementById('billRepairNotes').value = '';
+        document.getElementById('modalBilling').style.display = 'flex';
+        document.getElementById('billEstimateAmount').focus();
+    }
+
+    window.closeBillingModal = function() { document.getElementById('modalBilling').style.display = 'none'; }
+
     window.confirmBilling = async function() {
         const estimateAmount = parseFloat(document.getElementById('billEstimateAmount').value) || 0;
         const notes = document.getElementById('billRepairNotes').value.trim();
 
         try {
-            await supabaseClient.from('repairOrders').update({ 
+            const { error: updateError } = await supabaseClient.from('repairOrders').update({ 
                 status: 'Repair Completed', estimateAmount: estimateAmount, repairNotes: notes 
             }).eq('id', billingOrderId);
+
+            if (updateError) throw updateError;
             
             if (billingCustomerMobile) { await sendFast2SMS(billingCustomerMobile, billingCustomerName, billingJobNo); }
 
             closeBillingModal();
-            fetchOrders(); 
-        } catch (err) { alert("Error completing repair: " + err.message); }
+            await fetchOrders(); 
+            switchTab('Repair Completed');
+        } catch (err) { alert("Error completing repair: " + err.message + "\n\nMake sure 'estimateAmount' and 'repairNotes' columns exist in your Supabase table."); }
     }
+
+    window.markRepairNP = async function() {
+        if(!confirm("Are you sure you want to mark this device as Repair Not Possible (NP)?")) return;
+        const notes = document.getElementById('billRepairNotes').value.trim();
+
+        try {
+            const { error: updateError } = await supabaseClient.from('repairOrders').update({ 
+                status: 'Repair Refusal', repairNotes: notes 
+            }).eq('id', billingOrderId);
+
+            if (updateError) throw updateError;
+
+            closeBillingModal();
+            await fetchOrders(); 
+            switchTab('Repair Refusal');
+        } catch (err) { alert("Error updating order: " + err.message); }
+    }
+
 
     window.openDeliveryModal = function(id, jobNo, estimateAmount, customerName, customerMobile) {
         deliveryOrderId = id;
