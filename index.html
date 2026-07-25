@@ -330,6 +330,12 @@
                 <button type="button" class="seg-btn" id="btnSplit" onclick="selectPaymentMode('Split', this)">Split</button>
             </div>
 
+            <!-- New UPI Account / Reference Input -->
+            <div id="upiDetailsSection" style="display: none; margin-top: 15px; border-top: 1px solid #e5e7eb; padding-top: 15px;">
+                <label style="font-weight:bold; color: #374151; font-size: 0.9rem;">UPI Account Received In (Note)</label>
+                <input type="text" id="upiReferenceNote" class="notes-input" placeholder="e.g. Shop QR, Personal GPay, etc.">
+            </div>
+
             <div class="split-inputs" id="splitInputsContainer">
                 <div class="split-group">
                     <label>Cash Paid</label>
@@ -860,6 +866,9 @@
         document.getElementById('splitUPI').value = '';
         document.getElementById('splitCredit').value = '';
         
+        // Reset and clear UPI Note field
+        document.getElementById('upiReferenceNote').value = '';
+
         document.getElementById('creditCustSearch').value = `${customerName} (${customerMobile})`;
         document.getElementById('selectedCreditCustName').value = customerName;
         document.getElementById('selectedCreditCustMobile').value = customerMobile;
@@ -893,6 +902,13 @@
         document.querySelectorAll('.seg-btn').forEach(btn => btn.classList.remove('active'));
         if (element) element.classList.add('active');
 
+        // Show the UPI Details section if UPI or Split is selected
+        if (mode === 'UPI' || mode === 'Split') {
+            document.getElementById('upiDetailsSection').style.display = 'block';
+        } else {
+            document.getElementById('upiDetailsSection').style.display = 'none';
+        }
+
         if (mode === 'Split') {
             document.getElementById('mainAmountRow').style.display = 'flex';
             document.getElementById('splitInputsContainer').style.display = 'grid';
@@ -910,6 +926,7 @@
     window.confirmDelivery = async function() {
         let finalAmount = parseFloat(document.getElementById('deliveryAmount').value) || 0;
         let cashAmt = 0; let upiAmt = 0; let creditAmt = 0;
+        let upiNote = document.getElementById('upiReferenceNote').value.trim();
         
         if (selectedPaymentMethod === 'Split') {
             cashAmt = parseFloat(document.getElementById('splitCash').value) || 0;
@@ -940,8 +957,14 @@
                     if (cashError) throw cashError;
                 } 
                 if (upiAmt > 0) {
+                    // Combine Job No and UPI Note for Database description
+                    let upiDesc = `Repair Job No: ${deliveryJobNo}`;
+                    if (upiNote) {
+                        upiDesc += ` - UPI Acc: ${upiNote}`;
+                    }
+
                     const { error: upiError } = await supabaseClient.from('upi_entries').insert([{
-                        date: currentDate, time: currentTime, description: `Repair Job No: ${deliveryJobNo}`, category: 'Repair Sales', upi_amount: upiAmt, card_amount: 0, created_by: currentUserEmail
+                        date: currentDate, time: currentTime, description: upiDesc, category: 'Repair Sales', upi_amount: upiAmt, card_amount: 0, created_by: currentUserEmail
                     }]);
                     if (upiError) throw upiError;
                 }
