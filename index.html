@@ -105,9 +105,9 @@
         .billing-row label { font-weight: bold; color: #374151; font-size: 0.9rem;}
         .billing-row input, .billing-row select { text-align: right; width: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-weight: bold; outline: none;}
 
-        /* Segemented Control (Retool matching style) */
-        .segmented-control { display: inline-flex; border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; margin-top: 10px; margin-bottom: 15px; }
-        .seg-btn { padding: 10px 24px; border: none; background: #f9fafb; cursor: pointer; font-weight: bold; color: #4b5563; transition: 0.2s; border-right: 1px solid #d1d5db; font-size: 0.95rem; }
+        /* Segmented Control (Matching Exact Screenshot Styling) */
+        .segmented-control { display: inline-flex; border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; margin-top: 10px; margin-bottom: 15px; width: 100%; box-sizing: border-box; }
+        .seg-btn { flex: 1; padding: 12px 10px; border: none; background: white; cursor: pointer; font-weight: 600; color: #374151; transition: background 0.2s, color 0.2s; border-right: 1px solid #d1d5db; font-size: 0.9rem; text-align: center;}
         .seg-btn:last-child { border-right: none; }
         .seg-btn:hover { background: #f3f4f6; }
         .seg-btn.active { background: #111827; color: white; border-color: #111827; }
@@ -117,6 +117,7 @@
         .split-group { display: flex; flex-direction: column; }
         .split-group label { font-size: 0.75rem; color: #6b7280; margin-bottom: 4px; display: block; font-weight: 600;}
         .split-group input { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; text-align: right; font-weight: bold; outline: none;}
+        .split-group input:focus { border-color: #9ca3af; }
 
         .notes-input { width: 100%; box-sizing: border-box; padding: 10px; margin-top: 8px; border: 1px solid #d1d5db; border-radius: 6px; outline: none; font-family: inherit;}
         .notes-input:focus { border-color: #9ca3af; }
@@ -321,11 +322,11 @@
             <!-- Main Final Amount -->
             <div class="billing-row" id="mainAmountRow" style="flex-direction: column; align-items: flex-start; margin-bottom: 0;">
                 <label style="color: #6b7280; margin-bottom: 5px;">Final Amount Paid (₹)</label>
-                <input type="number" id="deliveryAmount" placeholder="0" style="width: 100%;">
+                <input type="number" id="deliveryAmount" placeholder="0" style="width: 100%;" oninput="calculateSplit()">
             </div>
 
             <!-- Segmented Control for Payment Method -->
-            <label style="color: #374151; font-weight:bold; font-size: 0.9rem; margin-top:20px; display:block;">Select Payment Method</label>
+            <label style="color: #374151; font-weight:bold; font-size: 0.9rem; margin-top:20px; display:block; margin-bottom: 5px;">Select Payment Method</label>
             <div class="segmented-control" id="paymentGrid">
                 <button type="button" class="seg-btn active" id="btnCash" onclick="selectPaymentMode('Cash', this)">Cash</button>
                 <button type="button" class="seg-btn" id="btnUPI" onclick="selectPaymentMode('UPI', this)">UPI</button>
@@ -336,16 +337,27 @@
             <!-- Split Payment Inputs -->
             <div class="split-inputs" id="splitInputsContainer">
                 <div class="split-group">
-                    <label>Cash (₹)</label>
-                    <input type="number" id="splitCash" placeholder="0">
+                    <label>Cash Paid</label>
+                    <input type="number" id="splitCash" placeholder="0" oninput="calculateSplit()">
                 </div>
                 <div class="split-group">
-                    <label>UPI (₹)</label>
-                    <input type="number" id="splitUPI" placeholder="0">
+                    <label>Credit (Udhar)</label>
+                    <input type="number" id="splitCredit" placeholder="0" oninput="calculateSplit()">
                 </div>
                 <div class="split-group">
-                    <label>Credit (₹)</label>
-                    <input type="number" id="splitCard" placeholder="0">
+                    <label>UPI (Auto)</label>
+                    <input type="number" id="splitUPI" placeholder="0" readonly style="background-color: #f3f4f6; color: #6b7280;">
+                </div>
+            </div>
+
+            <!-- Customer Assignment for Udhar/Credit -->
+            <div id="creditCustomerSection" style="display: none; margin-top: 15px; border-top: 1px solid #e5e7eb; padding-top: 15px;">
+                <label style="font-weight:bold; color: #374151; font-size: 0.9rem;">Record Credit to Customer</label>
+                <div class="search-select-container" style="margin-top: 5px;">
+                    <input type="text" id="creditCustSearch" class="search-select-input" placeholder="🔍 Search existing customer..." oninput="filterCreditCustomer()" onfocus="openCreditCustomerDropdown()">
+                    <input type="hidden" id="selectedCreditCustName">
+                    <input type="hidden" id="selectedCreditCustMobile">
+                    <ul class="search-select-list" id="creditCustomerDropdownList"></ul>
                 </div>
             </div>
         </div>
@@ -503,6 +515,8 @@
         if (!e.target.closest('.search-select-container')) {
             const list = document.getElementById('customerDropdownList');
             if (list) list.style.display = 'none';
+            const creditList = document.getElementById('creditCustomerDropdownList');
+            if (creditList) creditList.style.display = 'none';
         }
         if (!e.target.closest('#globalJobSearch') && !e.target.closest('#globalSearchResults')) {
             const list = document.getElementById('globalSearchResults');
@@ -512,7 +526,11 @@
 
     async function fetchCustomers() {
         const { data } = await supabaseClient.from('customers').select('*').order('name', { ascending: true });
-        if (data) { customersList = data; populateCustomerDropdown(); }
+        if (data) { 
+            customersList = data; 
+            populateCustomerDropdown(); 
+            populateCreditCustomerDropdown();
+        }
     }
 
     function populateCustomerDropdown() {
@@ -546,6 +564,38 @@
         document.getElementById('customerDropdownList').style.display = 'none';
     }
 
+    // Secondary Customer Dropdown logic for Credit Modal
+    function populateCreditCustomerDropdown() {
+        const list = document.getElementById('creditCustomerDropdownList');
+        list.innerHTML = '';
+        customersList.forEach(c => {
+            list.innerHTML += `<li onclick="selectCreditCustomer('${c.name.replace(/'/g, "\\'")}', '${c.mobile}')">${c.name} - ${c.mobile}</li>`;
+        });
+    }
+
+    window.filterCreditCustomer = function() {
+        const filter = document.getElementById('creditCustSearch').value.toLowerCase();
+        const list = document.getElementById('creditCustomerDropdownList');
+        const items = list.getElementsByTagName('li');
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].innerText.toLowerCase().includes(filter)) items[i].style.display = 'block';
+            else items[i].style.display = 'none';
+        }
+    }
+
+    window.openCreditCustomerDropdown = function() {
+        document.getElementById('creditCustomerDropdownList').style.display = 'block';
+        filterCreditCustomer();
+    }
+
+    window.selectCreditCustomer = function(name, mobile) {
+        document.getElementById('creditCustSearch').value = `${name} (${mobile})`;
+        document.getElementById('selectedCreditCustName').value = name;
+        document.getElementById('selectedCreditCustMobile').value = mobile;
+        document.getElementById('creditCustomerDropdownList').style.display = 'none';
+    }
+
+
     window.toggleCustomerMode = function() {
         isNewCustomerMode = !isNewCustomerMode;
         if (isNewCustomerMode) {
@@ -569,14 +619,19 @@
         const desc = document.getElementById('tabDescription');
         const thEstimate = document.getElementById('thEstimate');
 
+        // Dynamically shift table headers based on active tab
         if(tabName === 'Pending') {
             desc.innerText = "Showing all pending service orders awaiting repair.";
             thEstimate.innerText = "Approx Est. (₹)";
-        } else {
+        } else if (tabName === 'Repair Completed') {
+            desc.innerText = "Showing all items where repairs have successfully concluded.";
             thEstimate.innerText = "Balance Amount (₹)";
-            if(tabName === 'Repair Completed') desc.innerText = "Showing all items where repairs have successfully concluded.";
-            if(tabName === 'Goods Delivered') desc.innerText = "Showing history of completed & returned items.";
-            if(tabName === 'Repair Refusal') desc.innerText = "Showing orders marked as refused or cancelled.";
+        } else if (tabName === 'Goods Delivered') {
+            desc.innerText = "Showing history of completed & returned items.";
+            thEstimate.innerText = "Total Amount (₹)";
+        } else if (tabName === 'Repair Refusal') {
+            desc.innerText = "Showing orders marked as refused or cancelled.";
+            thEstimate.innerText = "Inspection Charges (₹)";
         }
 
         applyFilters();
@@ -638,16 +693,17 @@
         paginatedItems.forEach(order => {
             const problemSafe = order.problemDesc ? order.problemDesc.replace(/'/g, "\\'") : '';
             const passwordSafe = order.devicePassword ? order.devicePassword.replace(/'/g, "\\'") : '';
+            const customerNameSafe = order.customerName ? order.customerName.replace(/'/g, "\\'") : '';
             
             let actionHtml = '';
             let displayAmount = 0;
             
             if (order.status === 'Pending') {
                 displayAmount = order.approxEstimate || 0;
-                actionHtml = `<button class="btn-bill" onclick="openBillingModal('${order.id}', '${order.jobNo}', '${order.customerName}', '${order.contactNo}')">Repair Complete ✓</button>`;
+                actionHtml = `<button class="btn-bill" onclick="openBillingModal('${order.id}', '${order.jobNo}', '${customerNameSafe}', '${order.contactNo}')">Repair Complete ✓</button>`;
             } else if (order.status === 'Repair Completed') {
                 displayAmount = order.estimateAmount || order.approxEstimate || 0;
-                actionHtml = `<button class="btn-bill" style="background:#2563eb;" onclick="openDeliveryModal('${order.id}', '${order.jobNo}', ${displayAmount})">Deliver Goods 📦</button>`;
+                actionHtml = `<button class="btn-bill" style="background:#2563eb;" onclick="openDeliveryModal('${order.id}', '${order.jobNo}', ${displayAmount}, '${customerNameSafe}', '${order.contactNo}')">Deliver Goods 📦</button>`;
             } else if (order.status === 'Goods Delivered') {
                 displayAmount = order.estimateAmount || order.approxEstimate || 0;
                 actionHtml = `<span class="status-badge" style="background:#dcfce7; color:#166534;">Delivered</span>`;
@@ -725,38 +781,71 @@
         }
     }
 
-    window.openDeliveryModal = function(id, jobNo, estimateAmount) {
+    // --- ENHANCED DELIVERY FUNCTIONS & PAYMENT GRID ---
+    window.openDeliveryModal = function(id, jobNo, estimateAmount, customerName, customerMobile) {
         deliveryOrderId = id;
         deliveryJobNo = jobNo;
-        document.getElementById('deliverySubtitle').innerText = `Job No: ${jobNo}`;
+        document.getElementById('deliverySubtitle').innerText = `Job No: ${jobNo} | ${customerName}`;
         
         // Reset Inputs
         document.getElementById('deliveryAmount').value = estimateAmount || '';
         document.getElementById('splitCash').value = '';
         document.getElementById('splitUPI').value = '';
-        document.getElementById('splitCard').value = '';
+        document.getElementById('splitCredit').value = '';
+        
+        // Prep Credit Customer field based on existing data
+        document.getElementById('creditCustSearch').value = `${customerName} (${customerMobile})`;
+        document.getElementById('selectedCreditCustName').value = customerName;
+        document.getElementById('selectedCreditCustMobile').value = customerMobile;
         
         // Default to Cash Option UI
         selectPaymentMode('Cash', document.getElementById('btnCash'));
         
         document.getElementById('modalDelivery').style.display = 'flex';
-        document.getElementById('deliveryAmount').focus();
+    }
+
+    // Split Autocalculator
+    window.calculateSplit = function() {
+        if (selectedPaymentMethod === 'Split') {
+            let total = parseFloat(document.getElementById('deliveryAmount').value) || 0;
+            let cash = parseFloat(document.getElementById('splitCash').value) || 0;
+            let credit = parseFloat(document.getElementById('splitCredit').value) || 0;
+            
+            let remainingUPI = total - cash - credit;
+            if (remainingUPI < 0) remainingUPI = 0;
+            
+            document.getElementById('splitUPI').value = remainingUPI;
+            
+            // Toggle Credit Customer field dynamically inside Split
+            if (credit > 0) {
+                document.getElementById('creditCustomerSection').style.display = 'block';
+            } else {
+                document.getElementById('creditCustomerSection').style.display = 'none';
+            }
+        }
     }
 
     window.selectPaymentMode = function(mode, element) {
         selectedPaymentMethod = mode;
         
-        // Manage active states visually for the segmented control
+        // Manage active visual state for segmented buttons
         document.querySelectorAll('.seg-btn').forEach(btn => btn.classList.remove('active'));
         if (element) element.classList.add('active');
 
-        // Toggle visibility between Split inputs vs Main Final Amount
+        // Toggle visibility combinations
         if (mode === 'Split') {
-            document.getElementById('mainAmountRow').style.display = 'none';
+            document.getElementById('mainAmountRow').style.display = 'flex';
             document.getElementById('splitInputsContainer').style.display = 'grid';
+            calculateSplit();
         } else {
             document.getElementById('mainAmountRow').style.display = 'flex';
             document.getElementById('splitInputsContainer').style.display = 'none';
+            
+            if (mode === 'Credit') {
+                document.getElementById('creditCustomerSection').style.display = 'block';
+            } else {
+                document.getElementById('creditCustomerSection').style.display = 'none';
+            }
         }
     }
 
@@ -765,22 +854,23 @@
     }
 
     window.confirmDelivery = async function() {
-        let finalAmount = 0;
+        let finalAmount = parseFloat(document.getElementById('deliveryAmount').value) || 0;
         let cashAmt = 0;
         let upiAmt = 0;
-        let cardAmt = 0;
+        let creditAmt = 0;
         
-        // Process amounts based on selected mode
+        // Process segmented payment logic
         if (selectedPaymentMethod === 'Split') {
             cashAmt = parseFloat(document.getElementById('splitCash').value) || 0;
-            upiAmt = parseFloat(document.getElementById('splitUPI').value) || 0;
-            cardAmt = parseFloat(document.getElementById('splitCard').value) || 0;
-            finalAmount = cashAmt + upiAmt + cardAmt; // Derive final amount automatically
-        } else {
-            finalAmount = parseFloat(document.getElementById('deliveryAmount').value) || 0;
-            if (selectedPaymentMethod === 'Cash') cashAmt = finalAmount;
-            if (selectedPaymentMethod === 'UPI') upiAmt = finalAmount;
-            if (selectedPaymentMethod === 'Credit') cardAmt = finalAmount;
+            creditAmt = parseFloat(document.getElementById('splitCredit').value) || 0;
+            upiAmt = finalAmount - cashAmt - creditAmt; 
+            if (upiAmt < 0) upiAmt = 0;
+        } else if (selectedPaymentMethod === 'Cash') {
+            cashAmt = finalAmount;
+        } else if (selectedPaymentMethod === 'UPI') {
+            upiAmt = finalAmount;
+        } else if (selectedPaymentMethod === 'Credit') {
+            creditAmt = finalAmount;
         }
 
         const currentDate = new Date().toISOString().split('T')[0];
@@ -796,7 +886,7 @@
             
             if (updateError) throw updateError;
             
-            // 2. Insert into Ledger tables
+            // 2. Insert into Specific Books
             if (finalAmount > 0) {
                 // Record Cash Portion
                 if (cashAmt > 0) {
@@ -811,18 +901,37 @@
                     if (cashError) throw cashError;
                 } 
                 
-                // Record Digital Portions (UPI/Card)
-                if (upiAmt > 0 || cardAmt > 0) {
+                // Record Digital Portions (UPI)
+                if (upiAmt > 0) {
                     const { error: upiError } = await supabaseClient.from('upi_entries').insert([{
                         date: currentDate,
                         time: currentTime,
                         description: `Repair Job No: ${deliveryJobNo}`,
                         category: 'Repair Sales',
                         upi_amount: upiAmt,
-                        card_amount: cardAmt,
+                        card_amount: 0,
                         created_by: currentUserEmail
                     }]);
                     if (upiError) throw upiError;
+                }
+
+                // Record Customer Credit (Udhar) Tracker
+                if (creditAmt > 0) {
+                    let creditCustName = document.getElementById('selectedCreditCustName').value;
+                    let creditCustMobile = document.getElementById('selectedCreditCustMobile').value;
+                    
+                    if (!creditCustName) return alert("Please specify the customer name for the Credit (Udhar) tracking.");
+                    
+                    const { error: creditError } = await supabaseClient.from('customer_credits').insert([{
+                        customer_name: creditCustName,
+                        mobile: creditCustMobile,
+                        amount: creditAmt,
+                        job_no: deliveryJobNo,
+                        date: currentDate,
+                        type: 'Given',
+                        created_by: currentUserEmail
+                    }]);
+                    if (creditError) throw creditError;
                 }
             }
             
@@ -833,7 +942,7 @@
             
         } catch (err) { 
             console.error(err);
-            alert("Error updating order: " + err.message + "\n\nDid you forget to add 'finalAmount' and 'paymentMethod' to your Supabase table?"); 
+            alert("Error updating order: " + err.message); 
         }
     }
 
