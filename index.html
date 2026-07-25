@@ -105,14 +105,12 @@
         .billing-row label { font-weight: bold; color: #374151; font-size: 0.9rem;}
         .billing-row input, .billing-row select { text-align: right; width: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-weight: bold; outline: none;}
 
-        /* Segmented Control (Matching Exact Screenshot Styling) */
         .segmented-control { display: inline-flex; border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; margin-top: 10px; margin-bottom: 15px; width: 100%; box-sizing: border-box; }
         .seg-btn { flex: 1; padding: 12px 10px; border: none; background: white; cursor: pointer; font-weight: 600; color: #374151; transition: background 0.2s, color 0.2s; border-right: 1px solid #d1d5db; font-size: 0.9rem; text-align: center;}
         .seg-btn:last-child { border-right: none; }
         .seg-btn:hover { background: #f3f4f6; }
         .seg-btn.active { background: #111827; color: white; border-color: #111827; }
 
-        /* Split Input Group */
         .split-inputs { display: none; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
         .split-group { display: flex; flex-direction: column; }
         .split-group label { font-size: 0.75rem; color: #6b7280; margin-bottom: 4px; display: block; font-weight: 600;}
@@ -319,13 +317,11 @@
         <p class="modal-subtitle" id="deliverySubtitle">Job No: GSM00</p>
         
         <div class="modal-body">
-            <!-- Main Final Amount -->
             <div class="billing-row" id="mainAmountRow" style="flex-direction: column; align-items: flex-start; margin-bottom: 0;">
-                <label style="color: #6b7280; margin-bottom: 5px;">Final Amount Paid (₹)</label>
+                <label style="color: #6b7280; margin-bottom: 5px;">Final Amount (₹)</label>
                 <input type="number" id="deliveryAmount" placeholder="0" style="width: 100%;" oninput="calculateSplit()">
             </div>
 
-            <!-- Segmented Control for Payment Method -->
             <label style="color: #374151; font-weight:bold; font-size: 0.9rem; margin-top:20px; display:block; margin-bottom: 5px;">Select Payment Method</label>
             <div class="segmented-control" id="paymentGrid">
                 <button type="button" class="seg-btn active" id="btnCash" onclick="selectPaymentMode('Cash', this)">Cash</button>
@@ -334,7 +330,6 @@
                 <button type="button" class="seg-btn" id="btnSplit" onclick="selectPaymentMode('Split', this)">Split</button>
             </div>
 
-            <!-- Split Payment Inputs -->
             <div class="split-inputs" id="splitInputsContainer">
                 <div class="split-group">
                     <label>Cash Paid</label>
@@ -350,7 +345,6 @@
                 </div>
             </div>
 
-            <!-- Customer Assignment for Udhar/Credit -->
             <div id="creditCustomerSection" style="display: none; margin-top: 15px; border-top: 1px solid #e5e7eb; padding-top: 15px;">
                 <label style="font-weight:bold; color: #374151; font-size: 0.9rem;">Record Credit to Customer</label>
                 <div class="search-select-container" style="margin-top: 5px;">
@@ -413,10 +407,9 @@
     let billingCustomerName = '';
     let billingCustomerMobile = '';
 
-    // Delivery variables
     let deliveryOrderId = null;
     let deliveryJobNo = '';
-    let selectedPaymentMethod = 'Cash'; // Default
+    let selectedPaymentMethod = 'Cash'; 
     
     let currentPage = 1;
     const rowsPerPage = 10;
@@ -471,11 +464,7 @@
         const resultsList = document.getElementById('globalSearchResults');
         if (input.length < 3) { resultsList.style.display = 'none'; return; }
 
-        const { data, error } = await supabaseClient
-            .from('repairOrders')
-            .select('jobNo, status, customerName')
-            .ilike('jobNo', `%${input}%`)
-            .limit(5);
+        const { data, error } = await supabaseClient.from('repairOrders').select('jobNo, status, customerName').ilike('jobNo', `%${input}%`).limit(5);
 
         if (error) { console.error(error); return; }
 
@@ -545,7 +534,6 @@
         const filter = document.getElementById('custSearchInput').value.toLowerCase();
         const list = document.getElementById('customerDropdownList');
         const items = list.getElementsByTagName('li');
-        
         for (let i = 0; i < items.length; i++) {
             if (items[i].innerText.toLowerCase().includes(filter)) items[i].style.display = 'block';
             else items[i].style.display = 'none';
@@ -564,7 +552,6 @@
         document.getElementById('customerDropdownList').style.display = 'none';
     }
 
-    // Secondary Customer Dropdown logic for Credit Modal
     function populateCreditCustomerDropdown() {
         const list = document.getElementById('creditCustomerDropdownList');
         list.innerHTML = '';
@@ -619,7 +606,6 @@
         const desc = document.getElementById('tabDescription');
         const thEstimate = document.getElementById('thEstimate');
 
-        // Dynamically shift table headers based on active tab
         if(tabName === 'Pending') {
             desc.innerText = "Showing all pending service orders awaiting repair.";
             thEstimate.innerText = "Approx Est. (₹)";
@@ -749,14 +735,8 @@
             const { data, error } = await supabaseClient.functions.invoke('send-fast2sms', {
                 body: { phone: mobile, customerName: name, jobNo: jobNo }
             });
-            if (error) {
-                console.error("Edge Function Error:", error);
-                return;
-            }
-            console.log("SMS Sent Successfully:", data);
-        } catch(err) {
-            console.error("SMS Request Failed", err);
-        }
+            if (error) { console.error("Edge Function Error:", error); return; }
+        } catch(err) { console.error("SMS Request Failed", err); }
     }
 
     window.confirmBilling = async function() {
@@ -765,46 +745,34 @@
 
         try {
             await supabaseClient.from('repairOrders').update({ 
-                status: 'Repair Completed', 
-                estimateAmount: estimateAmount, 
-                repairNotes: notes 
+                status: 'Repair Completed', estimateAmount: estimateAmount, repairNotes: notes 
             }).eq('id', billingOrderId);
             
-            if (billingCustomerMobile) {
-                await sendFast2SMS(billingCustomerMobile, billingCustomerName, billingJobNo);
-            }
+            if (billingCustomerMobile) { await sendFast2SMS(billingCustomerMobile, billingCustomerName, billingJobNo); }
 
             closeBillingModal();
             fetchOrders(); 
-        } catch (err) { 
-            alert("Error completing repair: " + err.message); 
-        }
+        } catch (err) { alert("Error completing repair: " + err.message); }
     }
 
-    // --- ENHANCED DELIVERY FUNCTIONS & PAYMENT GRID ---
     window.openDeliveryModal = function(id, jobNo, estimateAmount, customerName, customerMobile) {
         deliveryOrderId = id;
         deliveryJobNo = jobNo;
         document.getElementById('deliverySubtitle').innerText = `Job No: ${jobNo} | ${customerName}`;
         
-        // Reset Inputs
         document.getElementById('deliveryAmount').value = estimateAmount || '';
         document.getElementById('splitCash').value = '';
         document.getElementById('splitUPI').value = '';
         document.getElementById('splitCredit').value = '';
         
-        // Prep Credit Customer field based on existing data
         document.getElementById('creditCustSearch').value = `${customerName} (${customerMobile})`;
         document.getElementById('selectedCreditCustName').value = customerName;
         document.getElementById('selectedCreditCustMobile').value = customerMobile;
         
-        // Default to Cash Option UI
         selectPaymentMode('Cash', document.getElementById('btnCash'));
-        
         document.getElementById('modalDelivery').style.display = 'flex';
     }
 
-    // Split Autocalculator
     window.calculateSplit = function() {
         if (selectedPaymentMethod === 'Split') {
             let total = parseFloat(document.getElementById('deliveryAmount').value) || 0;
@@ -816,7 +784,6 @@
             
             document.getElementById('splitUPI').value = remainingUPI;
             
-            // Toggle Credit Customer field dynamically inside Split
             if (credit > 0) {
                 document.getElementById('creditCustomerSection').style.display = 'block';
             } else {
@@ -828,11 +795,9 @@
     window.selectPaymentMode = function(mode, element) {
         selectedPaymentMethod = mode;
         
-        // Manage active visual state for segmented buttons
         document.querySelectorAll('.seg-btn').forEach(btn => btn.classList.remove('active'));
         if (element) element.classList.add('active');
 
-        // Toggle visibility combinations
         if (mode === 'Split') {
             document.getElementById('mainAmountRow').style.display = 'flex';
             document.getElementById('splitInputsContainer').style.display = 'grid';
@@ -840,130 +805,107 @@
         } else {
             document.getElementById('mainAmountRow').style.display = 'flex';
             document.getElementById('splitInputsContainer').style.display = 'none';
-            
-            if (mode === 'Credit') {
-                document.getElementById('creditCustomerSection').style.display = 'block';
-            } else {
-                document.getElementById('creditCustomerSection').style.display = 'none';
-            }
+            if (mode === 'Credit') document.getElementById('creditCustomerSection').style.display = 'block';
+            else document.getElementById('creditCustomerSection').style.display = 'none';
         }
     }
 
-    window.closeDeliveryModal = function() { 
-        document.getElementById('modalDelivery').style.display = 'none'; 
-    }
+    window.closeDeliveryModal = function() { document.getElementById('modalDelivery').style.display = 'none'; }
 
     window.confirmDelivery = async function() {
         let finalAmount = parseFloat(document.getElementById('deliveryAmount').value) || 0;
-        let cashAmt = 0;
-        let upiAmt = 0;
-        let creditAmt = 0;
+        let cashAmt = 0; let upiAmt = 0; let creditAmt = 0;
         
-        // Process segmented payment logic
         if (selectedPaymentMethod === 'Split') {
             cashAmt = parseFloat(document.getElementById('splitCash').value) || 0;
             creditAmt = parseFloat(document.getElementById('splitCredit').value) || 0;
             upiAmt = finalAmount - cashAmt - creditAmt; 
             if (upiAmt < 0) upiAmt = 0;
-        } else if (selectedPaymentMethod === 'Cash') {
-            cashAmt = finalAmount;
-        } else if (selectedPaymentMethod === 'UPI') {
-            upiAmt = finalAmount;
-        } else if (selectedPaymentMethod === 'Credit') {
-            creditAmt = finalAmount;
-        }
+        } else if (selectedPaymentMethod === 'Cash') { cashAmt = finalAmount;
+        } else if (selectedPaymentMethod === 'UPI') { upiAmt = finalAmount;
+        } else if (selectedPaymentMethod === 'Credit') { creditAmt = finalAmount; }
 
         const currentDate = new Date().toISOString().split('T')[0];
         const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
         try {
-            // 1. Update the Order status
             const { error: updateError } = await supabaseClient.from('repairOrders').update({ 
-                status: 'Goods Delivered',
-                finalAmount: finalAmount,
-                paymentMethod: selectedPaymentMethod
+                status: 'Goods Delivered', finalAmount: finalAmount, paymentMethod: selectedPaymentMethod
             }).eq('id', deliveryOrderId);
-            
             if (updateError) throw updateError;
             
-            // 2. Insert into Specific Books
             if (finalAmount > 0) {
-                // Record Cash Portion
                 if (cashAmt > 0) {
                     const { error: cashError } = await supabaseClient.from('cashbook_entries').insert([{
-                        date: currentDate,
-                        description: `Repair Job No: ${deliveryJobNo}`,
-                        category: 'Repair Sales',
-                        amount: cashAmt,
-                        type: 'in',
-                        created_by: currentUserEmail
+                        date: currentDate, description: `Repair Job No: ${deliveryJobNo}`, category: 'Repair Sales', amount: cashAmt, type: 'in', created_by: currentUserEmail
                     }]);
                     if (cashError) throw cashError;
                 } 
-                
-                // Record Digital Portions (UPI)
                 if (upiAmt > 0) {
                     const { error: upiError } = await supabaseClient.from('upi_entries').insert([{
-                        date: currentDate,
-                        time: currentTime,
-                        description: `Repair Job No: ${deliveryJobNo}`,
-                        category: 'Repair Sales',
-                        upi_amount: upiAmt,
-                        card_amount: 0,
-                        created_by: currentUserEmail
+                        date: currentDate, time: currentTime, description: `Repair Job No: ${deliveryJobNo}`, category: 'Repair Sales', upi_amount: upiAmt, card_amount: 0, created_by: currentUserEmail
                     }]);
                     if (upiError) throw upiError;
                 }
-
-                // Record Customer Credit (Udhar) Tracker
                 if (creditAmt > 0) {
                     let creditCustName = document.getElementById('selectedCreditCustName').value;
                     let creditCustMobile = document.getElementById('selectedCreditCustMobile').value;
-                    
                     if (!creditCustName) return alert("Please specify the customer name for the Credit (Udhar) tracking.");
                     
                     const { error: creditError } = await supabaseClient.from('customer_credits').insert([{
-                        customer_name: creditCustName,
-                        mobile: creditCustMobile,
-                        amount: creditAmt,
-                        job_no: deliveryJobNo,
-                        date: currentDate,
-                        type: 'Given',
-                        created_by: currentUserEmail
+                        customer_name: creditCustName, mobile: creditCustMobile, amount: creditAmt, job_no: deliveryJobNo, date: currentDate, type: 'Given', created_by: currentUserEmail
                     }]);
                     if (creditError) throw creditError;
+
+                    const { data: custData } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', creditCustMobile).single();
+                    if (custData) {
+                        const currentBal = parseFloat(custData.credit_balance) || 0;
+                        await supabaseClient.from('customers').update({ credit_balance: currentBal + creditAmt }).eq('id', custData.id);
+                    }
                 }
             }
-            
-            // 3. Smooth Transition
             closeDeliveryModal();
-            await fetchOrders(); // Wait for data to refresh FIRST
-            switchTab('Goods Delivered'); // Smoothly glide into the delivered tab
-            
-        } catch (err) { 
-            console.error(err);
-            alert("Error updating order: " + err.message); 
-        }
+            await fetchOrders(); 
+            switchTab('Goods Delivered'); 
+        } catch (err) { alert("Error updating order: " + err.message); }
     }
 
-    window.prevPage = function() { 
-        if (currentPage > 1) { currentPage--; renderOrdersTable(); } 
+    // CASCADE DELETION LOGIC
+    window.deleteOrder = async function(id, jobNo) {
+        if(!confirm(`Are you sure you want to completely delete Job No: ${jobNo}? This will also delete related Cash, UPI, and Credit records.`)) return;
+        try {
+            const { data: credits } = await supabaseClient.from('customer_credits').select('*').eq('job_no', jobNo);
+            if (credits && credits.length > 0) {
+                for (let c of credits) {
+                    if (c.type === 'Given') {
+                        const { data: custData } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', c.mobile).single();
+                        if (custData) {
+                            let newBal = (parseFloat(custData.credit_balance) || 0) - parseFloat(c.amount);
+                            if (newBal < 0) newBal = 0;
+                            await supabaseClient.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
+                        }
+                    }
+                }
+                await supabaseClient.from('customer_credits').delete().eq('job_no', jobNo);
+            }
+
+            await supabaseClient.from('cashbook_entries').delete().ilike('description', `%${jobNo}%`);
+            await supabaseClient.from('upi_entries').delete().ilike('description', `%${jobNo}%`);
+
+            const { error } = await supabaseClient.from('repairOrders').delete().eq('id', id);
+            if (error) throw error;
+            
+            fetchOrders();
+            alert(`Order ${jobNo} and all related accounting entries were completely deleted.`);
+        } catch (err) { alert("Error deleting order: " + err.message); }
     }
-    window.nextPage = function() { 
-        const maxPage = Math.ceil(filteredOrdersData.length / rowsPerPage);
-        if (currentPage < maxPage) { currentPage++; renderOrdersTable(); } 
-    }
+
+    window.prevPage = function() { if (currentPage > 1) { currentPage--; renderOrdersTable(); } }
+    window.nextPage = function() { const maxPage = Math.ceil(filteredOrdersData.length / rowsPerPage); if (currentPage < maxPage) { currentPage++; renderOrdersTable(); } }
 
     window.toggleForm = async function() {
         const form = document.getElementById('orderFormCard');
-        if (form.style.display === 'block') {
-            form.style.display = 'none';
-        } else {
-            form.style.display = 'block';
-            await generateNextJobNo(); 
-            if(isNewCustomerMode) document.getElementById('newCustName').focus();
-            else document.getElementById('custSearchInput').focus();
-        }
+        if (form.style.display === 'block') { form.style.display = 'none'; } else { form.style.display = 'block'; await generateNextJobNo(); if(isNewCustomerMode) document.getElementById('newCustName').focus(); else document.getElementById('custSearchInput').focus(); }
     }
 
     async function generateNextJobNo() {
@@ -973,17 +915,12 @@
             if (data && data.length > 0) {
                 data.forEach(order => {
                     const match = order.jobNo.match(/^GSM(\d+)$/i);
-                    if (match) {
-                        const num = parseInt(match[1], 10);
-                        if (num > maxNum) maxNum = num;
-                    }
+                    if (match) { const num = parseInt(match[1], 10); if (num > maxNum) maxNum = num; }
                 });
             }
             const nextNum = maxNum + 1;
             document.getElementById('jobNo').value = `GSM${String(nextNum).padStart(2, '0')}`;
-        } catch(err) {
-            document.getElementById('jobNo').value = "GSM01";
-        }
+        } catch(err) { document.getElementById('jobNo').value = "GSM01"; }
     }
 
     window.saveOrder = async function() {
@@ -991,11 +928,8 @@
         if (isNewCustomerMode) {
             custName = document.getElementById('newCustName').value.trim();
             let rawContact = document.getElementById('newCustMobile').value.trim();
-            
             if(!custName || rawContact.length !== 10) return alert("Please provide a valid Customer Name and a 10-digit Mobile Number.");
-            
             contactNo = '+91' + rawContact;
-            
             const { error: custErr } = await supabaseClient.from('customers').insert([{ name: custName, mobile: contactNo }]);
             if(!custErr) fetchCustomers(); 
         } else {
@@ -1013,83 +947,31 @@
 
         if(!jobNoVal) return alert("Job Number is missing. Please close and reopen the form.");
 
-        const orderData = {
-            customerName: custName, contactNo: contactNo, jobNo: jobNoVal, problemDesc: problemDesc,
-            devicePassword: devicePassword, approxEstimate: approxEstimate, date: currentDate, time: currentTime,
-            status: "Pending", createdBy: currentUserEmail.split('@')[0]
-        };
+        const orderData = { customerName: custName, contactNo: contactNo, jobNo: jobNoVal, problemDesc: problemDesc, devicePassword: devicePassword, approxEstimate: approxEstimate, date: currentDate, time: currentTime, status: "Pending", createdBy: currentUserEmail.split('@')[0] };
 
         try {
             const { error: orderError } = await supabaseClient.from('repairOrders').insert([orderData]);
             if (orderError) throw orderError;
-            
             document.getElementById('custSearchInput').value = ''; document.getElementById('selectedCustName').value = ''; document.getElementById('selectedCustMobile').value = ''; document.getElementById('newCustName').value = ''; document.getElementById('newCustMobile').value = ''; document.getElementById('problemDesc').value = ''; document.getElementById('devicePassword').value = ''; document.getElementById('approxEstimate').value = '';
-            
-            toggleForm();
-            switchTab('Pending');
-            fetchOrders();
+            toggleForm(); switchTab('Pending'); fetchOrders();
         } catch (error) { alert("Error saving order: " + error.message); }
     };
 
-    window.openBillingModal = function(id, jobNo, customer, mobile) {
-        billingOrderId = id; billingJobNo = jobNo; billingCustomerName = customer; billingCustomerMobile = mobile;
-        document.getElementById('billingSubtitle').innerText = `Job No: ${jobNo} | Customer: ${customer}`;
-        document.getElementById('billEstimateAmount').value = '';
-        document.getElementById('billRepairNotes').value = '';
-        document.getElementById('modalBilling').style.display = 'flex';
-        document.getElementById('billEstimateAmount').focus();
-    }
-
-    window.closeBillingModal = function() { document.getElementById('modalBilling').style.display = 'none'; }
-
-    window.markRepairNP = async function() {
-        if(!confirm("Are you sure you want to mark this device as Repair Not Possible (NP)?")) return;
-        const notes = document.getElementById('billRepairNotes').value.trim();
-
-        try {
-            await supabaseClient.from('repairOrders').update({ status: 'Repair Refusal', repairNotes: notes }).eq('id', billingOrderId);
-            closeBillingModal();
-            fetchOrders(); 
-        } catch (err) { alert("Error updating order: " + err.message); }
-    }
-
-    window.deleteOrder = async function(id, jobNo) {
-        if(!confirm(`Are you sure you want to completely delete Job No: ${jobNo}? This cannot be undone.`)) return;
-        try {
-            const { error } = await supabaseClient.from('repairOrders').delete().eq('id', id);
-            if (error) throw error;
-            fetchOrders();
-        } catch (err) { alert("Error deleting order: " + err.message); }
-    }
-
     window.openEditModal = function(id, jobNo, currentProblem, currentPassword) {
-        editOrderId = id;
-        document.getElementById('editSubtitle').innerText = `Editing details for Job No: ${jobNo}`;
-        document.getElementById('editProblemDesc').value = currentProblem;
-        document.getElementById('editDevicePassword').value = currentPassword;
-        document.getElementById('modalEdit').style.display = 'flex';
+        editOrderId = id; document.getElementById('editSubtitle').innerText = `Editing details for Job No: ${jobNo}`; document.getElementById('editProblemDesc').value = currentProblem; document.getElementById('editDevicePassword').value = currentPassword; document.getElementById('modalEdit').style.display = 'flex';
     }
-
     window.closeEditModal = function() { document.getElementById('modalEdit').style.display = 'none'; }
-
     window.saveEditOrder = async function() {
         const newProblem = document.getElementById('editProblemDesc').value.trim();
         const newPassword = document.getElementById('editDevicePassword').value.trim();
-
         try {
             const { error } = await supabaseClient.from('repairOrders').update({ problemDesc: newProblem, devicePassword: newPassword }).eq('id', editOrderId);
             if (error) throw error;
-            closeEditModal();
-            fetchOrders(); 
+            closeEditModal(); fetchOrders(); 
         } catch (err) { alert("Error updating order: " + err.message); }
     }
 
-    document.addEventListener("DOMContentLoaded", async () => {
-        resetSidebarTimer();
-        await checkAuth();
-        fetchCustomers();
-        fetchOrders();
-    });
+    document.addEventListener("DOMContentLoaded", async () => { resetSidebarTimer(); await checkAuth(); fetchCustomers(); fetchOrders(); });
 </script>
 </body>
 </html>
