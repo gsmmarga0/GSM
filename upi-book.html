@@ -135,7 +135,7 @@
     <div class="header-top">
         <div class="header-title">
             <h1>UPI Book</h1>
-            <p>Mapped dynamically from Repair Orders and Accessories</p>
+            <p>Master ledger for digital transactions (UPI & Card)</p>
         </div>
         
         <div class="filter-group">
@@ -147,7 +147,7 @@
                 <label>To:</label>
                 <input type="date" id="filterToDate">
             </div>
-            <button class="btn-fetch" onclick="fetchMappedData()">
+            <button class="btn-fetch" onclick="fetchLedgerData()">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 Fetch
             </button>
@@ -196,7 +196,7 @@
                         <th>Date</th>
                         <th>Time (IST)</th>
                         <th>Description</th>
-                        <th>Source</th>
+                        <th>Category</th>
                         <th style="text-align: right;">UPI (₹)</th>
                         <th style="text-align: right;">Card (₹)</th>
                     </tr>
@@ -229,7 +229,7 @@
     // Global Pagination State
     let allUpiData = [];
     let currentPage = 1;
-    const rowsPerPage = 50; // Increased to 50 items so the scrollbar is fully utilized
+    const rowsPerPage = 50; 
 
     // Sidebar Hover Timers
     let sidebarTimer;
@@ -290,82 +290,36 @@
         return amount.toLocaleString('en-IN', { style: 'currency', currency: 'INR' });
     }
 
-    function getBadgeClass(source) {
-        if (source === 'Repair Payment') return 'badge-repair';
+    function getBadgeClass(category) {
+        if (category === 'Repair Sales' || category === 'Advances') return 'badge-repair';
         return 'badge-accessories';
     }
 
-    // FETCH DYNAMICALLY FROM REPAIRS AND ACCESSORIES TABLES
-    window.fetchMappedData = async function() {
+    // FETCH FROM NEW UNIFIED UPI_ENTRIES TABLE
+    window.fetchLedgerData = async function() {
         const fromDate = document.getElementById('filterFromDate').value;
         const toDate = document.getElementById('filterToDate').value;
         document.getElementById('tableDateRangeDisplay').innerText = fromDate === toDate ? fromDate : `${fromDate} to ${toDate}`;
 
-        let unifiedData = [];
-
         try {
-            // 1. Fetch from upi_transactions ledger directly
-            const { data: upiLedger } = await supabaseClient.from('upi_transactions').select('*');
+            const { data, error } = await supabaseClient
+                .from('upi_entries')
+                .select('*')
+                .gte('date', fromDate)
+                .lte('date', toDate)
+                .order('date', { ascending: true })
+                .order('time', { ascending: true });
 
-            upiLedger?.forEach(u => {
-                let amt = parseFloat(u.amount) || 0;
-                let timestamp = u.created_at || null;
-                
-                let parseDate = u.date || (timestamp ? timestamp.split('T')[0] : '1970-01-01');
-                let parseTime = u.time || '00:00:00';
-                
-                let dateObj = timestamp ? new Date(timestamp) : new Date(`${parseDate}T${parseTime}`);
-                if (isNaN(dateObj.getTime())) dateObj = new Date(); 
+            if (error) throw error;
 
-                unifiedData.push({
-                    dateObj: dateObj,
-                    dateStr: parseDate,
-                    timeStr: u.time || (timestamp ? new Date(timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' }) : '00:00'),
-                    description: u.description || 'UPI Payment',
-                    source: u.source || 'Repair Payment',
-                    upi: amt,
-                    card: 0
-                });
-            });
-
-            // 2. Fetch Accessories Invoices
-            const { data: accessories } = await supabaseClient.from('accessories_invoices').select('*').in('payment_mode', ['UPI', 'Card']);
-
-            accessories?.forEach(a => {
-                let amt = parseFloat(a.total_amt) || 0;
-                let upi = a.payment_mode === 'UPI' ? amt : 0;
-                let card = a.payment_mode === 'Card' ? amt : 0;
-                
-                let dateStr = a.date || new Date(a.created_at).toISOString().split('T')[0];
-                let dateObj = new Date(a.created_at || a.date);
-                if (isNaN(dateObj.getTime())) dateObj = new Date();
-
-                unifiedData.push({
-                    dateObj: dateObj,
-                    dateStr: dateStr,
-                    timeStr: new Date(a.created_at).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' }),
-                    description: `Acc. Invoice #${a.invoice_no} (${a.customer_name})`,
-                    source: 'Accessories',
-                    upi: upi,
-                    card: card
-                });
-            });
-
-            // Apply Date Filter
-            unifiedData = unifiedData.filter(d => d.dateStr >= fromDate && d.dateStr <= toDate);
-            
-            // Sort by Date/Time ascending
-            unifiedData.sort((a, b) => a.dateObj - b.dateObj);
-
-            // Store globally for pagination
-            allUpiData = unifiedData;
+            allUpiData = data || [];
             currentPage = 1;
             
             calculateStats(allUpiData);
             renderPaginatedTable();
 
         } catch (error) {
-            console.error("Error fetching mapped data:", error.message);
+            console.error("Error fetching data:", error.message);
         }
     }
 
@@ -373,11 +327,14 @@
         let totals = { upiAmount: 0, upiCount: 0, cardAmount: 0, cardCount: 0, repairTotal: 0, accessoriesTotal: 0 };
 
         data.forEach(item => {
-            if (item.upi > 0) { totals.upiAmount += item.upi; totals.upiCount += 1; }
-            if (item.card > 0) { totals.cardAmount += item.card; totals.cardCount += 1; }
+            const upiAmt = parseFloat(item.upi_amount) || 0;
+            const cardAmt = parseFloat(item.card_amount) || 0;
 
-            let rowTotal = item.upi + item.card;
-            if (item.source === 'Repair Payment' || item.source === 'Advance Towards Repair') {
+            if (upiAmt > 0) { totals.upiAmount += upiAmt; totals.upiCount += 1; }
+            if (cardAmt > 0) { totals.cardAmount += cardAmt; totals.cardCount += 1; }
+
+            let rowTotal = upiAmt + cardAmt;
+            if (item.category === 'Repair Sales' || item.category === 'Advances') {
                 totals.repairTotal += rowTotal;
             } else {
                 totals.accessoriesTotal += rowTotal;
@@ -414,8 +371,8 @@
         // Calculate overall period totals for the footer to ensure accuracy across pages
         let periodUpi = 0, periodCard = 0;
         allUpiData.forEach(item => {
-            periodUpi += item.upi;
-            periodCard += item.card;
+            periodUpi += parseFloat(item.upi_amount) || 0;
+            periodCard += parseFloat(item.card_amount) || 0;
         });
 
         renderTable(paginatedData, periodUpi, periodCard, allUpiData.length);
@@ -434,13 +391,16 @@
         // Group the data specifically for this page chunk
         const groupedData = {};
         data.forEach(item => {
-            if (!groupedData[item.dateStr]) groupedData[item.dateStr] = [];
-            groupedData[item.dateStr].push(item);
+            if (!groupedData[item.date]) groupedData[item.date] = [];
+            groupedData[item.date].push(item);
         });
 
         for (const [dateStr, transactions] of Object.entries(groupedData)) {
             let dayUpi = 0, dayCard = 0;
-            transactions.forEach(t => { dayUpi += t.upi; dayCard += t.card; });
+            transactions.forEach(t => { 
+                dayUpi += parseFloat(t.upi_amount) || 0; 
+                dayCard += parseFloat(t.card_amount) || 0; 
+            });
 
             const dateObj = new Date(dateStr);
             const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
@@ -455,14 +415,19 @@
             tbody.appendChild(headerRow);
 
             transactions.forEach(item => {
+                const upiAmt = parseFloat(item.upi_amount) || 0;
+                const cardAmt = parseFloat(item.card_amount) || 0;
+                
+                const timeStr = item.time ? item.time.substring(0, 5) : '00:00'; // Format HH:MM
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${item.dateStr}</td>
-                    <td>${item.timeStr}</td>
+                    <td>${item.date}</td>
+                    <td>${timeStr}</td>
                     <td>${item.description}</td>
-                    <td><span class="badge ${getBadgeClass(item.source)}">${item.source}</span></td>
-                    <td class="col-upi" style="text-align: right;">${item.upi > 0 ? formatMoney(item.upi) : '-'}</td>
-                    <td class="col-card" style="text-align: right;">${item.card > 0 ? formatMoney(item.card) : '-'}</td>
+                    <td><span class="badge ${getBadgeClass(item.category)}">${item.category}</span></td>
+                    <td class="col-upi" style="text-align: right;">${upiAmt > 0 ? formatMoney(upiAmt) : '-'}</td>
+                    <td class="col-card" style="text-align: right;">${cardAmt > 0 ? formatMoney(cardAmt) : '-'}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -488,13 +453,16 @@
         }
 
         // Create CSV Header
-        let csvContent = "Date,Time,Description,Source,UPI Amount (INR),Card Amount (INR)\n";
+        let csvContent = "Date,Time,Description,Category,UPI Amount (INR),Card Amount (INR)\n";
 
         // Append Rows
         allUpiData.forEach(row => {
-            // Strip out any commas from descriptions to prevent column breaks
             const safeDescription = row.description ? row.description.replace(/,/g, " ") : "";
-            csvContent += `${row.dateStr},${row.timeStr},${safeDescription},${row.source},${row.upi},${row.card}\n`;
+            const upiAmt = parseFloat(row.upi_amount) || 0;
+            const cardAmt = parseFloat(row.card_amount) || 0;
+            const timeStr = row.time ? row.time.substring(0, 5) : '00:00';
+            
+            csvContent += `${row.date},${timeStr},${safeDescription},${row.category},${upiAmt},${cardAmt}\n`;
         });
 
         // Trigger file download using a Blob
@@ -506,7 +474,7 @@
         const toDate = document.getElementById('filterToDate').value;
 
         link.setAttribute("href", url);
-        link.setAttribute("download", `UPI_Transactions_${fromDate}_to_${toDate}.csv`);
+        link.setAttribute("download", `Digital_Transactions_${fromDate}_to_${toDate}.csv`);
         link.style.visibility = 'hidden';
         
         document.body.appendChild(link);
@@ -517,7 +485,7 @@
     document.addEventListener("DOMContentLoaded", async () => {
         await checkAuth();
         resetSidebarTimer();
-        fetchMappedData();
+        fetchLedgerData();
     });
 </script>
 </body>
