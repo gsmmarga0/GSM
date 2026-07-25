@@ -76,7 +76,7 @@
         .form-group { display: flex; flex-direction: column; }
         .form-group label { font-size: 0.85rem; color: #4b5563; margin-bottom: 8px; font-weight: 500;}
         .form-group label span { color: #ef4444; }
-        .form-group input { padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; background: #fdfdfd; }
+        .form-group input, .form-group select { padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; background: #fdfdfd; font-family: inherit;}
         input[readonly] { background-color: #f3f4f6 !important; color: #6b7280; font-weight: bold; cursor: not-allowed; }
 
         .search-select-container { position: relative; width: 100%; }
@@ -103,7 +103,7 @@
         .modal-subtitle { font-size: 0.85rem; color: #6b7280; margin: 0 0 20px 0; padding-bottom: 15px; border-bottom: 1px solid #e5e7eb;}
         .billing-row { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
         .billing-row label { font-weight: bold; color: #374151; font-size: 0.9rem;}
-        .billing-row input { text-align: right; width: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-weight: bold; outline: none;}
+        .billing-row input, .billing-row select { text-align: right; width: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-weight: bold; outline: none;}
         .notes-input { width: 100%; box-sizing: border-box; padding: 10px; margin-top: 8px; border: 1px solid #d1d5db; border-radius: 6px; outline: none; font-family: inherit;}
         .notes-input:focus { border-color: #9ca3af; }
         .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
@@ -294,6 +294,34 @@
     </div>
 </div>
 
+<!-- DELIVERY MODAL -->
+<div class="modal-overlay" id="modalDelivery">
+    <div class="modal-container">
+        <h2 class="modal-title">Deliver Goods</h2>
+        <p class="modal-subtitle" id="deliverySubtitle">Job No: GSM00</p>
+        
+        <div class="modal-body">
+            <div class="billing-row">
+                <label style="color: #6b7280;">Final Amount Paid (₹)</label>
+                <input type="number" id="deliveryAmount" placeholder="0">
+            </div>
+            <div class="billing-row">
+                <label style="color: #6b7280;">Payment Method</label>
+                <select id="deliveryMethod">
+                    <option value="Cash">Cash</option>
+                    <option value="UPI">UPI</option>
+                    <option value="Credit">Credit</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button class="btn" onclick="closeDeliveryModal()">Cancel</button>
+            <button class="btn-confirm" style="background:#2563eb;" onclick="confirmDelivery()">Complete Delivery</button>
+        </div>
+    </div>
+</div>
+
 <!-- EDIT MODAL -->
 <div class="modal-overlay" id="modalEdit">
     <div class="modal-container">
@@ -337,6 +365,10 @@
     let billingJobNo = '';
     let billingCustomerName = '';
     let billingCustomerMobile = '';
+
+    // Delivery variables
+    let deliveryOrderId = null;
+    let deliveryJobNo = '';
     
     let currentPage = 1;
     const rowsPerPage = 10;
@@ -569,9 +601,9 @@
             if (order.status === 'Pending') {
                 actionHtml = `<button class="btn-bill" onclick="openBillingModal('${order.id}', '${order.jobNo}', '${order.customerName}', '${order.contactNo}')">Repair Complete ✓</button>`;
             } else if (order.status === 'Repair Completed') {
-                
-                // Simplified Deliver Button (WhatsApp automation removed)
-                actionHtml = `<button class="btn-bill" style="background:#2563eb;" onclick="markGoodsDelivered('${order.id}')">Deliver Goods 📦</button>`;
+                // Modified Deliver Button to open the delivery modal
+                const estimatePass = order.estimateAmount || order.approxEstimate || 0;
+                actionHtml = `<button class="btn-bill" style="background:#2563eb;" onclick="openDeliveryModal('${order.id}', '${order.jobNo}', ${estimatePass})">Deliver Goods 📦</button>`;
                 
             } else if (order.status === 'Goods Delivered') {
                 actionHtml = `<span class="status-badge" style="background:#dcfce7; color:#166534;">Delivered</span>`;
@@ -611,20 +643,16 @@
         document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(filteredOrdersData.length / rowsPerPage) || 1}`;
     }
 
-    // --- SECURE FAST2SMS SEND TEXT FUNCTION ---
     async function sendFast2SMS(mobile, name, jobNo) {
         try {
-            // Call the secure Supabase Edge Function instead of the Fast2SMS API directly
             const { data, error } = await supabaseClient.functions.invoke('send-fast2sms', {
                 body: { phone: mobile, customerName: name, jobNo: jobNo }
             });
-
             if (error) {
                 console.error("Edge Function Error:", error);
                 alert("Failed to send SMS: " + error.message);
                 return;
             }
-
             console.log("SMS Sent Successfully:", data);
         } catch(err) {
             console.error("SMS Request Failed", err);
@@ -632,20 +660,17 @@
         }
     }
 
-    // --- MODIFIED CONFIRM BILLING ---
     window.confirmBilling = async function() {
         const estimateAmount = parseFloat(document.getElementById('billEstimateAmount').value) || 0;
         const notes = document.getElementById('billRepairNotes').value.trim();
 
         try {
-            // Update Supabase Database
             await supabaseClient.from('repairOrders').update({ 
                 status: 'Repair Completed', 
                 estimateAmount: estimateAmount, 
                 repairNotes: notes 
             }).eq('id', billingOrderId);
             
-            // Trigger Fast2SMS securely via Edge Function
             if (billingCustomerMobile) {
                 await sendFast2SMS(billingCustomerMobile, billingCustomerName, billingJobNo);
             }
@@ -657,6 +682,42 @@
             alert("Error completing repair: " + err.message); 
         }
     }
+
+    // --- NEW DELIVERY FUNCTIONS ---
+    window.openDeliveryModal = function(id, jobNo, estimateAmount) {
+        deliveryOrderId = id;
+        deliveryJobNo = jobNo;
+        document.getElementById('deliverySubtitle').innerText = `Job No: ${jobNo}`;
+        document.getElementById('deliveryAmount').value = estimateAmount || '';
+        document.getElementById('deliveryMethod').value = 'Cash'; 
+        document.getElementById('modalDelivery').style.display = 'flex';
+        document.getElementById('deliveryAmount').focus();
+    }
+
+    window.closeDeliveryModal = function() { 
+        document.getElementById('modalDelivery').style.display = 'none'; 
+    }
+
+    window.confirmDelivery = async function() {
+        const finalAmount = parseFloat(document.getElementById('deliveryAmount').value) || 0;
+        const paymentMethod = document.getElementById('deliveryMethod').value;
+
+        try {
+            await supabaseClient.from('repairOrders').update({ 
+                status: 'Goods Delivered',
+                finalAmount: finalAmount,
+                paymentMethod: paymentMethod
+            }).eq('id', deliveryOrderId);
+            
+            closeDeliveryModal();
+            fetchOrders();
+            // Depending on how your other pages work, they should now filter 
+            // the 'repairOrders' table by paymentMethod = 'UPI' or 'Cash'
+        } catch (err) { 
+            alert("Error updating order: " + err.message); 
+        }
+    }
+    // -----------------------------
 
     window.prevPage = function() { 
         if (currentPage > 1) { currentPage--; renderOrdersTable(); } 
@@ -706,7 +767,6 @@
             
             if(!custName || !rawContact) return alert("Please fill in New Customer details.");
             
-            // Automatically clean and enforce +91 prefix
             rawContact = rawContact.replace(/\s+/g, '');
             if (rawContact.startsWith('+91')) {
                 contactNo = rawContact;
@@ -773,14 +833,6 @@
             closeBillingModal();
             fetchOrders(); 
             alert("Order moved to Repair Refusal!");
-        } catch (err) { alert("Error updating order: " + err.message); }
-    }
-
-    window.markGoodsDelivered = async function(id) {
-        if(!confirm("Are you sure you want to mark this item as Delivered?")) return;
-        try {
-            await supabaseClient.from('repairOrders').update({ status: 'Goods Delivered' }).eq('id', id);
-            fetchOrders();
         } catch (err) { alert("Error updating order: " + err.message); }
     }
 
