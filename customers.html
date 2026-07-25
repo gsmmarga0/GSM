@@ -235,18 +235,40 @@
     async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
 
     async function fetchCustomers() {
-        const { data, error } = await supabaseClient.from('customers').select('*').order('created_at', { ascending: false });
-        if (error) return console.error(error);
-        
-        allCustomers = data || [];
-        
-        // --- Sort mathematically by highest credit balance first (Top requested feature) ---
-        allCustomers.sort((a, b) => {
-            const dueA = parseFloat(a.credit_balance) || 0;
-            const dueB = parseFloat(b.credit_balance) || 0;
-            return dueB - dueA; // highest numbers float to the top automatically
+        // 1. Fetch both customers and their full credit history simultaneously
+        const [custRes, credRes] = await Promise.all([
+            supabaseClient.from('customers').select('*').order('created_at', { ascending: false }),
+            supabaseClient.from('customer_credits').select('*')
+        ]);
+
+        if (custRes.error) return console.error(custRes.error);
+        if (credRes.error) return console.error(credRes.error);
+
+        let customersData = custRes.data || [];
+        let creditsData = credRes.data || [];
+
+        // 2. Dynamically calculate the true balance based on the History table
+        allCustomers = customersData.map(c => {
+            let calculatedDue = 0;
+            const customerHistory = creditsData.filter(cred => cred.mobile === c.mobile);
+
+            customerHistory.forEach(entry => {
+                const amt = parseFloat(entry.amount) || 0;
+                if (entry.type === 'Given') {
+                    calculatedDue += amt;
+                } else if (entry.type === 'Settled') {
+                    calculatedDue -= amt;
+                }
+            });
+
+            // 3. Apply the calculated due to the customer object
+            c.display_due = customerHistory.length > 0 ? calculatedDue : (parseFloat(c.credit_balance) || 0);
+            return c;
         });
-        
+
+        // 4. Sort mathematically by highest real credit balance first
+        allCustomers.sort((a, b) => b.display_due - a.display_due);
+
         filteredCustomers = [...allCustomers]; 
         currentPage = 1; 
         renderTable(filteredCustomers);
@@ -266,14 +288,12 @@
         const paginatedItems = dataToRender.slice(start, start + rowsPerPage);
 
         paginatedItems.forEach(c => {
-            let due = parseFloat(c.credit_balance) || 0;
+            // Use the dynamically calculated due instead of the static database column
+            let due = c.display_due; 
             
-            let actionHtml = '';
-            if (due > 0) {
-                actionHtml += `<button class="btn-settle" onclick="openSettleModal(${c.id}, '${escapeStr(c.name)}', '${escapeStr(c.mobile)}', ${due})">Settle Due</button>`;
-            }
+            // REMOVED the 'if (due > 0)' restriction so the Settle button is ALWAYS visible
+            let actionHtml = `<button class="btn-settle" onclick="openSettleModal(${c.id}, '${escapeStr(c.name)}', '${escapeStr(c.mobile)}', ${due})">Settle Due</button>`;
             
-            // New History Button for every customer
             actionHtml += `<button class="btn-history" onclick="openHistoryModal('${escapeStr(c.mobile)}', '${escapeStr(c.name)}')">📜 History</button>`;
 
             let dateStr = new Date(c.created_at).toLocaleDateString('en-GB');
