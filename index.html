@@ -809,8 +809,8 @@
                     </div>`;
             }
             
-            if (isAdmin) {
-                actionHtml += `<button class="btn-icon" style="color:#ef4444; margin-top: 5px;" onclick="deleteOrder('${orderIdSafe}', '${jobNoSafe}')" title="Delete Order">🗑️</button>`;
+            if (isAdmin && order.status !== 'Goods Delivered' && order.status !== 'Delivered (Refused)') {
+                actionHtml += `<button class="btn-icon" style="color:#ef4444; margin-top: 5px;" onclick="deleteOrder('${orderIdSafe}', '${jobNoSafe}', '${order.status}')" title="Delete Order">🗑️</button>`;
             }
 
             const editIconHtml = `<span onclick="openEditModal('${orderIdSafe}', '${jobNoSafe}', '${problemSafe}', '${passwordSafe}')" title="Edit Problem/Password">${pencilSVG}</span>`;
@@ -851,29 +851,6 @@
         document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(filteredOrdersData.length / rowsPerPage) || 1}`;
     }
 
-    async function sendRepairCompleteSMS(mobile, name, jobNo, billAmount) {
-        try {
-            // Invoking the new Juvlon Edge Function
-            const { data, error } = await supabaseClient.functions.invoke('send-juvlon-sms', {
-                body: { 
-                    phone: mobile, 
-                    customerName: name, 
-                    jobNo: jobNo,
-                    amount: billAmount
-                }
-            });
-            
-            if (error) { 
-                console.error("Edge Function Error:", error); 
-                alert("Failed to trigger SMS function. Check console for details.");
-                return; 
-            }
-            
-            console.log("SMS Sent Successfully:", data);
-        } catch(err) { 
-            console.error("SMS Request Failed", err); 
-        }
-    }
     window.openBillingModal = function(id, jobNo, customer, mobile) {
         billingOrderId = id; billingJobNo = jobNo; billingCustomerName = customer; billingCustomerMobile = mobile;
         document.getElementById('billingSubtitle').innerText = `Job No: ${jobNo} | Customer: ${customer}`;
@@ -905,10 +882,6 @@
 
             if (updateError) throw updateError;
             
-            if (billingCustomerMobile) { 
-                await sendRepairCompleteSMS(billingCustomerMobile, billingCustomerName, billingJobNo, estimateAmount); 
-            }
-
             closeBillingModal();
             await fetchOrders(); 
             switchTab('Repair Completed');
@@ -1027,8 +1000,6 @@
         const gdDate = new Date().toISOString().split('T')[0];
         const gdTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
         
-        // Use the exact date of creation for ledgers, rather than the current delivery date if preferred,
-        // but traditionally cashbook entries are recorded exactly when payment is taken (today).
         const ledgerDate = new Date().toISOString().split('T')[0];
 
         const newStatus = deliveryCurrentStatus === 'Repair Refusal' ? 'Delivered (Refused)' : 'Goods Delivered';
@@ -1086,7 +1057,11 @@
     }
 
     // CASCADE DELETION LOGIC
-    window.deleteOrder = async function(id, jobNo) {
+    window.deleteOrder = async function(id, jobNo, status) {
+        if (status === 'Goods Delivered' || status === 'Delivered (Refused)') {
+            return alert("Orders that have been delivered cannot be deleted.");
+        }
+        
         if(!confirm(`Are you sure you want to completely delete Job No: ${jobNo}? This will also delete related Cash, UPI, and Credit records.`)) return;
         try {
             const { data: credits } = await supabaseClient.from('customer_credits').select('*').eq('job_no', jobNo);
