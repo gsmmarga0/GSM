@@ -38,7 +38,7 @@ serve(async (req) => {
       type: "template",
       template: {
         name: TEMPLATE_NAME,
-        language: { code: "en" }, 
+        language: { code: "en_US" }, 
         components: [
           {
             type: "body",
