@@ -858,32 +858,6 @@
     window.closeBillingModal = function() { document.getElementById('modalBilling').style.display = 'none'; }
 
 
-    // ==========================================
-    // META WHATSAPP API (VIA SUPABASE EDGE FUNCTION)
-    // ==========================================
-    async function sendWhatsAppMessage(mobile, customerName, jobNo, amount) {
-        try {
-            // Call the secure backend Edge Function
-            const { data, error } = await supabaseClient.functions.invoke('send-whatsapp', {
-                body: { 
-                    mobile: mobile, 
-                    customerName: customerName, 
-                    jobNo: jobNo, 
-                    amount: amount 
-                }
-            });
-
-            if (error) {
-                console.error("Edge Function Error:", error);
-            } else {
-                console.log("WhatsApp message sent successfully via backend!", data);
-            }
-        } catch (error) {
-            console.error("Error invoking WhatsApp function:", error);
-        }
-    }
-
-
     window.confirmBilling = async function() {
         const estimateAmount = parseFloat(document.getElementById('billEstimateAmount').value) || 0;
         const notes = document.getElementById('billRepairNotes').value.trim();
