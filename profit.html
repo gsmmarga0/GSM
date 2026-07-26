@@ -118,7 +118,7 @@
             <div class="breakdown-card">
                 <h2>Ledger Breakdown (Cashbook + UPI)</h2>
                 <div class="flex-row"><span>Cash Income (Cashbook In)</span> <span id="cashInText">₹0</span></div>
-                <div class="flex-row"><span>Digital Income (UPI Book)</span> <span id="upiInText">₹0</span></div>
+                <div class="flex-row"><span>Digital Income (UPI & Card Book)</span> <span id="upiInText">₹0</span></div>
                 <div class="flex-row" style="background: #f0fdf4; padding: 10px; margin-top: 5px; border-radius: 6px;">
                     <span class="text-green" style="font-weight:bold;">Total Gross Inflows</span> 
                     <span class="text-green" style="font-weight:bold;" id="totalRevText">₹0</span>
@@ -214,14 +214,17 @@
             });
         }
 
-        // 2. Fetch UPI Book (Assuming positive amounts are inflows, negative are outflows/refunds)
-        const { data: upiData } = await supabaseClient.from('upi_transactions').select('amount');
+        // 2. Fetch UPI Book (Updated to use upi_entries and combine UPI & Card amounts)
+        const { data: upiData } = await supabaseClient.from('upi_entries').select('upi_amount, card_amount');
         let upiIn = 0, upiOut = 0;
         if(upiData) {
             upiData.forEach(u => {
-                let val = parseFloat(u.amount) || 0;
-                if(val >= 0) upiIn += val;
-                if(val < 0) upiOut += Math.abs(val);
+                let upiVal = parseFloat(u.upi_amount) || 0;
+                let cardVal = parseFloat(u.card_amount) || 0;
+                let totalVal = upiVal + cardVal;
+                
+                if(totalVal >= 0) upiIn += totalVal;
+                if(totalVal < 0) upiOut += Math.abs(totalVal);
             });
         }
 
