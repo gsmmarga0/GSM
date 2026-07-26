@@ -6,23 +6,32 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // 1. Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const { mobile, customerName, jobNo, amount } = await req.json()
+    console.log("--- NEW REQUEST STARTED ---");
+    
+    // 2. Parse the body from the frontend
+    const body = await req.json();
+    console.log("Data received from frontend:", body);
 
-    const META_TOKEN = Deno.env.get('META_TOKEN')
-    const PHONE_NUMBER_ID = Deno.env.get('PHONE_NUMBER_ID')
-    const TEMPLATE_NAME = Deno.env.get('TEMPLATE_NAME')
+    // 3. Load your Secrets
+    const META_TOKEN = Deno.env.get('META_TOKEN');
+    const PHONE_NUMBER_ID = Deno.env.get('PHONE_NUMBER_ID');
+    const TEMPLATE_NAME = Deno.env.get('TEMPLATE_NAME');
 
     if (!META_TOKEN || !PHONE_NUMBER_ID || !TEMPLATE_NAME) {
-      throw new Error("Missing Meta credentials in server configuration.")
+      throw new Error("Missing Meta secrets in Supabase Dashboard.");
     }
 
-    const formattedMobile = mobile.replace('+', '').trim()
+    // 4. Clean up the phone number
+    const formattedMobile = body.mobile.replace('+', '').trim();
+    console.log("Sending to mobile:", formattedMobile);
 
+    // 5. Build the Meta Payload
     const payload = {
       messaging_product: "whatsapp",
       to: formattedMobile,
@@ -34,15 +43,18 @@ serve(async (req) => {
           {
             type: "body",
             parameters: [
-              { type: "text", text: customerName },
-              { type: "text", text: String(jobNo) },
-              { type: "text", text: String(amount) }
+              { type: "text", text: String(body.customerName) },
+              { type: "text", text: String(body.jobNo) },
+              { type: "text", text: String(body.amount) }
             ]
           }
         ]
       }
-    }
+    };
+    
+    console.log("Payload ready, sending to Meta...");
 
+    // 6. Send to Meta
     const metaResponse = await fetch(`https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`, {
       method: 'POST',
       headers: {
@@ -50,24 +62,26 @@ serve(async (req) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
-    })
+    });
 
-    const metaData = await metaResponse.json()
+    const metaData = await metaResponse.json();
+    console.log("Meta API Response:", metaData);
 
     if (!metaResponse.ok) {
-      console.error("Meta API Error:", metaData)
-      throw new Error(`Meta API failed: ${metaData.error?.message || 'Unknown error'}`)
+      throw new Error(`Meta API Rejected: ${JSON.stringify(metaData)}`);
     }
 
+    console.log("SUCCESS! Message sent.");
     return new Response(JSON.stringify({ success: true, data: metaData }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
-    })
+    });
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error("CRITICAL ERROR:", error.message || error);
+    return new Response(JSON.stringify({ error: error.message || String(error) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
-    })
+    });
   }
-})
+});
