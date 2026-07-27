@@ -125,7 +125,6 @@
         
         .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; display: inline-block;}
         
-        /* Unified Pencil Styling */
         .edit-pen { cursor: pointer; display: inline-block; width: 14px; height: 14px; margin-left: 6px; vertical-align: middle; color: #9ca3af; transition: 0.2s; }
         .edit-pen:hover { color: #2563eb; }
     </style>
@@ -168,7 +167,8 @@
                 <input type="text" id="globalJobSearch" class="search-bar search-bar-global" placeholder="🔍 Track Any Job No..." oninput="debounceGlobalSearch()">
                 <ul id="globalSearchResults"></ul>
             </div>
-            <input type="text" id="searchInput" class="search-bar" placeholder="Search current list..." onkeyup="applyFilters()">
+            <!-- Updated Placeholder text to reflect global capabilities -->
+            <input type="text" id="searchInput" class="search-bar" placeholder="Search All Orders..." onkeyup="applyFilters()">
             <button class="btn btn-primary" onclick="toggleForm()">+ New Order</button>
         </div>
     </div>
@@ -370,7 +370,7 @@
     </div>
 </div>
 
-<!-- EDIT MODAL -->
+<!-- EDIT ORDER MODAL -->
 <div class="modal-overlay" id="modalEdit">
     <div class="modal-container">
         <h2 class="modal-title">Edit Order Details</h2>
@@ -390,6 +390,36 @@
         <div class="modal-footer">
             <button class="btn" onclick="closeEditModal()">Cancel</button>
             <button class="btn-save" onclick="saveEditOrder()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- NEW: CHANGE PAYMENT MODE MODAL (ADMIN ONLY) -->
+<div class="modal-overlay" id="modalEditPayment">
+    <div class="modal-container">
+        <h2 class="modal-title">Edit Payment Mode</h2>
+        <p class="modal-subtitle" id="editPaymentSubtitle">Job No: GSM00</p>
+        
+        <div class="modal-body">
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label style="font-weight:bold; color: #374151;">Select New Payment Mode</label>
+                <select id="newPaymentMode" class="notes-input" style="margin-top: 5px; font-weight: bold;" onchange="toggleEditPaymentUpiNote()">
+                    <option value="Cash">Cash</option>
+                    <option value="UPI">UPI</option>
+                    <option value="Credit">Credit</option>
+                </select>
+                <p style="font-size: 0.75rem; color: #ef4444; margin-top: 5px;">* This will rewrite the Cashbook & UPI book.</p>
+            </div>
+
+            <div id="editPaymentUpiSection" style="display: none; margin-bottom: 15px;">
+                <label style="font-weight:bold; color: #374151; font-size: 0.9rem;">UPI Reference/Note</label>
+                <input type="text" id="editPaymentUpiNote" class="notes-input" placeholder="e.g. GPay, PhonePe">
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button class="btn" onclick="closeEditPaymentModal()">Cancel</button>
+            <button class="btn-save" onclick="saveNewPaymentMode()">Save Update</button>
         </div>
     </div>
 </div>
@@ -640,9 +670,53 @@
         applyFilters();
     }
 
+    // ==========================================
+    // UPDATED SMART GLOBAL FILTER
+    // ==========================================
     window.applyFilters = function() {
         const input = document.getElementById("searchInput").value.toLowerCase();
         
+        if (input.trim() !== '') {
+            // Check globally if the search matches ANYTHING in the entire database
+            const allMatches = allOrdersData.filter(order => {
+                const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc} ${order.devicePassword}`.toLowerCase();
+                return combinedString.includes(input);
+            });
+
+            if (allMatches.length > 0) {
+                // Determine if any match is actually inside our *currently selected* tab
+                const matchesInCurrentTab = allMatches.some(order => {
+                    return currentTab === 'Goods Delivered' 
+                        ? (order.status === 'Goods Delivered' || order.status === 'Delivered (Refused)') 
+                        : (order.status || 'Pending') === currentTab;
+                });
+
+                // If the item exists but NOT in this tab, automatically jump to the tab where the first match lives
+                if (!matchesInCurrentTab) {
+                    let newTab = allMatches[0].status;
+                    if (newTab === 'Delivered (Refused)') newTab = 'Goods Delivered';
+                    
+                    if (newTab && newTab !== currentTab) {
+                        currentTab = newTab;
+                        
+                        // Update UI seamlessly
+                        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                        const tabId = 'tab-' + newTab.replace(' ', '-');
+                        const element = document.getElementById(tabId);
+                        if(element) element.classList.add('active');
+                        
+                        const desc = document.getElementById('tabDescription');
+                        const thEstimate = document.getElementById('thEstimate');
+                        if(newTab === 'Pending') { desc.innerText = "Showing all pending service orders awaiting repair."; thEstimate.innerText = "Approx Est. (₹)"; } 
+                        else if (newTab === 'Repair Completed') { desc.innerText = "Showing all items where repairs have successfully concluded."; thEstimate.innerText = "Balance Amount (₹)"; } 
+                        else if (newTab === 'Goods Delivered') { desc.innerText = "Showing history of completed & returned items."; thEstimate.innerText = "Total Amount (₹)"; } 
+                        else if (newTab === 'Repair Refusal') { desc.innerText = "Showing orders marked as refused or cancelled."; thEstimate.innerText = "Inspection Charges (₹)"; }
+                    }
+                }
+            }
+        }
+
+        // Apply normal filtering based on the currently active tab
         filteredOrdersData = allOrdersData.filter(order => {
             const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc} ${order.devicePassword}`.toLowerCase();
             const matchesSearch = combinedString.includes(input);
@@ -786,7 +860,14 @@
             } else if (order.status === 'Goods Delivered') {
                 displayAmount = order.finalAmount || order.estimateAmount || order.approxEstimate || 0;
                 displayAmountHtml = `<span style="font-weight:bold; color:#059669;">₹${displayAmount}</span>`;
-                actionHtml = `<span class="status-badge" style="background:#dcfce7; color:#166534;">Delivered</span>`;
+                
+                // Add Edit Payment Feature for Admin
+                actionHtml = `<div style="display:flex; flex-direction:column; gap:8px; align-items:center;">`;
+                actionHtml += `<span class="status-badge" style="background:#dcfce7; color:#166534;">Delivered (${order.paymentMethod || 'Cash'})</span>`;
+                if (isAdmin && displayAmount > 0) {
+                    actionHtml += `<button class="btn" style="font-size: 0.7rem; padding: 4px 8px;" onclick="openEditPaymentModal('${orderIdSafe}', '${jobNoSafe}', ${displayAmount}, '${customerNameSafe}', '${contactNoSafe}', '${order.paymentMethod}')">✏️ Edit Payment</button>`;
+                }
+                actionHtml += `</div>`;
             
             } else if (order.status === 'Delivered (Refused)') {
                 displayAmount = order.finalAmount || order.estimateAmount || order.approxEstimate || 0;
@@ -845,6 +926,120 @@
 
         document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(filteredOrdersData.length / rowsPerPage) || 1}`;
     }
+
+    // ==========================================
+    // EDIT PAYMENT MODE (ADMIN) LOGIC
+    // ==========================================
+    let editPaymentOrderId = null;
+    let editPaymentJobNo = '';
+    let editPaymentAmount = 0;
+    let editPaymentCustomerName = '';
+    let editPaymentMobile = '';
+
+    window.openEditPaymentModal = function(id, jobNo, amount, custName, mobile, currentMethod) {
+        editPaymentOrderId = id;
+        editPaymentJobNo = jobNo;
+        editPaymentAmount = amount;
+        editPaymentCustomerName = custName;
+        editPaymentMobile = mobile;
+
+        document.getElementById('editPaymentSubtitle').innerText = `Job No: ${jobNo} | Amount: ₹${amount}`;
+        
+        let initMode = currentMethod;
+        if(initMode === 'Split') initMode = 'Cash'; // simplified fallback if they try to edit a split
+        
+        const modeSelect = document.getElementById('newPaymentMode');
+        if (modeSelect) modeSelect.value = initMode || 'Cash';
+        
+        toggleEditPaymentUpiNote();
+        document.getElementById('modalEditPayment').style.display = 'flex';
+    }
+
+    window.toggleEditPaymentUpiNote = function() {
+        if(document.getElementById('newPaymentMode').value === 'UPI') {
+            document.getElementById('editPaymentUpiSection').style.display = 'block';
+        } else {
+            document.getElementById('editPaymentUpiSection').style.display = 'none';
+        }
+    }
+
+    window.closeEditPaymentModal = function() {
+        document.getElementById('modalEditPayment').style.display = 'none';
+    }
+
+    window.saveNewPaymentMode = async function() {
+        const newMode = document.getElementById('newPaymentMode').value;
+        const upiNote = document.getElementById('editPaymentUpiNote').value.trim();
+        const ledgerDate = new Date().toISOString().split('T')[0];
+        const gdTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+        if(!confirm(`Are you sure you want to change the payment mode for ${editPaymentJobNo} to ${newMode}? This will rewrite the accounting books.`)) return;
+
+        try {
+            // 1. Rollback old entries completely
+            const { data: credits } = await supabaseClient.from('customer_credits').select('*').eq('job_no', editPaymentJobNo);
+            if (credits && credits.length > 0) {
+                for (let c of credits) {
+                    if (c.type === 'Given') {
+                        const { data: custData } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', c.mobile).single();
+                        if (custData) {
+                            let newBal = (parseFloat(custData.credit_balance) || 0) - parseFloat(c.amount);
+                            if (newBal < 0) newBal = 0;
+                            await supabaseClient.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
+                        }
+                    }
+                }
+                await supabaseClient.from('customer_credits').delete().eq('job_no', editPaymentJobNo);
+            }
+
+            await supabaseClient.from('cashbook_entries').delete().ilike('description', `%${editPaymentJobNo}%`);
+            await supabaseClient.from('upi_entries').delete().ilike('description', `%${editPaymentJobNo}%`);
+
+            // 2. Insert new entries based on new mode
+            if (editPaymentAmount > 0) {
+                if (newMode === 'Cash') {
+                    const { error: cashError } = await supabaseClient.from('cashbook_entries').insert([{
+                        date: ledgerDate, description: `Repair Job No: ${editPaymentJobNo}`, category: 'Repair Sales', amount: editPaymentAmount, type: 'in', created_by: currentUserEmail
+                    }]);
+                    if (cashError) throw cashError;
+                } 
+                else if (newMode === 'UPI') {
+                    let upiDesc = `Repair Job No: ${editPaymentJobNo}`;
+                    if (upiNote) upiDesc += ` - UPI Acc: ${upiNote}`;
+
+                    const { error: upiError } = await supabaseClient.from('upi_entries').insert([{
+                        date: ledgerDate, time: gdTime, description: upiDesc, category: 'Repair Sales', upi_amount: editPaymentAmount, card_amount: 0, created_by: currentUserEmail
+                    }]);
+                    if (upiError) throw upiError;
+                } 
+                else if (newMode === 'Credit') {
+                    const { error: creditError } = await supabaseClient.from('customer_credits').insert([{
+                        customer_name: editPaymentCustomerName, mobile: editPaymentMobile, amount: editPaymentAmount, job_no: editPaymentJobNo, date: ledgerDate, type: 'Given', created_by: currentUserEmail
+                    }]);
+                    if (creditError) throw creditError;
+
+                    const { data: custData } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', editPaymentMobile).single();
+                    if (custData) {
+                        const currentBal = parseFloat(custData.credit_balance) || 0;
+                        await supabaseClient.from('customers').update({ credit_balance: currentBal + editPaymentAmount }).eq('id', custData.id);
+                    }
+                }
+            }
+
+            // 3. Update the repairOrder
+            const { error: updateError } = await supabaseClient.from('repairOrders').update({ 
+                paymentMethod: newMode
+            }).eq('id', editPaymentOrderId);
+            if (updateError) throw updateError;
+
+            closeEditPaymentModal();
+            fetchOrders();
+
+        } catch (err) {
+            alert("Error updating payment mode: " + err.message);
+        }
+    }
+
 
     window.openBillingModal = function(id, jobNo, customer, mobile) {
         billingOrderId = id; billingJobNo = jobNo; billingCustomerName = customer; billingCustomerMobile = mobile;
