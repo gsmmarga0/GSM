@@ -866,7 +866,7 @@
 
             // Generate Invoice Number
             const prefix = 'AC';
-            const { data: latest } = await db.from('accessories_invoices').select('invoice_no').like('invoice_no', 'AC%').order('created_at', { ascending: false }).limit(1);
+            const { data: latest } = await db.from('accessories_invoices').select('invoice_no').ilike('invoice_no', 'AC%').order('created_at', { ascending: false }).limit(1);
             
             let nextNum = 1;
             if (latest && latest.length > 0 && latest[0].invoice_no) {
@@ -892,36 +892,47 @@
                 time: time
             };
 
-            const { error } = await db.from('accessories_invoices').insert([invData]);
-            if(error) return alert("Error saving invoice: " + error.message);
+            const { error: invSaveErr } = await db.from('accessories_invoices').insert([invData]);
+            if(invSaveErr) return alert("Error saving invoice: " + invSaveErr.message);
 
             // INTEGRATION: Push to Cashbook, UPI Book, or Customer Credit
             let currentDate = new Date().toISOString().split('T')[0];
             let currentTime = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' });
             let baseDesc = `Acc. Invoice #${invoiceNoStr} - ${custName} (${selectedPaymentMode})`;
 
-            if (selectedPaymentMode === 'Credit') {
-                // Update customer's credit balance
-                const { data: custData } = await db.from('customers').select('credit_balance').eq('id', custId).single();
-                let currentBal = parseFloat(custData.credit_balance) || 0;
-                await db.from('customers').update({ credit_balance: currentBal + grandTotal }).eq('id', custId);
-                alert("Invoice saved as Credit! Customer balance updated.");
-            } else if (selectedPaymentMode === 'Cash') {
-                await db.from('cashbook_entries').insert([{
-                    description: baseDesc, category: 'Accessories', amount: grandTotal, type: 'in', 
-                    date: currentDate, created_by: currentUserEmail
-                }]);
-                alert("Invoice Saved successfully to Cashbook!");
-            } else if (selectedPaymentMode === 'UPI') {
-                let upiNotes = document.getElementById('upiAccountNotes').value.trim();
-                let finalDesc = upiNotes ? `${baseDesc} - Acct: ${upiNotes}` : baseDesc;
-                
-                // FIXED THE BUG: table changed from 'upi_transactions' to 'upi_entries' and columns mapped properly
-                await db.from('upi_entries').insert([{
-                    date: currentDate, time: currentTime, description: finalDesc, category: 'Accessories', 
-                    upi_amount: grandTotal, card_amount: 0, created_by: currentUserEmail
-                }]);
-                alert("Invoice Saved successfully to UPI Book!");
+            try {
+                if (selectedPaymentMode === 'Credit') {
+                    // Update customer's credit balance
+                    const { data: custData, error: fetchCustErr } = await db.from('customers').select('credit_balance').eq('id', custId).single();
+                    if (fetchCustErr) throw fetchCustErr;
+                    
+                    let currentBal = parseFloat(custData.credit_balance) || 0;
+                    const { error: updateCustErr } = await db.from('customers').update({ credit_balance: currentBal + grandTotal }).eq('id', custId);
+                    if (updateCustErr) throw updateCustErr;
+                    
+                    alert("Invoice saved as Credit! Customer balance updated.");
+                } else if (selectedPaymentMode === 'Cash') {
+                    const { error: cashErr } = await db.from('cashbook_entries').insert([{
+                        description: baseDesc, category: 'Accessories', amount: grandTotal, type: 'in', 
+                        date: currentDate, created_by: currentUserEmail
+                    }]);
+                    if (cashErr) throw cashErr;
+                    
+                    alert("Invoice Saved successfully to Cashbook!");
+                } else if (selectedPaymentMode === 'UPI') {
+                    let upiNotes = document.getElementById('upiAccountNotes').value.trim();
+                    let finalDesc = upiNotes ? `${baseDesc} - Acct: ${upiNotes}` : baseDesc;
+                    
+                    const { error: upiErr } = await db.from('upi_entries').insert([{
+                        date: currentDate, time: currentTime, description: finalDesc, category: 'Accessories', 
+                        upi_amount: grandTotal, card_amount: 0, created_by: currentUserEmail
+                    }]);
+                    if (upiErr) throw upiErr;
+                    
+                    alert("Invoice Saved successfully to UPI Book!");
+                }
+            } catch (err) {
+                alert("Invoice saved, but ledger update failed: " + err.message);
             }
 
             // Reset and Collapse Form
@@ -942,24 +953,35 @@
         window.deleteInvoice = async function(id, invoiceNoStr, paymentMode, amount, mobile) {
             if(!confirm("Are you sure you want to delete this invoice? Associated ledger entries will also be removed.")) return;
             
-            const searchString = `Acc. Invoice #${invoiceNoStr}%`;
-            await db.from('cashbook_entries').delete().like('description', searchString);
-            
-            // FIXED THE BUG: changed to upi_entries
-            await db.from('upi_entries').delete().like('description', searchString);
+            try {
+                const searchString = `Acc. Invoice #${invoiceNoStr}%`;
+                
+                const { error: cashDelErr } = await db.from('cashbook_entries').delete().ilike('description', searchString);
+                if (cashDelErr) throw cashDelErr;
+                
+                const { error: upiDelErr } = await db.from('upi_entries').delete().ilike('description', searchString);
+                if (upiDelErr) throw upiDelErr;
 
-            // Revert credit balance if it was a credit transaction
-            if (paymentMode === 'Credit') {
-                const { data: custData } = await db.from('customers').select('id, credit_balance').eq('mobile', mobile).single();
-                if (custData) {
-                    let newBal = (parseFloat(custData.credit_balance) || 0) - amount;
-                    if (newBal < 0) newBal = 0;
-                    await db.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
+                // Revert credit balance if it was a credit transaction
+                if (paymentMode === 'Credit') {
+                    const { data: custData, error: custFetchErr } = await db.from('customers').select('id, credit_balance').eq('mobile', mobile).single();
+                    if (custFetchErr) throw custFetchErr;
+                    
+                    if (custData) {
+                        let newBal = (parseFloat(custData.credit_balance) || 0) - amount;
+                        if (newBal < 0) newBal = 0;
+                        const { error: custUpdErr } = await db.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
+                        if (custUpdErr) throw custUpdErr;
+                    }
                 }
-            }
 
-            await db.from('accessories_invoices').delete().eq('id', id);
-            fetchInvoices();
+                const { error: invDelErr } = await db.from('accessories_invoices').delete().eq('id', id);
+                if (invDelErr) throw invDelErr;
+                
+                fetchInvoices();
+            } catch (err) {
+                alert("Error deleting invoice: " + err.message);
+            }
         }
 
         // --- Edit Payment Mode Logic (Admin Only) ---
@@ -1004,16 +1026,19 @@
                 
                 // 1. Rollback old entry
                 if (editInvOldMode === 'Cash') {
-                    await db.from('cashbook_entries').delete().like('description', searchString);
+                    const { error } = await db.from('cashbook_entries').delete().ilike('description', searchString);
+                    if (error) throw new Error("Cashbook delete failed: " + error.message);
                 } else if (editInvOldMode === 'UPI') {
-                    // FIXED THE BUG: changed to upi_entries
-                    await db.from('upi_entries').delete().like('description', searchString);
+                    const { error } = await db.from('upi_entries').delete().ilike('description', searchString);
+                    if (error) throw new Error("UPI Book delete failed: " + error.message);
                 } else if (editInvOldMode === 'Credit') {
-                    const { data: custData } = await db.from('customers').select('id, credit_balance').eq('mobile', editInvMobile).single();
+                    const { data: custData, error: custFetchErr } = await db.from('customers').select('id, credit_balance').eq('mobile', editInvMobile).single();
+                    if (custFetchErr) throw new Error("Customer fetch failed: " + custFetchErr.message);
                     if (custData) {
                         let newBal = (parseFloat(custData.credit_balance) || 0) - editInvAmount;
                         if (newBal < 0) newBal = 0;
-                        await db.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
+                        const { error: custUpdErr } = await db.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
+                        if (custUpdErr) throw new Error("Customer update failed: " + custUpdErr.message);
                     }
                 }
 
@@ -1022,34 +1047,38 @@
                 let baseDesc = `Acc. Invoice #${editInvNo} - ${editInvCustName} (${newMode})`;
                 
                 if (newMode === 'Cash') {
-                    await db.from('cashbook_entries').insert([{
+                    const { error } = await db.from('cashbook_entries').insert([{
                         description: baseDesc, category: 'Accessories', amount: editInvAmount, type: 'in', 
                         date: editInvDate, created_by: currentUserEmail
                     }]);
+                    if (error) throw new Error("Cashbook insert failed: " + error.message);
                 } else if (newMode === 'UPI') {
                     let finalDesc = upiNote ? `${baseDesc} - Acct: ${upiNote}` : baseDesc;
-                    // FIXED THE BUG: mapped to upi_entries
-                    await db.from('upi_entries').insert([{
+                    const { error } = await db.from('upi_entries').insert([{
                         date: editInvDate, time: currentTime, description: finalDesc, category: 'Accessories', 
                         upi_amount: editInvAmount, card_amount: 0, created_by: currentUserEmail
                     }]);
+                    if (error) throw new Error("UPI Book insert failed: " + error.message);
                 } else if (newMode === 'Credit') {
-                    const { data: custData } = await db.from('customers').select('id, credit_balance').eq('mobile', editInvMobile).single();
+                    const { data: custData, error: custFetchErr } = await db.from('customers').select('id, credit_balance').eq('mobile', editInvMobile).single();
+                    if (custFetchErr) throw new Error("Customer fetch failed: " + custFetchErr.message);
                     if (custData) {
                         let currentBal = parseFloat(custData.credit_balance) || 0;
-                        await db.from('customers').update({ credit_balance: currentBal + editInvAmount }).eq('id', custData.id);
+                        const { error: custUpdErr } = await db.from('customers').update({ credit_balance: currentBal + editInvAmount }).eq('id', custData.id);
+                        if (custUpdErr) throw new Error("Customer update failed: " + custUpdErr.message);
                     }
                 }
 
                 // 3. Update the invoice record
-                await db.from('accessories_invoices').update({ payment_mode: newMode }).eq('id', editInvId);
+                const { error: invErr } = await db.from('accessories_invoices').update({ payment_mode: newMode }).eq('id', editInvId);
+                if (invErr) throw new Error("Invoice update failed: " + invErr.message);
 
                 closeEditModeModal();
                 fetchInvoices();
                 alert("Payment mode updated successfully!");
 
             } catch (err) {
-                alert("Error updating payment mode: " + err.message);
+                alert("Error updating payment mode:\n" + err.message);
             }
         }
 
