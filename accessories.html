@@ -902,13 +902,15 @@
 
             try {
                 if (selectedPaymentMode === 'Credit') {
-                    // Update customer's credit balance
-                    const { data: custData, error: fetchCustErr } = await db.from('customers').select('credit_balance').eq('id', custId).single();
+                    // FIX 406 ERROR HERE: Replaced .single() with .limit(1) and array fallback
+                    const { data: custDataArr, error: fetchCustErr } = await db.from('customers').select('credit_balance').eq('id', custId).limit(1);
                     if (fetchCustErr) throw fetchCustErr;
                     
-                    let currentBal = parseFloat(custData.credit_balance) || 0;
-                    const { error: updateCustErr } = await db.from('customers').update({ credit_balance: currentBal + grandTotal }).eq('id', custId);
-                    if (updateCustErr) throw updateCustErr;
+                    if (custDataArr && custDataArr.length > 0) {
+                        let currentBal = parseFloat(custDataArr[0].credit_balance) || 0;
+                        const { error: updateCustErr } = await db.from('customers').update({ credit_balance: currentBal + grandTotal }).eq('id', custId);
+                        if (updateCustErr) throw updateCustErr;
+                    }
                     
                     alert("Invoice saved as Credit! Customer balance updated.");
                 } else if (selectedPaymentMode === 'Cash') {
@@ -964,10 +966,12 @@
 
                 // Revert credit balance if it was a credit transaction
                 if (paymentMode === 'Credit') {
-                    const { data: custData, error: custFetchErr } = await db.from('customers').select('id, credit_balance').eq('mobile', mobile).single();
+                    // FIX 406 ERROR HERE: Replaced .single() with .limit(1) and array fallback
+                    const { data: custDataArr, error: custFetchErr } = await db.from('customers').select('id, credit_balance').eq('mobile', mobile).limit(1);
                     if (custFetchErr) throw custFetchErr;
                     
-                    if (custData) {
+                    if (custDataArr && custDataArr.length > 0) {
+                        const custData = custDataArr[0];
                         let newBal = (parseFloat(custData.credit_balance) || 0) - amount;
                         if (newBal < 0) newBal = 0;
                         const { error: custUpdErr } = await db.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
@@ -1032,9 +1036,12 @@
                     const { error } = await db.from('upi_entries').delete().ilike('description', searchString);
                     if (error) throw new Error("UPI Book delete failed: " + error.message);
                 } else if (editInvOldMode === 'Credit') {
-                    const { data: custData, error: custFetchErr } = await db.from('customers').select('id, credit_balance').eq('mobile', editInvMobile).single();
+                    // FIX 406 ERROR HERE: Replaced .single() with .limit(1) and array fallback
+                    const { data: custDataArr, error: custFetchErr } = await db.from('customers').select('id, credit_balance').eq('mobile', editInvMobile).limit(1);
                     if (custFetchErr) throw new Error("Customer fetch failed: " + custFetchErr.message);
-                    if (custData) {
+                    
+                    if (custDataArr && custDataArr.length > 0) {
+                        const custData = custDataArr[0];
                         let newBal = (parseFloat(custData.credit_balance) || 0) - editInvAmount;
                         if (newBal < 0) newBal = 0;
                         const { error: custUpdErr } = await db.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
@@ -1060,9 +1067,12 @@
                     }]);
                     if (error) throw new Error("UPI Book insert failed: " + error.message);
                 } else if (newMode === 'Credit') {
-                    const { data: custData, error: custFetchErr } = await db.from('customers').select('id, credit_balance').eq('mobile', editInvMobile).single();
+                    // FIX 406 ERROR HERE: Replaced .single() with .limit(1) and array fallback
+                    const { data: custDataArr, error: custFetchErr } = await db.from('customers').select('id, credit_balance').eq('mobile', editInvMobile).limit(1);
                     if (custFetchErr) throw new Error("Customer fetch failed: " + custFetchErr.message);
-                    if (custData) {
+                    
+                    if (custDataArr && custDataArr.length > 0) {
+                        const custData = custDataArr[0];
                         let currentBal = parseFloat(custData.credit_balance) || 0;
                         const { error: custUpdErr } = await db.from('customers').update({ credit_balance: currentBal + editInvAmount }).eq('id', custData.id);
                         if (custUpdErr) throw new Error("Customer update failed: " + custUpdErr.message);
