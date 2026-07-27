@@ -861,18 +861,27 @@
                 displayAmount = order.finalAmount || order.estimateAmount || order.approxEstimate || 0;
                 displayAmountHtml = `<span style="font-weight:bold; color:#059669;">₹${displayAmount}</span>`;
                 
-                // Add Edit Payment Feature for Admin
                 actionHtml = `<div style="display:flex; flex-direction:column; gap:8px; align-items:center;">`;
                 actionHtml += `<span class="status-badge" style="background:#dcfce7; color:#166534;">Delivered (${order.paymentMethod || 'Cash'})</span>`;
-                if (isAdmin && displayAmount > 0) {
-                    actionHtml += `<button class="btn" style="font-size: 0.7rem; padding: 4px 8px;" onclick="openEditPaymentModal('${orderIdSafe}', '${jobNoSafe}', ${displayAmount}, '${customerNameSafe}', '${contactNoSafe}', '${order.paymentMethod}')">✏️ Edit Payment</button>`;
+                
+                if (isAdmin) {
+                    if (displayAmount > 0) {
+                        actionHtml += `<button class="btn" style="font-size: 0.7rem; padding: 4px 8px;" onclick="openEditPaymentModal('${orderIdSafe}', '${jobNoSafe}', ${displayAmount}, '${customerNameSafe}', '${contactNoSafe}', '${order.paymentMethod}')">✏️ Edit Payment</button>`;
+                    }
+                    actionHtml += `<button class="btn" style="font-size: 0.7rem; padding: 4px 8px; color: #d97706; border-color: #fde68a; background: #fffbeb;" onclick="revertToRepairCompleted('${orderIdSafe}', '${jobNoSafe}', '${order.paymentMethod}', ${displayAmount}, '${contactNoSafe}', 'Repair Completed')">⏪ Revert Status</button>`;
                 }
                 actionHtml += `</div>`;
             
             } else if (order.status === 'Delivered (Refused)') {
                 displayAmount = order.finalAmount || order.estimateAmount || order.approxEstimate || 0;
                 displayAmountHtml = `<span style="font-weight:bold; color:#059669;">₹${displayAmount}</span>`;
-                actionHtml = `<span class="status-badge" style="background:#fca5a5; color:#7f1d1d;">Returned (Refused)</span>`;
+                
+                actionHtml = `<div style="display:flex; flex-direction:column; gap:8px; align-items:center;">`;
+                actionHtml += `<span class="status-badge" style="background:#fca5a5; color:#7f1d1d;">Returned (Refused)</span>`;
+                if (isAdmin) {
+                    actionHtml += `<button class="btn" style="font-size: 0.7rem; padding: 4px 8px; color: #d97706; border-color: #fde68a; background: #fffbeb;" onclick="revertToRepairCompleted('${orderIdSafe}', '${jobNoSafe}', '${order.paymentMethod}', ${displayAmount}, '${contactNoSafe}', 'Repair Refusal')">⏪ Revert Status</button>`;
+                }
+                actionHtml += `</div>`;
                 rowStyle = 'background-color: #fef2f2;';
             
             } else if (order.status === 'Repair Refusal') {
@@ -926,6 +935,89 @@
 
         document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(filteredOrdersData.length / rowsPerPage) || 1}`;
     }
+
+    // ==========================================
+    // REVERT ORDER STATUS LOGIC (ADMIN)
+    // ==========================================
+    window.revertToRepairCompleted = async function(id, jobNo, paymentMode, amount, mobile, targetStatus) {
+        if (!confirm(`Are you sure you want to revert Job No: ${jobNo} back to '${targetStatus}'?\n\nThis will DELETE any final delivery records and remove the related Cash, UPI, and Credit entries from the ledgers.`)) return;
+
+        try {
+            const searchString = `%${jobNo}%`;
+
+            // 1. Rollback Ledgers based on payment mode
+            if (paymentMode === 'Cash') {
+                await supabaseClient.from('cashbook_entries').delete().ilike('description', searchString);
+            } else if (paymentMode === 'UPI') {
+                await supabaseClient.from('upi_entries').delete().ilike('description', searchString);
+            } else if (paymentMode === 'Credit') {
+                // Revert customer credit balance
+                const { data: custData } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', mobile).single();
+                if (custData) {
+                    let newBal = (parseFloat(custData.credit_balance) || 0) - amount;
+                    if (newBal < 0) newBal = 0;
+                    await supabaseClient.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
+                }
+                // Delete credit history
+                await supabaseClient.from('customer_credits').delete().eq('job_no', jobNo);
+            } else if (paymentMode === 'Split') {
+                // Split payments hit multiple ledgers. Wipe all related to this jobNo.
+                await supabaseClient.from('cashbook_entries').delete().ilike('description', searchString);
+                await supabaseClient.from('upi_entries').delete().ilike('description', searchString);
+                const { data: credits } = await supabaseClient.from('customer_credits').select('*').eq('job_no', jobNo);
+                if (credits && credits.length > 0) {
+                    for (let c of credits) {
+                        if (c.type === 'Given') {
+                            const { data: custData } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', c.mobile).single();
+                            if (custData) {
+                                let newBal = (parseFloat(custData.credit_balance) || 0) - parseFloat(c.amount);
+                                if (newBal < 0) newBal = 0;
+                                await supabaseClient.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
+                            }
+                        }
+                    }
+                    await supabaseClient.from('customer_credits').delete().eq('job_no', jobNo);
+                }
+            } else {
+                // Fallback catch-all for old data structures
+                await supabaseClient.from('cashbook_entries').delete().ilike('description', searchString);
+                await supabaseClient.from('upi_entries').delete().ilike('description', searchString);
+                const { data: credits } = await supabaseClient.from('customer_credits').select('*').eq('job_no', jobNo);
+                if (credits && credits.length > 0) {
+                    for (let c of credits) {
+                        if (c.type === 'Given') {
+                            const { data: custData } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', c.mobile).single();
+                            if (custData) {
+                                let newBal = (parseFloat(custData.credit_balance) || 0) - parseFloat(c.amount);
+                                if (newBal < 0) newBal = 0;
+                                await supabaseClient.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
+                            }
+                        }
+                    }
+                    await supabaseClient.from('customer_credits').delete().eq('job_no', jobNo);
+                }
+            }
+
+            // 2. Revert the Repair Order Record
+            const { error } = await supabaseClient.from('repairOrders').update({
+                status: targetStatus,
+                paymentMethod: null,
+                finalAmount: null,
+                gd_date: null,
+                gd_time: null,
+                gd_timestamp: null
+            }).eq('id', id);
+
+            if (error) throw error;
+
+            alert(`Order reverted to '${targetStatus}' successfully!`);
+            fetchOrders();
+
+        } catch (err) {
+            alert("Error reverting order: " + err.message);
+        }
+    }
+
 
     // ==========================================
     // EDIT PAYMENT MODE (ADMIN) LOGIC
