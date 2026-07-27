@@ -39,8 +39,11 @@
         .btn-settle { background: #10b981; color: white; border: none; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer; transition: 0.2s;}
         .btn-settle:hover { background: #059669; }
         
-        .btn-ledger { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; font-weight: bold; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
-        .btn-ledger:hover { background: #e5e7eb; }
+        .btn-ledger { background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; font-weight: bold; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .btn-ledger:hover { background: #e2e8f0; }
+
+        .btn-history { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; font-weight: bold; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; margin-left: 8px; }
+        .btn-history:hover { background: #e5e7eb; }
         
         .btn-edit { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; font-weight: bold; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; margin-left: 8px; }
         .btn-edit:hover { background: #dbeafe; }
@@ -186,6 +189,35 @@
                     <!-- Ledger Injected Here -->
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- HISTORY MODAL (Kept for strict given/settled tracking) -->
+<div class="modal-overlay" id="modalHistory">
+    <div class="modal-container" style="width: 650px; max-width: 95%;">
+        <h2 class="modal-title">Credit History</h2>
+        <p class="modal-subtitle" id="historySubtitle">Loading...</p>
+        
+        <div class="table-card" style="max-height: 350px; overflow-y: auto; margin-bottom: 0; box-shadow: none; border: 1px solid #e5e7eb;">
+            <table style="margin-bottom: 0;">
+                <thead style="position: sticky; top: 0; z-index: 10;">
+                    <tr>
+                        <th style="padding: 12px;">Date</th>
+                        <th style="padding: 12px;">Type</th>
+                        <th style="padding: 12px;">Job No / Note</th>
+                        <th style="padding: 12px; text-align: right;">Amount (₹)</th>
+                        <th style="padding: 12px; text-align: center;" class="admin-col admin-hidden">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody">
+                    <!-- History Injected Here -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="modal-footer" style="margin-top: 15px;">
+            <button class="btn" onclick="closeHistoryModal()">Close Tab</button>
         </div>
     </div>
 </div>
@@ -421,6 +453,7 @@
             let due = c.display_due; 
             
             let actionHtml = `<button class="btn-ledger" onclick="openLedger(${c.id}, '${escapeStr(c.name)}', '${escapeStr(c.mobile)}', ${due})">📖 Ledger</button>`;
+            actionHtml += `<button class="btn-history" onclick="openHistoryModal('${escapeStr(c.mobile)}', '${escapeStr(c.name)}')">📜 History</button>`;
             actionHtml += `<button class="btn-edit" onclick="openEditCustomerModal(${c.id}, '${escapeStr(c.name)}', '${escapeStr(c.mobile)}')">✏️ Edit</button>`;
 
             let dateStr = new Date(c.created_at).toLocaleDateString('en-GB');
@@ -576,7 +609,66 @@
         document.getElementById('modalLedger').style.display = 'none';
     }
 
-    // Admins can delete credit/settlement entries directly from the ledger
+
+    // --- HISTORY MODAL LOGIC (Kept for strict Given/Settled history) ---
+    window.openHistoryModal = async function(mobile, name) {
+        document.getElementById('historySubtitle').innerText = `Transaction history for ${name}`;
+        document.getElementById('historyTableBody').innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px;">Loading history...</td></tr>`;
+        document.getElementById('modalHistory').style.display = 'flex';
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('customer_credits')
+                .select('*')
+                .eq('mobile', mobile)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = '';
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px; color: gray;">No credit history found for this customer.</td></tr>`;
+                return;
+            }
+
+            data.forEach(entry => {
+                const dateStr = new Date(entry.created_at || entry.date).toLocaleDateString('en-GB');
+                const isGiven = entry.type === 'Given';
+                
+                const color = isGiven ? '#ef4444' : '#10b981';
+                const sign = isGiven ? '+' : '-';
+                const typeLabel = isGiven ? 'Credit Taken' : (entry.type === 'Discount' ? 'Discount' : 'Settled');
+
+                let deleteBtn = '';
+                if (isAdmin) {
+                    deleteBtn = `<button class="action-delete" onclick="deleteHistoryEntry('${entry.id}', '${entry.type}', ${entry.amount}, '${escapeStr(entry.description)}', '${entry.mobile}')" title="Delete Entry & Rollback">🗑️</button>`;
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="padding: 12px;">${dateStr}</td>
+                        <td style="padding: 12px;"><span style="font-weight:bold; color:${color};">${typeLabel}</span></td>
+                        <td style="padding: 12px;">${entry.job_no || entry.description || 'Manual Entry'}</td>
+                        <td style="text-align: right; padding: 12px; font-weight:bold; color:${color};">${sign}₹${parseFloat(entry.amount).toFixed(2)}</td>
+                        <td style="text-align: center; padding: 12px;" class="admin-col ${isAdmin ? '' : 'admin-hidden'}">${deleteBtn}</td>
+                    </tr>
+                `;
+            });
+
+        } catch (err) {
+            document.getElementById('historyTableBody').innerHTML = `<tr><td colspan="5" style="text-align:center; color: red;">Error loading data: ${err.message}</td></tr>`;
+            console.error(err);
+        }
+    }
+
+    window.closeHistoryModal = function() {
+        document.getElementById('modalHistory').style.display = 'none';
+    }
+
+
+    // Shared Delete Logic for both Ledger and History Modals
     window.deleteHistoryEntry = async function(id, type, amount, description, mobile) {
         if (!isAdmin) return;
         if (!confirm(`Are you sure you want to delete this ledger record?\n\nIf this was a payment/settlement, it will be removed from your Cash/UPI book, and the due amount will be added back to the customer.`)) return;
@@ -610,10 +702,18 @@
 
             // Refresh UI
             await fetchCustomers();
+            
             const cInfo = allCustomers.find(c => c.mobile === mobile);
-            if (cInfo) openLedger(cInfo.id, cInfo.name, mobile, cInfo.display_due);
+            if (cInfo) {
+                if (document.getElementById('modalLedger').style.display === 'flex') {
+                    openLedger(cInfo.id, cInfo.name, mobile, cInfo.display_due);
+                }
+                if (document.getElementById('modalHistory').style.display === 'flex') {
+                    openHistoryModal(mobile, cInfo.name);
+                }
+            }
 
-            alert("Ledger entry deleted and balances reverted successfully.");
+            alert("Entry deleted and balances reverted successfully.");
         } catch (err) {
             alert("Error deleting entry: " + err.message);
         }
@@ -622,7 +722,6 @@
 
     // --- SETTLE MODAL LOGIC WITH DISCOUNT ---
     window.openSettleFromLedger = function(id, name, mobile, due) {
-        // If coming from ledger header, fallback to global vars if not passed
         if (!id) { id = settleCustId; name = settleCustName; mobile = settleCustMobile; due = parseFloat(document.getElementById('ledgerDueAmount').innerText.replace('₹','')); }
         openSettleModal(id, name, mobile, due);
     }
