@@ -41,6 +41,9 @@
         
         .btn-history { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; font-weight: bold; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; margin-left: 8px; }
         .btn-history:hover { background: #e5e7eb; }
+        
+        .btn-edit { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; font-weight: bold; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; margin-left: 8px; }
+        .btn-edit:hover { background: #dbeafe; }
 
         .dashboard-padding { padding: 20px 30px; }
 
@@ -220,6 +223,38 @@
     </div>
 </div>
 
+<!-- EDIT CUSTOMER MODAL -->
+<div class="modal-overlay" id="modalEditCustomer">
+    <div class="modal-container">
+        <h2 class="modal-title">Edit Customer</h2>
+        <p class="modal-subtitle">Update details across all related records.</p>
+        
+        <div class="modal-body">
+            <input type="hidden" id="editCustId">
+            <input type="hidden" id="editCustOldName">
+            <input type="hidden" id="editCustOldMobile">
+            
+            <div class="billing-row" style="flex-direction: column; align-items: flex-start;">
+                <label style="margin-bottom: 5px;">Customer Name</label>
+                <input type="text" id="editCustName" placeholder="Full Name" style="width: 100%; box-sizing:border-box; text-align: left;">
+            </div>
+
+            <div class="billing-row" style="flex-direction: column; align-items: flex-start; margin-bottom: 0;">
+                <label style="margin-bottom: 5px;">Mobile Number</label>
+                <input type="text" id="editCustMobile" placeholder="e.g. +91XXXXXXXXXX" style="width: 100%; box-sizing:border-box; text-align: left;">
+                <p style="font-size: 0.75rem; color: #ef4444; margin-top: 8px;">
+                    * Modifying these details will update all existing Repair Orders and Invoices associated with this customer.
+                </p>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button class="btn" onclick="closeEditCustomerModal()">Cancel</button>
+            <button class="btn-confirm" onclick="saveCustomerEdit()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
     const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
@@ -383,6 +418,7 @@
                 actionHtml += `<button class="btn-settle" onclick="openSettleModal(${c.id}, '${escapeStr(c.name)}', '${escapeStr(c.mobile)}', ${due})">Settle Due</button>`;
             }
             actionHtml += `<button class="btn-history" onclick="openHistoryModal('${escapeStr(c.mobile)}', '${escapeStr(c.name)}')">📜 History</button>`;
+            actionHtml += `<button class="btn-edit" onclick="openEditCustomerModal(${c.id}, '${escapeStr(c.name)}', '${escapeStr(c.mobile)}')">✏️ Edit</button>`;
 
             let dateStr = new Date(c.created_at).toLocaleDateString('en-GB');
 
@@ -411,6 +447,80 @@
 
     window.prevPage = function() { if (currentPage > 1) { currentPage--; renderTable(filteredCustomers); } }
     window.nextPage = function() { if (currentPage < Math.ceil(filteredCustomers.length / rowsPerPage)) { currentPage++; renderTable(filteredCustomers); } }
+
+
+    // --- EDIT CUSTOMER MODAL LOGIC ---
+    window.openEditCustomerModal = function(id, name, mobile) {
+        document.getElementById('editCustId').value = id;
+        document.getElementById('editCustOldName').value = name;
+        document.getElementById('editCustOldMobile').value = mobile;
+        
+        document.getElementById('editCustName').value = name;
+        document.getElementById('editCustMobile').value = mobile;
+        
+        document.getElementById('modalEditCustomer').style.display = 'flex';
+    }
+
+    window.closeEditCustomerModal = function() {
+        document.getElementById('modalEditCustomer').style.display = 'none';
+    }
+
+    window.saveCustomerEdit = async function() {
+        const id = document.getElementById('editCustId').value;
+        const oldName = document.getElementById('editCustOldName').value;
+        const oldMobile = document.getElementById('editCustOldMobile').value;
+        const newName = document.getElementById('editCustName').value.trim();
+        const newMobile = document.getElementById('editCustMobile').value.trim();
+
+        if (!newName || !newMobile) return alert("Name and Mobile Number cannot be empty.");
+        if (newName === oldName && newMobile === oldMobile) {
+            return closeEditCustomerModal(); // Close if no changes made
+        }
+
+        if (!confirm(`Are you sure you want to update this customer?\n\nThis will instantly update their name and number across all related Invoices, Repair Orders, and Credit History.`)) return;
+
+        try {
+            // Run all related updates concurrently for speed and consistency
+            const updates = [
+                // Update primary customers table
+                supabaseClient.from('customers')
+                    .update({ name: newName, mobile: newMobile })
+                    .eq('id', id),
+                    
+                // Update repair orders (matching old mobile/name to ensure accuracy)
+                supabaseClient.from('repairOrders')
+                    .update({ customerName: newName, contactNo: newMobile })
+                    .eq('contactNo', oldMobile)
+                    .eq('customerName', oldName),
+                    
+                // Update accessories invoices
+                supabaseClient.from('accessories_invoices')
+                    .update({ customer_name: newName, mobile: newMobile })
+                    .eq('mobile', oldMobile)
+                    .eq('customer_name', oldName),
+                    
+                // Update credit history tracking
+                supabaseClient.from('customer_credits')
+                    .update({ customer_name: newName, mobile: newMobile })
+                    .eq('mobile', oldMobile)
+                    .eq('customer_name', oldName)
+            ];
+
+            const results = await Promise.all(updates);
+
+            // Check if any of the updates threw an error
+            for (let res of results) {
+                if (res.error) throw res.error;
+            }
+
+            closeEditCustomerModal();
+            fetchCustomers();
+            alert("Customer updated successfully across all records!");
+        } catch (err) {
+            alert("Error updating customer details: " + err.message);
+        }
+    }
+
 
     // --- HISTORY MODAL LOGIC ---
     window.openHistoryModal = async function(mobile, name) {
@@ -476,8 +586,8 @@
         try {
             // If it was a Settlement, we must roll back the ledger entries
             if (type === 'Settled') {
-                await supabaseClient.from('cashbook_entries').delete().like('description', `${description}%`);
-                await supabaseClient.from('upi_entries').delete().like('description', `${description}%`);
+                await supabaseClient.from('cashbook_entries').delete().ilike('description', `${description}%`);
+                await supabaseClient.from('upi_entries').delete().ilike('description', `${description}%`);
             }
 
             // Remove the history record itself
