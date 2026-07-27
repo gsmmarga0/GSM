@@ -24,8 +24,15 @@
         .header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
         .header-left h1 { margin: 0; font-size: 1.5rem; }
         .header-left p { margin: 5px 0 0 0; color: #6b7280; font-size: 0.9rem; }
+        .header-right { display: flex; gap: 10px; align-items: center; }
         
-        .search-bar { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; width: 300px; outline: none;}
+        .search-bar { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; width: 250px; outline: none; font-size: 0.9rem;}
+        .search-bar-global { background-color: #f0fdf4; border-color: #bbf7d0; width: 220px; font-weight: 500; }
+        .search-bar-global:focus { border-color: #22c55e; }
+        #globalSearchResults { position: absolute; top: 110%; right: 0; width: 300px; background: white; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: none; z-index: 1000; list-style: none; padding: 0; margin: 0; overflow: hidden; }
+        #globalSearchResults li { padding: 12px 15px; border-bottom: 1px solid #f3f4f6; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; }
+        #globalSearchResults li:hover { background: #f9fafb; }
+        #globalSearchResults li.no-results { justify-content: center; color: #6b7280; font-style: italic; }
 
         .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; border: 1px solid var(--border-color); background: white; }
         .btn-primary { background: black; color: white; border: none; }
@@ -51,7 +58,8 @@
         .modal-subtitle { font-size: 0.85rem; color: #6b7280; margin: 0 0 20px 0; padding-bottom: 15px; border-bottom: 1px solid #e5e7eb;}
         .billing-row { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
         .billing-row label { font-weight: bold; color: #374151; font-size: 0.9rem;}
-        .billing-row input { text-align: right; width: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-weight: bold; outline: none;}
+        .billing-row input, .billing-row select { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95rem; font-family: inherit; outline: none;}
+        .billing-row input.amount-input { text-align: right; width: 140px; font-size: 1rem; font-weight: bold; }
         
         /* Custom Payment Toggle */
         .payment-toggle { display: flex; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; width: 158px; }
@@ -60,6 +68,10 @@
 
         .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         .btn-confirm { padding: 10px 20px; border-radius: 6px; border: none; background: #2563eb; color: white; cursor: pointer; font-weight: bold; }
+        
+        .action-delete { color: #ef4444; cursor: pointer; background: none; border: none; padding: 5px; font-size: 1rem; transition: 0.2s; }
+        .action-delete:hover { transform: scale(1.1); }
+        .admin-hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -96,6 +108,12 @@
             <p>Manage all customers and track credit dues</p>
         </div>
         <div class="header-right">
+            <!-- Global Job Search -->
+            <div style="position: relative;">
+                <input type="text" id="globalJobSearch" class="search-bar search-bar-global" placeholder="🔍 Track Any Job No..." oninput="debounceGlobalSearch()">
+                <ul id="globalSearchResults"></ul>
+            </div>
+            <!-- Local Customer Search -->
             <input type="text" id="searchInput" class="search-bar" placeholder="🔍 Search Name or Mobile..." onkeyup="searchTable()">
         </div>
     </div>
@@ -135,9 +153,19 @@
                 <span id="currentDueAmount" style="font-weight:bold; font-size:1.1rem; color:#ef4444;">0.00</span>
             </div>
             
+            <div class="billing-row" style="flex-direction: column; align-items: flex-start;">
+                <label style="margin-bottom: 5px;">Select Bill / Job to Settle</label>
+                <select id="settleBillSelect" onchange="onBillSelectChange()">
+                    <option value="">-- General Settlement (No specific bill) --</option>
+                </select>
+                <p style="font-size: 0.7rem; color: #6b7280; margin-top: 5px; margin-bottom:0;">
+                    Selecting a specific bill and paying it in full will automatically update its status to Cash/UPI.
+                </p>
+            </div>
+
             <div class="billing-row" style="border-top: 1px solid #e5e7eb; padding-top: 15px;">
                 <label style="color: #059669;">Amount Settling Now (₹)</label>
-                <input type="number" id="settleAmount" placeholder="0" style="border-color: #10b981;">
+                <input type="number" id="settleAmount" class="amount-input" placeholder="0" style="border-color: #10b981;">
             </div>
 
             <div class="billing-row">
@@ -148,6 +176,11 @@
                 </div>
                 <!-- Hidden input to store value -->
                 <input type="hidden" id="settleModeValue" value="Cash">
+            </div>
+
+            <div class="billing-row" id="settleUpiSection" style="display:none; flex-direction:column; align-items:flex-start;">
+                <label style="margin-bottom: 5px;">UPI Account Note (Optional)</label>
+                <input type="text" id="settleUpiNote" placeholder="e.g., GPay, PhonePe" style="width: 100%; box-sizing:border-box; text-align: left;">
             </div>
         </div>
         
@@ -160,7 +193,7 @@
 
 <!-- HISTORY MODAL -->
 <div class="modal-overlay" id="modalHistory">
-    <div class="modal-container" style="width: 600px; max-width: 95%;">
+    <div class="modal-container" style="width: 650px; max-width: 95%;">
         <h2 class="modal-title">Credit History</h2>
         <p class="modal-subtitle" id="historySubtitle">Loading...</p>
         
@@ -172,6 +205,7 @@
                         <th style="padding: 12px;">Type</th>
                         <th style="padding: 12px;">Job No / Note</th>
                         <th style="padding: 12px; text-align: right;">Amount (₹)</th>
+                        <th style="padding: 12px; text-align: center;" class="admin-col admin-hidden">Action</th>
                     </tr>
                 </thead>
                 <tbody id="historyTableBody">
@@ -191,6 +225,7 @@
     const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
     const ADMIN_EMAIL = 'faizan@gsmsolution.com';
     let currentUserEmail = '';
+    let isAdmin = false;
     
     let allCustomers = [];
     let filteredCustomers = []; 
@@ -201,7 +236,7 @@
     let currentPage = 1;
     const rowsPerPage = 10;
 
-    // Secure HTML escaping to prevent string breaks on button clicks
+    // Secure HTML escaping
     const escapeStr = (str) => {
         if (!str) return '';
         return String(str).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, " ");
@@ -235,14 +270,66 @@
             currentUserEmail = data.session.user.email;
             document.getElementById('userNameDisplay').innerText = currentUserEmail.split('@')[0];
             if (currentUserEmail.toLowerCase() === ADMIN_EMAIL) {
+                isAdmin = true;
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
+                document.querySelectorAll('.admin-col').forEach(el => el.classList.remove('admin-hidden'));
             }
         }
     }
     async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
 
+    // --- Global Search Logic ---
+    let globalSearchTimeout = null;
+    window.debounceGlobalSearch = function() {
+        clearTimeout(globalSearchTimeout);
+        globalSearchTimeout = setTimeout(performGlobalSearch, 400);
+    }
+
+    async function performGlobalSearch() {
+        const input = document.getElementById('globalJobSearch').value.trim();
+        const resultsList = document.getElementById('globalSearchResults');
+        if (input.length < 3) { resultsList.style.display = 'none'; return; }
+
+        const { data, error } = await supabaseClient.from('repairOrders')
+            .select('jobNo, status, customerName')
+            .ilike('jobNo', `%${input}%`)
+            .limit(5);
+
+        if (error) { console.error(error); return; }
+
+        resultsList.innerHTML = '';
+        if (data.length === 0) {
+            resultsList.innerHTML = `<li class="no-results">No jobs found matching "${input}"</li>`;
+        } else {
+            data.forEach(job => {
+                let statusColor = '#3b82f6'; 
+                if (job.status === 'Repair Completed') statusColor = '#f59e0b'; 
+                else if (job.status === 'Repair Refusal') statusColor = '#ef4444'; 
+                else if (job.status === 'Goods Delivered' || job.status === 'Delivered (Refused)') statusColor = '#10b981'; 
+
+                resultsList.innerHTML += `
+                    <li>
+                        <div>
+                            <strong style="color: #111827;">${job.jobNo}</strong> <span style="color: #9ca3af; font-size: 0.75rem;">(${job.customerName})</span><br>
+                            <span style="font-size: 0.7rem; font-weight: bold; color: ${statusColor};">${job.status}</span>
+                        </div>
+                        <button class="btn" style="padding: 6px 10px; font-size: 0.7rem; color: #374151;" onclick="window.location.href='index.html?search=${job.jobNo}'">Go ➔</button>
+                    </li>
+                `;
+            });
+        }
+        resultsList.style.display = 'block';
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#globalJobSearch') && !e.target.closest('#globalSearchResults')) {
+            const list = document.getElementById('globalSearchResults');
+            if (list) list.style.display = 'none';
+        }
+    });
+
+    // --- Main Customers Logic ---
     async function fetchCustomers() {
-        // 1. Fetch both customers and their full credit history simultaneously
         const [custRes, credRes] = await Promise.all([
             supabaseClient.from('customers').select('*').order('created_at', { ascending: false }),
             supabaseClient.from('customer_credits').select('*')
@@ -254,26 +341,20 @@
         let customersData = custRes.data || [];
         let creditsData = credRes.data || [];
 
-        // 2. Dynamically calculate the true balance based on the History table
         allCustomers = customersData.map(c => {
             let calculatedDue = 0;
             const customerHistory = creditsData.filter(cred => cred.mobile === c.mobile);
 
             customerHistory.forEach(entry => {
                 const amt = parseFloat(entry.amount) || 0;
-                if (entry.type === 'Given') {
-                    calculatedDue += amt;
-                } else if (entry.type === 'Settled') {
-                    calculatedDue -= amt;
-                }
+                if (entry.type === 'Given') calculatedDue += amt;
+                else if (entry.type === 'Settled') calculatedDue -= amt;
             });
 
-            // 3. Apply the calculated due to the customer object
             c.display_due = customerHistory.length > 0 ? calculatedDue : (parseFloat(c.credit_balance) || 0);
             return c;
         });
 
-        // 4. Sort mathematically by highest real credit balance first
         allCustomers.sort((a, b) => b.display_due - a.display_due);
 
         filteredCustomers = [...allCustomers]; 
@@ -295,15 +376,12 @@
         const paginatedItems = dataToRender.slice(start, start + rowsPerPage);
 
         paginatedItems.forEach(c => {
-            // Use the dynamically calculated due instead of the static database column
             let due = c.display_due; 
             
             let actionHtml = '';
-            // Only show Settle Due if balance is strictly greater than 0
             if (due > 0) {
                 actionHtml += `<button class="btn-settle" onclick="openSettleModal(${c.id}, '${escapeStr(c.name)}', '${escapeStr(c.mobile)}', ${due})">Settle Due</button>`;
             }
-            
             actionHtml += `<button class="btn-history" onclick="openHistoryModal('${escapeStr(c.mobile)}', '${escapeStr(c.name)}')">📜 History</button>`;
 
             let dateStr = new Date(c.created_at).toLocaleDateString('en-GB');
@@ -331,24 +409,13 @@
         renderTable(filteredCustomers);
     };
 
-    window.prevPage = function() { 
-        if (currentPage > 1) { 
-            currentPage--; 
-            renderTable(filteredCustomers); 
-        } 
-    }
-    
-    window.nextPage = function() { 
-        if (currentPage < Math.ceil(filteredCustomers.length / rowsPerPage)) { 
-            currentPage++; 
-            renderTable(filteredCustomers); 
-        } 
-    }
+    window.prevPage = function() { if (currentPage > 1) { currentPage--; renderTable(filteredCustomers); } }
+    window.nextPage = function() { if (currentPage < Math.ceil(filteredCustomers.length / rowsPerPage)) { currentPage++; renderTable(filteredCustomers); } }
 
     // --- HISTORY MODAL LOGIC ---
     window.openHistoryModal = async function(mobile, name) {
         document.getElementById('historySubtitle').innerText = `Transaction history for ${name}`;
-        document.getElementById('historyTableBody').innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px;">Loading history...</td></tr>`;
+        document.getElementById('historyTableBody').innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px;">Loading history...</td></tr>`;
         document.getElementById('modalHistory').style.display = 'flex';
 
         try {
@@ -364,7 +431,7 @@
             tbody.innerHTML = '';
 
             if (!data || data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px; color: gray;">No credit history found for this customer.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px; color: gray;">No credit history found for this customer.</td></tr>`;
                 return;
             }
 
@@ -372,10 +439,14 @@
                 const dateStr = new Date(entry.created_at || entry.date).toLocaleDateString('en-GB');
                 const isGiven = entry.type === 'Given';
                 
-                // Color Code: Red for taking udhar, Green for settling
                 const color = isGiven ? '#ef4444' : '#10b981';
                 const sign = isGiven ? '+' : '-';
                 const typeLabel = isGiven ? 'Credit Taken' : 'Settled';
+
+                let deleteBtn = '';
+                if (isAdmin) {
+                    deleteBtn = `<button class="action-delete" onclick="deleteHistoryEntry('${entry.id}', '${entry.type}', ${entry.amount}, '${escapeStr(entry.description)}', '${entry.mobile}')" title="Delete Entry & Rollback">🗑️</button>`;
+                }
 
                 tbody.innerHTML += `
                     <tr>
@@ -383,12 +454,13 @@
                         <td style="padding: 12px;"><span style="font-weight:bold; color:${color};">${typeLabel}</span></td>
                         <td style="padding: 12px;">${entry.job_no || entry.description || 'Manual Entry'}</td>
                         <td style="text-align: right; padding: 12px; font-weight:bold; color:${color};">${sign}₹${parseFloat(entry.amount).toFixed(2)}</td>
+                        <td style="text-align: center; padding: 12px;" class="admin-col ${isAdmin ? '' : 'admin-hidden'}">${deleteBtn}</td>
                     </tr>
                 `;
             });
 
         } catch (err) {
-            document.getElementById('historyTableBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color: red;">Error loading data: ${err.message}</td></tr>`;
+            document.getElementById('historyTableBody').innerHTML = `<tr><td colspan="5" style="text-align:center; color: red;">Error loading data: ${err.message}</td></tr>`;
             console.error(err);
         }
     }
@@ -397,6 +469,33 @@
         document.getElementById('modalHistory').style.display = 'none';
     }
 
+    window.deleteHistoryEntry = async function(id, type, amount, description, mobile) {
+        if (!isAdmin) return;
+        if (!confirm(`Are you sure you want to delete this history record?\n\nIf this was a settlement, it will remove the payment from your Cashbook/UPI Book and add the amount back to the customer's due.`)) return;
+
+        try {
+            // If it was a Settlement, we must roll back the ledger entries
+            if (type === 'Settled') {
+                await supabaseClient.from('cashbook_entries').delete().like('description', `${description}%`);
+                await supabaseClient.from('upi_entries').delete().like('description', `${description}%`);
+            }
+
+            // Remove the history record itself
+            const { error } = await supabaseClient.from('customer_credits').delete().eq('id', id);
+            if (error) throw error;
+
+            // Recalculate customer due
+            fetchCustomers();
+            
+            // Refresh history modal
+            const cInfo = allCustomers.find(c => c.mobile === mobile);
+            if (cInfo) openHistoryModal(mobile, cInfo.name);
+
+            alert("Entry successfully deleted and ledgers updated.");
+        } catch (err) {
+            alert("Error deleting entry: " + err.message);
+        }
+    }
 
     // --- SETTLE MODAL LOGIC ---
     window.setPaymentMode = function(mode) {
@@ -404,13 +503,56 @@
         if (mode === 'Cash') {
             document.getElementById('modeCash').classList.add('active');
             document.getElementById('modeUPI').classList.remove('active');
+            document.getElementById('settleUpiSection').style.display = 'none';
         } else {
             document.getElementById('modeUPI').classList.add('active');
             document.getElementById('modeCash').classList.remove('active');
+            document.getElementById('settleUpiSection').style.display = 'flex';
         }
     }
 
-    window.openSettleModal = function(id, name, mobile, due) {
+    async function fetchPendingBillsForCustomer(mobile) {
+        let optionsHtml = `<option value="">-- General Settlement (No specific bill) --</option>`;
+        
+        // 1. Fetch from Repairs
+        const { data: repairs } = await supabaseClient.from('repairOrders')
+            .select('*')
+            .eq('contactNo', mobile)
+            .eq('paymentMethod', 'Credit');
+            
+        if (repairs && repairs.length > 0) {
+            repairs.forEach(r => {
+                let amt = r.finalAmount || r.estimateAmount || r.approxEstimate || 0;
+                optionsHtml += `<option value="REPAIR|${r.id}|${r.jobNo}|${amt}">Repair: ${r.jobNo} (Due: ₹${amt})</option>`;
+            });
+        }
+        
+        // 2. Fetch from Accessories
+        const { data: accs } = await supabaseClient.from('accessories_invoices')
+            .select('*')
+            .eq('mobile', mobile)
+            .eq('payment_mode', 'Credit');
+            
+        if (accs && accs.length > 0) {
+            accs.forEach(a => {
+                optionsHtml += `<option value="ACC|${a.id}|${a.invoice_no}|${a.total_amt}">Accessory: ${a.invoice_no} (Due: ₹${a.total_amt})</option>`;
+            });
+        }
+        
+        document.getElementById('settleBillSelect').innerHTML = optionsHtml;
+    }
+
+    window.onBillSelectChange = function() {
+        const val = document.getElementById('settleBillSelect').value;
+        if (val) {
+            const parts = val.split('|');
+            document.getElementById('settleAmount').value = parts[3]; // auto-fill exact amount
+        } else {
+            document.getElementById('settleAmount').value = '';
+        }
+    }
+
+    window.openSettleModal = async function(id, name, mobile, due) {
         settleCustId = id;
         settleCustName = name;
         settleCustMobile = mobile;
@@ -418,10 +560,13 @@
         document.getElementById('currentDueAmount').innerText = due.toFixed(2);
         document.getElementById('settleAmount').value = due;
         
-        // Reset to Cash by default when opening
         setPaymentMode('Cash');
+        document.getElementById('settleUpiNote').value = '';
         
         document.getElementById('modalSettle').style.display = 'flex';
+        
+        // Load pending bills
+        await fetchPendingBillsForCustomer(mobile);
     }
 
     window.closeSettleModal = function() {
@@ -432,40 +577,66 @@
         const amount = parseFloat(document.getElementById('settleAmount').value) || 0;
         const currentDue = parseFloat(document.getElementById('currentDueAmount').innerText);
         const mode = document.getElementById('settleModeValue').value;
+        const upiNote = document.getElementById('settleUpiNote').value.trim();
+        const selectedBillStr = document.getElementById('settleBillSelect').value;
 
         if (amount <= 0 || amount > currentDue) return alert("Please enter a valid settlement amount that is not more than the current due.");
 
         try {
-            // 1. Update Customer Balance mathematically
-            const newBalance = currentDue - amount;
-            await supabaseClient.from('customers').update({ credit_balance: newBalance }).eq('id', settleCustId);
-
             let currentDate = new Date().toISOString().split('T')[0];
             let currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            let desc = `Credit Settled - ${settleCustName}`;
+            
+            let desc = '';
+            let jobRef = '';
 
-            // 2. Track in the Customer Credits Table (History) so it shows up in the modal
+            // --- CROSS-TABLE UPDATE LOGIC ---
+            if (selectedBillStr) {
+                const parts = selectedBillStr.split('|');
+                const billType = parts[0];
+                const billId = parts[1];
+                const billNo = parts[2];
+                const billAmt = parseFloat(parts[3]);
+
+                // Update the invoice status if they pay the exact full bill amount
+                if (amount >= billAmt) {
+                    if (billType === 'REPAIR') {
+                        await supabaseClient.from('repairOrders').update({ paymentMethod: mode }).eq('id', billId);
+                    } else if (billType === 'ACC') {
+                        await supabaseClient.from('accessories_invoices').update({ payment_mode: mode }).eq('id', billId);
+                    }
+                }
+                desc = `Credit Settled for ${billNo} - ${settleCustName}`;
+                jobRef = billNo;
+            } else {
+                desc = `Credit Settled - ${settleCustName}`;
+            }
+
+            // Append Mode/Account to Description for ledger clarity
+            let ledgerDesc = mode === 'UPI' && upiNote ? `${desc} (${mode} - ${upiNote})` : `${desc} (${mode})`;
+
+            // 1. Track in Customer Credits (History)
             await supabaseClient.from('customer_credits').insert([{
                 customer_name: settleCustName,
                 mobile: settleCustMobile,
                 amount: amount,
                 date: currentDate,
                 type: 'Settled',
-                description: desc,
+                description: ledgerDesc,
+                job_no: jobRef,
                 created_by: currentUserEmail
             }]);
             
-            // 3. Record the money coming in natively to Main Accounting Ledgers
+            // 2. Record Money Into Accounting Ledgers
             if (mode === 'Cash') {
                 await supabaseClient.from('cashbook_entries').insert([{
-                    description: desc, category: 'Repair Sales', amount: amount, type: 'in', 
+                    description: ledgerDesc, category: 'Repair Sales', amount: amount, type: 'in', 
                     date: currentDate, created_by: currentUserEmail
                 }]);
             } else if (mode === 'UPI') {
                 await supabaseClient.from('upi_entries').insert([{
                     date: currentDate, 
                     time: currentTime,
-                    description: desc, 
+                    description: ledgerDesc, 
                     category: 'Repair Sales', 
                     upi_amount: amount, 
                     card_amount: 0,
