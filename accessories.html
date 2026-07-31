@@ -179,7 +179,7 @@
                             </div>
                         </div>
 
-                        <!-- Create Mode with Duplicate Checking -->
+                        <!-- Create Mode -->
                         <div id="customerCreateMode" style="display: none; gap: 15px;">
                             <input type="text" id="newCustName" placeholder="Full Name" style="flex:1; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline:none;">
                             <div style="position: relative; flex: 1;">
@@ -348,6 +348,7 @@
                 </div>
             </div>
         </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
@@ -440,9 +441,11 @@
                 const list = document.getElementById('globalSearchResults');
                 if (list) list.style.display = 'none';
             }
-            if (!e.target.closest('#customerSelectMode') && !e.target.closest('#customerCreateMode')) {
+            if (!e.target.closest('#customerSelectMode')) {
                 const list = document.getElementById('customerDropdownList');
                 if (list) list.style.display = 'none';
+            }
+            if (!e.target.closest('#customerCreateMode')) {
                 const newCustList = document.getElementById('newCustMobileDropdown');
                 if (newCustList) newCustList.style.display = 'none';
             }
@@ -488,7 +491,7 @@
             const list = document.getElementById('customerDropdownList');
             list.innerHTML = '';
             customersList.forEach(c => {
-                list.innerHTML += `<li onclick="selectCustomer(${c.id}, '${escapeStr(c.name)}', '${escapeStr(c.mobile)}')">${c.name} - ${c.mobile}</li>`;
+                list.innerHTML += `<li onclick="selectCustomer(${c.id}, '${c.name.replace(/'/g, "\\'")}', '${c.mobile}')">${c.name} - ${c.mobile}</li>`;
             });
         }
 
@@ -523,11 +526,11 @@
             list.innerHTML = '';
 
             if (input.length >= 3) {
-                const matches = customersList.filter(c => c.mobile.includes(input));
+                const matches = customersList.filter(c => c.mobile && c.mobile.includes(input));
 
                 if (matches.length > 0) {
                     matches.forEach(c => {
-                        list.innerHTML += `<li onclick="autoSelectFromNew(${c.id}, '${escapeStr(c.name)}', '${escapeStr(c.mobile)}')"><span style="color:#2563eb; font-weight:bold;">Existing:</span> ${c.name} - ${c.mobile}</li>`;
+                        list.innerHTML += `<li onclick="autoSelectFromNew(${c.id}, '${c.name.replace(/'/g, "\\'")}', '${c.mobile}')"><span style="color:#2563eb; font-weight:bold;">Existing:</span> ${c.name} - ${c.mobile}</li>`;
                     });
                     list.style.display = 'block';
                 } else {
@@ -828,7 +831,7 @@
                 let actionBtns = `<button class="btn-icon" onclick='printInvoice(${JSON.stringify(inv).replace(/'/g, "&#39;")})' style="color:#374151;">📄 Bill</button>`;
                 
                 if (currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase()) {
-                    actionBtns += `<button class="btn-icon" onclick="openEditModeModal(${inv.id}, '${inv.invoice_no}', '${inv.payment_mode}', ${inv.total_amt}, '${escapeStr(inv.customer_name)}', '${inv.mobile}', '${inv.date}')" style="color:#2563eb;" title="Edit Payment">✏️</button>`;
+                    actionBtns += `<button class="btn-icon" onclick="openEditModeModal(${inv.id}, '${inv.invoice_no}', '${inv.payment_mode}', ${inv.total_amt}, '${inv.customer_name.replace(/'/g, "\\'")}', '${inv.mobile}', '${inv.date}')" style="color:#2563eb;" title="Edit Payment">✏️</button>`;
                     actionBtns += `<button class="btn-icon" onclick="deleteInvoice(${inv.id}, '${inv.invoice_no}', '${inv.payment_mode}', ${inv.total_amt}, '${inv.mobile}')" style="color:red;" title="Delete">🗑️</button>`;
                 }
 
