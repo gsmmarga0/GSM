@@ -604,7 +604,6 @@
         document.getElementById('customerDropdownList').style.display = 'none';
     }
 
-    // --- NEW: Check existing mobile dynamically while typing ---
     window.checkExistingMobile = function() {
         const input = document.getElementById('newCustMobile').value.trim();
         const list = document.getElementById('newCustMobileDropdown');
@@ -639,7 +638,6 @@
         
         selectCustomer(name, mobile);
     }
-    // -------------------------------------------------------------
 
     function populateCreditCustomerDropdown() {
         const list = document.getElementById('creditCustomerDropdownList');
@@ -923,6 +921,7 @@
                     <div style="display:flex; flex-direction:column; gap:8px; align-items:center;">
                         <span class="status-badge" style="background:#fee2e2; color:#991b1b;">Refused</span>
                         <button class="btn-bill" style="background:#2563eb; font-size: 0.75rem; padding: 5px 10px;" onclick="openDeliveryModal('${orderIdSafe}', '${jobNoSafe}', ${displayAmount}, '${customerNameSafe}', '${contactNoSafe}', '${order.status}')">Deliver Goods 📦</button>
+                        ${isAdmin ? `<button class="btn" style="font-size: 0.7rem; padding: 4px 8px; color: #d97706; border-color: #fde68a; background: #fffbeb;" onclick="revertToPending('${orderIdSafe}', '${jobNoSafe}')">⏪ Revert to Pending</button>` : ''}
                     </div>`;
             }
             
@@ -1044,6 +1043,29 @@
 
             alert(`Order reverted to '${targetStatus}' successfully!`);
             fetchOrders();
+
+        } catch (err) {
+            alert("Error reverting order: " + err.message);
+        }
+    }
+
+    window.revertToPending = async function(id, jobNo) {
+        if (!confirm(`Are you sure you want to revert Job No: ${jobNo} back to 'Pending'?\n\nThis will remove its refusal status.`)) return;
+
+        try {
+            const { error } = await supabaseClient.from('repairOrders').update({
+                status: 'Pending',
+                rc_date: null,
+                rc_time: null,
+                rc_timestamp: null,
+                repairNotes: null
+            }).eq('id', id);
+
+            if (error) throw error;
+
+            alert(`Order ${jobNo} reverted to 'Pending' successfully!`);
+            fetchOrders();
+            switchTab('Pending');
 
         } catch (err) {
             alert("Error reverting order: " + err.message);
