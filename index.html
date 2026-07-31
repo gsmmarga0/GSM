@@ -167,7 +167,6 @@
                 <input type="text" id="globalJobSearch" class="search-bar search-bar-global" placeholder="🔍 Track Any Job No..." oninput="debounceGlobalSearch()">
                 <ul id="globalSearchResults"></ul>
             </div>
-            <!-- Updated Placeholder text to reflect global capabilities -->
             <input type="text" id="searchInput" class="search-bar" placeholder="Search All Orders..." onkeyup="applyFilters()">
             <button class="btn btn-primary" onclick="toggleForm()">+ New Order</button>
         </div>
@@ -394,7 +393,7 @@
     </div>
 </div>
 
-<!-- NEW: CHANGE PAYMENT MODE MODAL (ADMIN ONLY) -->
+<!-- CHANGE PAYMENT MODE MODAL (ADMIN ONLY) -->
 <div class="modal-overlay" id="modalEditPayment">
     <div class="modal-container">
         <h2 class="modal-title">Edit Payment Mode</h2>
@@ -670,28 +669,22 @@
         applyFilters();
     }
 
-    // ==========================================
-    // UPDATED SMART GLOBAL FILTER
-    // ==========================================
     window.applyFilters = function() {
         const input = document.getElementById("searchInput").value.toLowerCase();
         
         if (input.trim() !== '') {
-            // Check globally if the search matches ANYTHING in the entire database
             const allMatches = allOrdersData.filter(order => {
                 const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc} ${order.devicePassword}`.toLowerCase();
                 return combinedString.includes(input);
             });
 
             if (allMatches.length > 0) {
-                // Determine if any match is actually inside our *currently selected* tab
                 const matchesInCurrentTab = allMatches.some(order => {
                     return currentTab === 'Goods Delivered' 
                         ? (order.status === 'Goods Delivered' || order.status === 'Delivered (Refused)') 
                         : (order.status || 'Pending') === currentTab;
                 });
 
-                // If the item exists but NOT in this tab, automatically jump to the tab where the first match lives
                 if (!matchesInCurrentTab) {
                     let newTab = allMatches[0].status;
                     if (newTab === 'Delivered (Refused)') newTab = 'Goods Delivered';
@@ -699,7 +692,6 @@
                     if (newTab && newTab !== currentTab) {
                         currentTab = newTab;
                         
-                        // Update UI seamlessly
                         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
                         const tabId = 'tab-' + newTab.replace(' ', '-');
                         const element = document.getElementById(tabId);
@@ -716,7 +708,6 @@
             }
         }
 
-        // Apply normal filtering based on the currently active tab
         filteredOrdersData = allOrdersData.filter(order => {
             const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc} ${order.devicePassword}`.toLowerCase();
             const matchesSearch = combinedString.includes(input);
@@ -727,7 +718,6 @@
             return matchesSearch && matchesTab;
         });
 
-        // Smart Sorting Logic
         filteredOrdersData.sort((a, b) => {
             if (currentTab === 'Goods Delivered') {
                 const timeA = a.gd_timestamp ? new Date(a.gd_timestamp).getTime() : new Date(a.created_at || 0).getTime();
@@ -1401,6 +1391,14 @@
             let rawContact = document.getElementById('newCustMobile').value.trim();
             if(!custName || rawContact.length !== 10) return alert("Please provide a valid Customer Name and a 10-digit Mobile Number.");
             contactNo = '+91' + rawContact;
+
+            // --- NEW: Duplicate Number Check ---
+            const { data: existing } = await supabaseClient.from('customers').select('id').eq('mobile', contactNo).limit(1);
+            if (existing && existing.length > 0) {
+                return alert("A customer with this mobile number already exists in the database. Please click 'Search Existing Database' to select them instead.");
+            }
+            // -----------------------------------
+
             const { error: custErr } = await supabaseClient.from('customers').insert([{ name: custName, mobile: contactNo }]);
             if(!custErr) fetchCustomers(); 
         } else {
