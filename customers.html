@@ -717,7 +717,7 @@
                         rawDate: new Date(c.created_at || c.date),
                         dateStr: new Date(c.created_at || c.date).toLocaleDateString('en-GB'),
                         type: c.type,
-                        desc: c.job_no || 'Manual Entry', // Fallback to displaying job_no since description column doesn't exist
+                        desc: c.job_no || 'Manual Entry', // Displays what is safely stored in the short job_no column
                         amount: parseFloat(c.amount),
                         method: c.type,
                         isCredit: true,
@@ -881,7 +881,7 @@
     }
 
 
-    // --- SETTLE MODAL LOGIC WITH DB ERROR FIX ---
+    // --- SETTLE MODAL LOGIC WITH VARCHAR(50) FIX ---
     window.openSettleFromLedger = function(id, name, mobile, due) {
         if (!id) { id = settleCustId; name = settleCustName; mobile = settleCustMobile; due = parseFloat(document.getElementById('ledgerDueAmount').innerText.replace('₹','')); }
         openSettleModal(id, name, mobile, due);
@@ -977,24 +977,24 @@
             let currentDate = new Date().toISOString().split('T')[0];
             let currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             
-            let baseDesc = '';
             let jobRef = null; 
 
+            // Safely parse the bill number if one was selected
             if (selectedBillStr) {
                 const parts = selectedBillStr.split('|');
-                const billNo = parts[2];
-                baseDesc = `Credit Settled for ${billNo} - ${settleCustName}`;
-                jobRef = billNo;
-            } else {
-                baseDesc = `Credit Settled - ${settleCustName}`;
+                jobRef = parts[2];
             }
 
-            let ledgerDesc = mode === 'UPI' && upiNote ? `${baseDesc} (${mode} - ${upiNote})` : `${baseDesc} (${mode})`;
+            // 1. Create a detailed string for Cashbook/UPI (they allow long text)
+            let ledgerDesc = mode === 'UPI' && upiNote ? `Settled - ${settleCustName} (${mode} - ${upiNote})` : `Settled - ${settleCustName} (${mode})`;
+            if (jobRef) ledgerDesc = `Settled for ${jobRef} - ${settleCustName} (${mode})`;
 
-            // We safely save the ledger description into the "job_no" column since "description" doesn't exist
-            let fallbackRef = jobRef ? `${jobRef} | ${ledgerDesc}` : ledgerDesc;
+            // 2. Create a STRICTLY SHORT string for 'customer_credits' (MUST be under 50 chars)
+            let shortRef = jobRef ? `Settled: ${jobRef}` : `Direct Settle`;
+            if (mode === 'UPI') shortRef += ` (UPI)`;
+            shortRef = shortRef.substring(0, 48); // Absolute safety cutoff to prevent the VARCHAR(50) crash!
 
-            // 1. Core Credit Ledger Update
+            // Update Credit Ledger
             if (amountPaying > 0) {
                 const { error: creditError } = await supabaseClient.from('customer_credits').insert({
                     customer_name: settleCustName, 
@@ -1002,13 +1002,12 @@
                     amount: amountPaying, 
                     date: currentDate,
                     type: 'Settled', 
-                    // 'description' column removed entirely to prevent the 400 error!
-                    job_no: fallbackRef 
+                    job_no: shortRef // Using the short string to fix the 400 error
                 });
 
                 if (creditError) throw new Error("Failed saving ledger record: " + creditError.message);
 
-                // 2. Cashbook or UPI Update (These tables DO have description columns)
+                // Update Cashbook or UPI
                 if (mode === 'Cash') {
                     const { error: cashError } = await supabaseClient.from('cashbook_entries').insert({
                         description: ledgerDesc, 
@@ -1032,16 +1031,18 @@
                 }
             }
 
-            // 3. Discount Update
+            // Update Discount
             if (discount > 0) {
+                let discountRef = jobRef ? `${jobRef} Discount` : `Direct Discount`;
+                discountRef = discountRef.substring(0, 48); // Cutoff for discount too
+                
                 const { error: discError } = await supabaseClient.from('customer_credits').insert({
                     customer_name: settleCustName, 
                     mobile: settleCustMobile, 
                     amount: discount, 
                     date: currentDate,
                     type: 'Discount', 
-                    // 'description' column removed here too!
-                    job_no: jobRef ? `${jobRef} | Discount` : `Discount Given`
+                    job_no: discountRef
                 });
                 if (discError) throw new Error("Failed saving discount record: " + discError.message);
             }
