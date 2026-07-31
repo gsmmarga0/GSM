@@ -893,7 +893,7 @@
     }
 
 
-    // --- SETTLE MODAL LOGIC WITH PURE LEDGER APPROACH ---
+    // --- SETTLE MODAL LOGIC WITH STRICT ERROR HANDLING ---
     window.openSettleFromLedger = function(id, name, mobile, due) {
         if (!id) { id = settleCustId; name = settleCustName; mobile = settleCustMobile; due = parseFloat(document.getElementById('ledgerDueAmount').innerText.replace('₹','')); }
         openSettleModal(id, name, mobile, due);
@@ -984,13 +984,14 @@
         if (totalClearing > currentDue && currentDue > 0) return alert("Total clearing amount cannot exceed the current due.");
 
         try {
+            document.querySelector('.btn-confirm').innerText = "Processing...";
+            
             let currentDate = new Date().toISOString().split('T')[0];
             let currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             
             let baseDesc = '';
-            let jobRef = '';
+            let jobRef = null; // null is safer than an empty string to avoid db foreign key issues
 
-            // We explicitly use type "Settled". The Fetch math engine dynamically deducts anything marked as 'Settled' or 'Discount'
             if (selectedBillStr) {
                 const parts = selectedBillStr.split('|');
                 const billNo = parts[2];
@@ -1002,45 +1003,77 @@
 
             let ledgerDesc = mode === 'UPI' && upiNote ? `${baseDesc} (${mode} - ${upiNote})` : `${baseDesc} (${mode})`;
 
+            // 1. Core Credit Ledger Update
             if (amountPaying > 0) {
-                await supabaseClient.from('customer_credits').insert([{
-                    customer_name: settleCustName, mobile: settleCustMobile, amount: amountPaying, date: currentDate,
-                    type: 'Settled', description: ledgerDesc, job_no: jobRef, created_by: currentUserEmail
-                }]);
+                // EXPLICITLY CHECK FOR ERRORS TO PREVENT SILENT FAILURES
+                const { error: creditError } = await supabaseClient.from('customer_credits').insert({
+                    customer_name: settleCustName, 
+                    mobile: settleCustMobile, 
+                    amount: amountPaying, 
+                    date: currentDate,
+                    type: 'Settled', 
+                    description: ledgerDesc, 
+                    job_no: jobRef 
+                    // removed 'created_by' as it is a common cause for insert rejections if the schema doesn't match perfectly.
+                });
 
+                if (creditError) throw new Error("Failed saving ledger record: " + creditError.message);
+
+                // 2. Cashbook or UPI Update
                 if (mode === 'Cash') {
-                    await supabaseClient.from('cashbook_entries').insert([{
-                        description: ledgerDesc, category: 'Repair Sales', amount: amountPaying, type: 'in', date: currentDate, created_by: currentUserEmail
-                    }]);
+                    const { error: cashError } = await supabaseClient.from('cashbook_entries').insert({
+                        description: ledgerDesc, 
+                        category: 'Credit Settlement', 
+                        amount: amountPaying, 
+                        type: 'in', 
+                        date: currentDate
+                    });
+                    if (cashError) throw new Error("Failed adding to Cashbook: " + cashError.message);
+
                 } else if (mode === 'UPI') {
-                    await supabaseClient.from('upi_entries').insert([{
-                        date: currentDate, time: currentTime, description: ledgerDesc, category: 'Repair Sales', 
-                        upi_amount: amountPaying, card_amount: 0, created_by: currentUserEmail
-                    }]);
+                    const { error: upiError } = await supabaseClient.from('upi_entries').insert({
+                        date: currentDate, 
+                        time: currentTime, 
+                        description: ledgerDesc, 
+                        category: 'Credit Settlement', 
+                        upi_amount: amountPaying, 
+                        card_amount: 0
+                    });
+                    if (upiError) throw new Error("Failed adding to UPI Book: " + upiError.message);
                 }
             }
 
+            // 3. Discount Update
             if (discount > 0) {
-                await supabaseClient.from('customer_credits').insert([{
-                    customer_name: settleCustName, mobile: settleCustMobile, amount: discount, date: currentDate,
-                    type: 'Discount', description: `Discount Given - ${settleCustName}`, job_no: jobRef, created_by: currentUserEmail
-                }]);
+                const { error: discError } = await supabaseClient.from('customer_credits').insert({
+                    customer_name: settleCustName, 
+                    mobile: settleCustMobile, 
+                    amount: discount, 
+                    date: currentDate,
+                    type: 'Discount', 
+                    description: `Discount Given - ${settleCustName}`, 
+                    job_no: jobRef
+                });
+                if (discError) throw new Error("Failed saving discount record: " + discError.message);
             }
 
             closeSettleModal();
+            document.querySelector('.btn-confirm').innerText = "Process Settlement";
             
-            // Re-fetch strictly parses "Settled" type from above inserts and calculates a pristine new due.
+            // Re-fetch parses "Settled" type from above inserts and calculates a pristine new due.
             await fetchCustomers(); 
             
-            // Refresh ledger modal content instantly if open
+            // Refresh ledger modal content instantly to display the green "PAID" badge and new balance
             const cInfo = allCustomers.find(c => c.id === settleCustId);
             if(cInfo && document.getElementById('modalLedger').style.display === 'flex') {
                 openLedger(cInfo.id, cInfo.name, cInfo.mobile, cInfo.display_due);
             }
             
-            alert("Settlement processed successfully! Deducted from dues.");
+            alert("Settlement processed successfully! Automatically deducted from market dues.");
         } catch (err) {
-            alert("Error settling credit: " + err.message);
+            document.querySelector('.btn-confirm').innerText = "Process Settlement";
+            alert("⚠️ SYSTEM ERROR:\n" + err.message + "\n\nPlease check your database table configurations (Supabase).");
+            console.error(err);
         }
     }
 
