@@ -454,18 +454,47 @@
         }
     });
 
-    // --- PURE LEDGER MATH AGGREGATION (FIXED DOUBLE COUNTING & DEDUCTIONS) ---
+    // --- PURE LEDGER MATH AGGREGATION (BULLETPROOF DOUBLE COUNTING FIX) ---
     async function fetchCustomers() {
         // Fetch raw base data
         const { data: customers, error: custErr } = await supabaseClient.from('customers').select('*');
         if (custErr) return console.error(custErr);
 
-        // Fetch ONLY customer_credits for live math. This perfectly avoids double-counting repair orders!
-        const { data: credits } = await supabaseClient.from('customer_credits').select('mobile, amount, type');
+        // Fetch live ledger components to dynamically calculate accurate dues
+        const { data: repairs } = await supabaseClient.from('repairOrders').select('jobNo, contactNo, finalAmount, estimateAmount, approxEstimate, paymentMethod');
+        const { data: accs } = await supabaseClient.from('accessories_invoices').select('invoice_no, mobile, total_amt, payment_mode');
+        const { data: credits } = await supabaseClient.from('customer_credits').select('mobile, amount, type, job_no');
 
         let calcDues = {};
         if (customers) customers.forEach(c => calcDues[(c.mobile || '').trim()] = 0);
 
+        // Track jobs that are ALREADY fully counted by the Repair or Accessory table
+        const fullCreditInvoices = new Set();
+
+        // 1. Add all Repair Jobs that were generated as 'Credit'
+        if (repairs) {
+            repairs.forEach(r => {
+                if (r.paymentMethod === 'Credit') {
+                    const mob = (r.contactNo || '').trim();
+                    let amt = r.finalAmount || r.estimateAmount || r.approxEstimate || 0;
+                    if (calcDues[mob] !== undefined) calcDues[mob] += parseFloat(amt);
+                    if (r.jobNo) fullCreditInvoices.add(r.jobNo.trim());
+                }
+            });
+        }
+
+        // 2. Add all Accessory Invoices that were generated as 'Credit'
+        if (accs) {
+            accs.forEach(a => {
+                if (a.payment_mode === 'Credit') {
+                    const mob = (a.mobile || '').trim();
+                    if (calcDues[mob] !== undefined) calcDues[mob] += parseFloat(a.total_amt);
+                    if (a.invoice_no) fullCreditInvoices.add(a.invoice_no.trim());
+                }
+            });
+        }
+
+        // 3. Process Credits Table (Subtract Settlements, Add Split/Manual Credits)
         if (credits) {
             credits.forEach(c => {
                 const mob = (c.mobile || '').trim();
@@ -474,11 +503,15 @@
                     const cType = (c.type || '').trim().toLowerCase();
                     
                     if (cType === 'given') {
-                        // Any credit given (from Repairs, Accessories, or Manual) is summed up.
-                        calcDues[mob] += amt;
+                        // FIX: If the job is already fully counted in Step 1 or 2, SKIP IT to prevent double counting.
+                        // However, if the job was a "Split" payment, it isn't in `fullCreditInvoices`, 
+                        // so this will correctly add the credit portion!
+                        if (!c.job_no || !fullCreditInvoices.has(c.job_no.trim())) {
+                            calcDues[mob] += amt;
+                        }
                     } else if (cType === 'settled' || cType === 'discount') {
-                        // Any settlement or discount correctly deducts from the total.
-                        calcDues[mob] -= amt;
+                        // Settlements and discounts always deduct mathematically
+                        calcDues[mob] -= amt; 
                     }
                 }
             });
@@ -648,10 +681,13 @@
             ]);
 
             let ledgerItems = [];
+            const fullCreditInvoices = new Set();
 
             if (repRes.data) {
                 repRes.data.forEach(r => {
                     let amt = r.finalAmount || r.estimateAmount || r.approxEstimate || 0;
+                    if (r.paymentMethod === 'Credit' && r.jobNo) fullCreditInvoices.add(r.jobNo.trim());
+                    
                     ledgerItems.push({
                         rawDate: new Date(r.created_at),
                         dateStr: new Date(r.created_at).toLocaleDateString('en-GB'),
@@ -667,6 +703,8 @@
 
             if (accRes.data) {
                 accRes.data.forEach(a => {
+                    if (a.payment_mode === 'Credit' && a.invoice_no) fullCreditInvoices.add(a.invoice_no.trim());
+                    
                     ledgerItems.push({
                         rawDate: new Date(a.created_at),
                         dateStr: new Date(a.created_at).toLocaleDateString('en-GB'),
@@ -683,9 +721,10 @@
             if (credRes.data) {
                 credRes.data.forEach(c => {
                     const cType = (c.type || '').trim().toLowerCase();
-                    // FIX: To avoid visual double-printing in the ledger, hide auto-generated "Given" rows if they have a Job No.
-                    // The Repair/Accessory row already displays this transaction visually.
-                    if (cType === 'given' && c.job_no && c.job_no.trim() !== '') return;
+                    
+                    // FIX: Hide auto-generated "Given" rows from UI to avoid visual double-printing,
+                    // IF they are completely represented by the Repair/Accessory Full Credit row above.
+                    if (cType === 'given' && c.job_no && fullCreditInvoices.has(c.job_no.trim())) return;
 
                     ledgerItems.push({
                         rawDate: new Date(c.created_at || c.date),
@@ -807,9 +846,10 @@
         document.getElementById('modalHistory').style.display = 'none';
     }
 
+
     window.deleteHistoryEntry = async function(id, type, amount, description, mobile) {
         if (!isAdmin) return;
-        if (!confirm(`Are you sure you want to delete this ledger record?\n\nIf this was a payment/settlement, it will be removed from your Cash/UPI book, and the due amount will be added back to the customer.`)) return;
+        if (!confirm(`Are you sure you want to delete this ledger record?\n\nIf this was a payment/settlement, it will be removed from your Cash/UPI book, and the due amount will automatically recalculate.`)) return;
 
         try {
             if (type === 'Settled') {
@@ -820,7 +860,7 @@
             const { error } = await supabaseClient.from('customer_credits').delete().eq('id', id);
             if (error) throw error;
 
-            // Simply Re-fetch, it automatically triggers the math correction!
+            // Simply Re-fetch, it automatically triggers the math correction and heals the database!
             await fetchCustomers();
             
             const cInfo = allCustomers.find(c => c.mobile === mobile);
@@ -937,7 +977,7 @@
             let baseDesc = '';
             let jobRef = '';
 
-            // We do NOT change the original bill. It stays Credit, and this payment completely balances it dynamically.
+            // We do NOT change the original bill. It stays Credit, and this payment mathematically counters it automatically.
             if (selectedBillStr) {
                 const parts = selectedBillStr.split('|');
                 const billNo = parts[2];
