@@ -458,11 +458,9 @@
 
     // --- BULLETPROOF LEDGER MATH ENGINE ---
     async function fetchCustomers() {
-        // Fetch raw base data
         const { data: customers, error: custErr } = await supabaseClient.from('customers').select('*');
         if (custErr) return console.error(custErr);
 
-        // Fetch live ledger components to dynamically calculate accurate dues
         const { data: repairs } = await supabaseClient.from('repairOrders').select('jobNo, contactNo, finalAmount, estimateAmount, approxEstimate, paymentMethod, status');
         const { data: accs } = await supabaseClient.from('accessories_invoices').select('invoice_no, mobile, total_amt, payment_mode');
         const { data: credits } = await supabaseClient.from('customer_credits').select('mobile, amount, type, job_no');
@@ -472,7 +470,6 @@
 
         const fullCreditInvoices = new Set();
 
-        // 1. Add all Repair Jobs that were generated as 'Credit'
         if (repairs) {
             repairs.forEach(r => {
                 if (r.paymentMethod === 'Credit' && !(r.status || '').toLowerCase().includes('refusal')) {
@@ -484,7 +481,6 @@
             });
         }
 
-        // 2. Add all Accessory Invoices that were generated as 'Credit'
         if (accs) {
             accs.forEach(a => {
                 if (a.payment_mode === 'Credit') {
@@ -495,7 +491,6 @@
             });
         }
 
-        // 3. Process Credits Table (Subtract Settlements, Add Split/Manual Credits)
         if (credits) {
             credits.forEach(c => {
                 const mob = sanitizeMob(c.mobile);
@@ -504,12 +499,10 @@
                     const cType = (c.type || '').trim().toLowerCase();
                     
                     if (cType === 'given') {
-                        // Avoid double counting if already captured in Step 1/2
                         if (!c.job_no || !fullCreditInvoices.has(sanitizeMob(c.job_no))) {
                             calcDues[mob] += amt;
                         }
                     } else if (cType === 'settled' || cType === 'discount' || cType === 'payment') {
-                        // Settlements and discounts always deduct mathematically
                         calcDues[mob] -= amt; 
                     }
                 }
@@ -521,9 +514,8 @@
         allCustomers = customers.map(c => {
             const mob = sanitizeMob(c.mobile);
             let actualDue = calcDues[mob] || 0;
-            if (actualDue < 0.01) actualDue = 0; // Guard against negative floating decimals
+            if (actualDue < 0.01) actualDue = 0; 
             
-            // Background auto-heal: Fix database if it's out of sync with real-time math
             if (Math.abs(actualDue - parseFloat(c.credit_balance || 0)) > 0.01) {
                 supabaseClient.from('customers').update({ credit_balance: actualDue }).eq('id', c.id).then();
             }
@@ -533,10 +525,8 @@
             return c;
         });
 
-        // Update the global market card
         document.getElementById('globalTotalCredit').innerText = '₹' + globalTotal.toFixed(2);
 
-        // Sort Highest Due First
         allCustomers.sort((a, b) => {
             if (b.display_due !== a.display_due) return b.display_due - a.display_due; 
             return new Date(b.created_at) - new Date(a.created_at); 
@@ -721,14 +711,13 @@
                 credRes.data.forEach(c => {
                     const cType = (c.type || '').trim().toLowerCase();
                     
-                    // Hide auto-generated "Given" rows from UI if represented by the Repair/Acc row above
                     if (cType === 'given' && c.job_no && fullCreditInvoices.has(sanitizeMob(c.job_no))) return;
 
                     ledgerItems.push({
                         rawDate: new Date(c.created_at || c.date),
                         dateStr: new Date(c.created_at || c.date).toLocaleDateString('en-GB'),
                         type: c.type,
-                        desc: c.description || c.job_no || 'Manual Entry',
+                        desc: c.job_no || 'Manual Entry', // Fallback to displaying job_no since description column doesn't exist
                         amount: parseFloat(c.amount),
                         method: c.type,
                         isCredit: true,
@@ -878,7 +867,6 @@
             const { error } = await supabaseClient.from('customer_credits').delete().eq('id', id);
             if (error) throw error;
 
-            // Simple Re-fetch handles the math correction entirely
             await fetchCustomers();
             
             const cInfo = allCustomers.find(c => sanitizeMob(c.mobile) === sanitizeMob(mobile));
@@ -893,7 +881,7 @@
     }
 
 
-    // --- SETTLE MODAL LOGIC WITH STRICT ERROR HANDLING ---
+    // --- SETTLE MODAL LOGIC WITH DB ERROR FIX ---
     window.openSettleFromLedger = function(id, name, mobile, due) {
         if (!id) { id = settleCustId; name = settleCustName; mobile = settleCustMobile; due = parseFloat(document.getElementById('ledgerDueAmount').innerText.replace('₹','')); }
         openSettleModal(id, name, mobile, due);
@@ -990,7 +978,7 @@
             let currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             
             let baseDesc = '';
-            let jobRef = null; // null is safer than an empty string to avoid db foreign key issues
+            let jobRef = null; 
 
             if (selectedBillStr) {
                 const parts = selectedBillStr.split('|');
@@ -1003,23 +991,24 @@
 
             let ledgerDesc = mode === 'UPI' && upiNote ? `${baseDesc} (${mode} - ${upiNote})` : `${baseDesc} (${mode})`;
 
+            // We safely save the ledger description into the "job_no" column since "description" doesn't exist
+            let fallbackRef = jobRef ? `${jobRef} | ${ledgerDesc}` : ledgerDesc;
+
             // 1. Core Credit Ledger Update
             if (amountPaying > 0) {
-                // EXPLICITLY CHECK FOR ERRORS TO PREVENT SILENT FAILURES
                 const { error: creditError } = await supabaseClient.from('customer_credits').insert({
                     customer_name: settleCustName, 
                     mobile: settleCustMobile, 
                     amount: amountPaying, 
                     date: currentDate,
                     type: 'Settled', 
-                    description: ledgerDesc, 
-                    job_no: jobRef 
-                    // removed 'created_by' as it is a common cause for insert rejections if the schema doesn't match perfectly.
+                    // 'description' column removed entirely to prevent the 400 error!
+                    job_no: fallbackRef 
                 });
 
                 if (creditError) throw new Error("Failed saving ledger record: " + creditError.message);
 
-                // 2. Cashbook or UPI Update
+                // 2. Cashbook or UPI Update (These tables DO have description columns)
                 if (mode === 'Cash') {
                     const { error: cashError } = await supabaseClient.from('cashbook_entries').insert({
                         description: ledgerDesc, 
@@ -1051,8 +1040,8 @@
                     amount: discount, 
                     date: currentDate,
                     type: 'Discount', 
-                    description: `Discount Given - ${settleCustName}`, 
-                    job_no: jobRef
+                    // 'description' column removed here too!
+                    job_no: jobRef ? `${jobRef} | Discount` : `Discount Given`
                 });
                 if (discError) throw new Error("Failed saving discount record: " + discError.message);
             }
@@ -1060,10 +1049,8 @@
             closeSettleModal();
             document.querySelector('.btn-confirm').innerText = "Process Settlement";
             
-            // Re-fetch parses "Settled" type from above inserts and calculates a pristine new due.
             await fetchCustomers(); 
             
-            // Refresh ledger modal content instantly to display the green "PAID" badge and new balance
             const cInfo = allCustomers.find(c => c.id === settleCustId);
             if(cInfo && document.getElementById('modalLedger').style.display === 'flex') {
                 openLedger(cInfo.id, cInfo.name, cInfo.mobile, cInfo.display_due);
@@ -1072,7 +1059,7 @@
             alert("Settlement processed successfully! Automatically deducted from market dues.");
         } catch (err) {
             document.querySelector('.btn-confirm').innerText = "Process Settlement";
-            alert("⚠️ SYSTEM ERROR:\n" + err.message + "\n\nPlease check your database table configurations (Supabase).");
+            alert("⚠️ SYSTEM ERROR:\n" + err.message);
             console.error(err);
         }
     }
