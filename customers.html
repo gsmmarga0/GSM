@@ -251,7 +251,7 @@
                     <option value="">-- General Settlement (No specific bill) --</option>
                 </select>
                 <p style="font-size: 0.7rem; color: #6b7280; margin-top: 5px; margin-bottom:0;">
-                    Paying a specific bill in full changes its status to Cash/UPI.
+                    Payment will be recorded against the ledger.
                 </p>
             </div>
 
@@ -454,7 +454,7 @@
         }
     });
 
-    // --- CORE CUSTOMER DATA LOGIC WITH LIVE AGGREGATION ---
+    // --- PURE LEDGER MATH AGGREGATION ---
     async function fetchCustomers() {
         // Fetch raw base data
         const { data: customers, error: custErr } = await supabaseClient.from('customers').select('*');
@@ -463,12 +463,12 @@
         // Fetch live ledger components to dynamically calculate accurate dues
         const { data: repairs } = await supabaseClient.from('repairOrders').select('contactNo, finalAmount, estimateAmount, approxEstimate, paymentMethod');
         const { data: accs } = await supabaseClient.from('accessories_invoices').select('mobile, total_amt, payment_mode');
-        const { data: credits } = await supabaseClient.from('customer_credits').select('mobile, amount, type, job_no');
+        const { data: credits } = await supabaseClient.from('customer_credits').select('mobile, amount, type');
 
         let calcDues = {};
         if (customers) customers.forEach(c => calcDues[c.mobile] = 0);
 
-        // 1. Add all Unpaid Repair Jobs to the Due
+        // 1. Add all Repair Jobs that were generated as 'Credit'
         if (repairs) {
             repairs.forEach(r => {
                 if (r.paymentMethod === 'Credit') {
@@ -478,7 +478,7 @@
             });
         }
 
-        // 2. Add all Unpaid Accessory Invoices to the Due
+        // 2. Add all Accessory Invoices that were generated as 'Credit'
         if (accs) {
             accs.forEach(a => {
                 if (a.payment_mode === 'Credit') {
@@ -487,7 +487,7 @@
             });
         }
 
-        // 3. Add Manual Given Credits, and subtract General Settlements/Discounts
+        // 3. Add Manual Given Credits, and ALWAYS subtract Settlements & Discounts
         if (credits) {
             credits.forEach(c => {
                 if (calcDues[c.mobile] !== undefined) {
@@ -495,12 +495,7 @@
                     if (c.type === 'Given') {
                         calcDues[c.mobile] += amt;
                     } else if (c.type === 'Settled' || c.type === 'Discount') {
-                        // Prevent Double-Subtraction:
-                        // If they settled a specific bill, the bill's mode was changed to 'Cash' (so it's excluded from step 1 & 2)
-                        // If job_no is empty, it was a general settlement, so we must subtract it here.
-                        if (!c.job_no || c.job_no.trim() === '') {
-                            calcDues[c.mobile] -= amt;
-                        }
+                        calcDues[c.mobile] -= amt; // Pure math: subtract any paid/discounted amount
                     }
                 }
             });
@@ -510,9 +505,7 @@
 
         allCustomers = customers.map(c => {
             let actualDue = calcDues[c.mobile] || 0;
-            if (actualDue < 0) actualDue = 0; // Guard against negative balances
-            
-            // BACKGROUND AUTO-HEAL: If the database is out of sync with the live ledger math, fix it silently.
+            // Background auto-heal: Fix database if it's out of sync with real-time math
             if (actualDue !== parseFloat(c.credit_balance)) {
                 supabaseClient.from('customers').update({ credit_balance: actualDue }).eq('id', c.id).then();
             }
@@ -835,6 +828,7 @@
             const { error } = await supabaseClient.from('customer_credits').delete().eq('id', id);
             if (error) throw error;
 
+            // Simply Re-fetch, it automatically triggers the math correction!
             await fetchCustomers();
             
             const cInfo = allCustomers.find(c => c.mobile === mobile);
@@ -854,7 +848,7 @@
     }
 
 
-    // --- SETTLE MODAL LOGIC WITH DISCOUNT ---
+    // --- SETTLE MODAL LOGIC WITH PURE LEDGER APPROACH ---
     window.openSettleFromLedger = function(id, name, mobile, due) {
         if (!id) { id = settleCustId; name = settleCustName; mobile = settleCustMobile; due = parseFloat(document.getElementById('ledgerDueAmount').innerText.replace('₹','')); }
         openSettleModal(id, name, mobile, due);
@@ -941,7 +935,8 @@
         const upiNote = document.getElementById('settleUpiNote').value.trim();
         const selectedBillStr = document.getElementById('settleBillSelect').value;
 
-        if (totalClearing <= 0 || totalClearing > currentDue) return alert("Total clearing amount is invalid or exceeds current due.");
+        if (totalClearing <= 0) return alert("Amount must be greater than 0.");
+        if (totalClearing > currentDue && currentDue > 0) return alert("Total clearing amount cannot exceed the current due.");
 
         try {
             let currentDate = new Date().toISOString().split('T')[0];
@@ -950,17 +945,10 @@
             let baseDesc = '';
             let jobRef = '';
 
+            // We NO LONGER update the original bill to 'Cash'. It stays 'Credit', and this payment perfectly counters it!
             if (selectedBillStr) {
                 const parts = selectedBillStr.split('|');
-                const billType = parts[0];
-                const billId = parts[1];
                 const billNo = parts[2];
-                const billAmt = parseFloat(parts[3]);
-
-                if (totalClearing >= billAmt) {
-                    if (billType === 'REPAIR') await supabaseClient.from('repairOrders').update({ paymentMethod: mode }).eq('id', billId);
-                    else if (billType === 'ACC') await supabaseClient.from('accessories_invoices').update({ payment_mode: mode }).eq('id', billId);
-                }
                 baseDesc = `Credit Settled for ${billNo} - ${settleCustName}`;
                 jobRef = billNo;
             } else {
@@ -996,7 +984,7 @@
 
             closeSettleModal();
             
-            // Re-fetch triggers the auto-heal and updates UI
+            // Re-fetch triggers the auto-heal and updates UI!
             await fetchCustomers(); 
             
             // Find updated details to refresh ledger
