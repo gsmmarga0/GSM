@@ -454,7 +454,7 @@
         }
     });
 
-    // --- PURE LEDGER MATH AGGREGATION ---
+    // --- PURE LEDGER MATH AGGREGATION (FIXED DOUBLE COUNTING) ---
     async function fetchCustomers() {
         // Fetch raw base data
         const { data: customers, error: custErr } = await supabaseClient.from('customers').select('*');
@@ -463,7 +463,7 @@
         // Fetch live ledger components to dynamically calculate accurate dues
         const { data: repairs } = await supabaseClient.from('repairOrders').select('contactNo, finalAmount, estimateAmount, approxEstimate, paymentMethod');
         const { data: accs } = await supabaseClient.from('accessories_invoices').select('mobile, total_amt, payment_mode');
-        const { data: credits } = await supabaseClient.from('customer_credits').select('mobile, amount, type');
+        const { data: credits } = await supabaseClient.from('customer_credits').select('mobile, amount, type, job_no');
 
         let calcDues = {};
         if (customers) customers.forEach(c => calcDues[c.mobile] = 0);
@@ -487,13 +487,18 @@
             });
         }
 
-        // 3. Add Manual Given Credits, and ALWAYS subtract Settlements & Discounts
+        // 3. Process Credits Table (Subtract Settlements, Add purely manual given credits)
         if (credits) {
             credits.forEach(c => {
                 if (calcDues[c.mobile] !== undefined) {
                     const amt = parseFloat(c.amount) || 0;
                     if (c.type === 'Given') {
-                        calcDues[c.mobile] += amt;
+                        // FIX: Only add this amount if it's a PURE MANUAL credit. 
+                        // If it has a job_no, it came from a repair or accessory invoice 
+                        // which we already counted in Step 1 or Step 2. We skip it to avoid doubling.
+                        if (!c.job_no || c.job_no.trim() === '') {
+                            calcDues[c.mobile] += amt;
+                        }
                     } else if (c.type === 'Settled' || c.type === 'Discount') {
                         calcDues[c.mobile] -= amt; // Pure math: subtract any paid/discounted amount
                     }
@@ -696,6 +701,10 @@
 
             if (credRes.data) {
                 credRes.data.forEach(c => {
+                    // FIX: To avoid double-printing in the ledger, hide auto-generated "Given" rows.
+                    // The repair/accessory row already shows the exact same transaction!
+                    if (c.type === 'Given' && c.job_no && c.job_no.trim() !== '') return;
+
                     ledgerItems.push({
                         rawDate: new Date(c.created_at || c.date),
                         dateStr: new Date(c.created_at || c.date).toLocaleDateString('en-GB'),
