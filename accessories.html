@@ -179,170 +179,175 @@
                             </div>
                         </div>
 
-                        <!-- Create Mode -->
+                        <!-- Create Mode with Duplicate Checking -->
                         <div id="customerCreateMode" style="display: none; gap: 15px;">
                             <input type="text" id="newCustName" placeholder="Full Name" style="flex:1; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline:none;">
-                            <input type="text" id="newCustMobile" placeholder="10-digit Mobile" style="flex:1; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline:none;">
+                            <div style="position: relative; flex: 1;">
+                                <div style="display:flex; border: 1px solid var(--border-color); border-radius: 6px; overflow:hidden;">
+                                    <span style="background: #f3f4f6; padding: 10px; color: #6b7280; font-weight: bold; border-right: 1px solid var(--border-color);">+91</span>
+                                    <input type="text" id="newCustMobile" placeholder="10-digit mobile number" style="border: none; padding: 10px; outline: none; width: 100%; font-family: inherit;" maxlength="10" oninput="checkExistingMobile()" autocomplete="off">
+                                </div>
+                                <ul class="search-select-list" id="newCustMobileDropdown" style="width: 100%;"></ul>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Dynamic Items Box -->
-                <div class="items-section">
-                    <div style="font-size: 0.8rem; font-weight: bold; color: #4b5563; margin-bottom: 15px;">ITEMS INCLUDED IN INVOICE</div>
-                    <div id="invoiceItemsContainer">
-                        <!-- JavaScript will inject item rows here -->
-                    </div>
-                    <button class="btn" style="font-size: 0.8rem;" onclick="addInvoiceItem()">+ Add Another Item</button>
-                </div>
-
-                <div class="form-grid">
-                    <div class="form-group col-span-2">
-                        <label>Payment Mode <span>*</span></label>
-                        <div class="segmented-input">
-                            <button type="button" class="pay-btn active" id="payCash" onclick="setPaymentMode('Cash')">Cash</button>
-                            <button type="button" class="pay-btn" id="payUPI" onclick="setPaymentMode('UPI')">UPI</button>
-                            <button type="button" class="pay-btn credit" id="payCredit" onclick="setPaymentMode('Credit')">Credit</button>
+                    <!-- Dynamic Items Box -->
+                    <div class="items-section">
+                        <div style="font-size: 0.8rem; font-weight: bold; color: #4b5563; margin-bottom: 15px;">ITEMS INCLUDED IN INVOICE</div>
+                        <div id="invoiceItemsContainer">
+                            <!-- JavaScript will inject item rows here -->
                         </div>
+                        <button class="btn" style="font-size: 0.8rem;" onclick="addInvoiceItem()">+ Add Another Item</button>
                     </div>
-                    <div class="form-group">
-                        <label>Date</label>
-                        <input type="date" id="inv-date">
-                    </div>
-                    
-                    <!-- Dynamic UPI Notes -->
-                    <div class="form-group col-span-2" id="upiNotesGroup" style="display: none;">
-                        <label style="color: #4b5563;">UPI Account Details / Notes</label>
-                        <input type="text" id="upiAccountNotes" placeholder="e.g. Paid to GPay / Personal Acct" style="width: 100%;">
-                    </div>
-                </div>
 
-                <button class="btn btn-primary" id="btnSubmitInv" style="margin-top: 10px;" onclick="saveInvoice()">+ Create Invoice</button>
-            </div>
-        </div>
-
-        <!-- Table Header with Export Controls -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <div class="form-title" style="border:none; margin:0;" id="tableTitle">INVOICES</div>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <input type="month" id="exportMonth" style="padding: 7px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem;">
-                <button class="btn btn-success" onclick="exportToExcel()">📊 Export to Excel</button>
-            </div>
-        </div>
-
-        <div class="table-card">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Invoice</th>
-                        <th>Created By</th>
-                        <th>Date & Time</th>
-                        <th>Name</th>
-                        <th>Mobile</th>
-                        <th>Items Summary</th>
-                        <th>Total (₹)</th>
-                        <th>Mode</th>
-                        <th style="text-align:center;">Action</th>
-                    </tr>
-                </thead>
-                <tbody id="invoicesTableBody">
-                    <!-- Data injected via JS -->
-                </tbody>
-            </table>
-            <div class="pagination">
-                <button class="btn" onclick="prevPage()">Previous</button>
-                <span id="pageInfo" style="font-size:0.9rem; font-weight:bold;">Page 1</span>
-                <button class="btn" onclick="nextPage()">Next</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Payment Mode Modal (Admin Only) -->
-    <div class="modal-overlay modal-overlay-center" id="modalEditPaymentMode">
-        <div class="modal-box-small">
-            <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
-                Change Payment Mode
-                <button class="close-btn" onclick="closeEditModeModal()" style="font-size: 1.5rem; margin-top:-5px;">×</button>
-            </div>
-            <p id="editModeSubtitle" style="font-size: 0.85rem; color: #2563eb; font-weight: bold; margin-top: 0; margin-bottom: 20px;">Invoice #AC00 | Customer | ₹0</p>
-
-            <div class="form-group">
-                <label>New Payment Mode</label>
-                <select id="editPaymentModeSelect" class="search-bar" style="width: 100%; padding: 10px; font-weight: bold; background:#fdfdfd;" onchange="toggleEditModeUpiNote()">
-                    <option value="Cash">Cash</option>
-                    <option value="UPI">UPI</option>
-                    <option value="Credit">Credit</option>
-                </select>
-            </div>
-
-            <div class="form-group" id="editPaymentUpiSection" style="display: none; margin-bottom: 15px;">
-                <label style="font-weight:bold; color: #374151; font-size: 0.9rem;">UPI Account Received In (Note)</label>
-                <input type="text" id="editPaymentUpiNote" class="search-bar" style="width: 100%; padding: 10px; background:#fdfdfd;" placeholder="e.g. Shop QR, Personal GPay, etc.">
-            </div>
-
-            <p style="font-size: 0.75rem; color: #ef4444; margin-top: 5px; line-height: 1.4;">
-                * This will rewrite the Cashbook & UPI book and update customer credit automatically.
-            </p>
-
-            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
-                <button class="btn" onclick="closeEditModeModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="savePaymentModeChange()">Save Changes</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Full Screen Catalog Modal -->
-    <div class="modal-overlay" id="catalogModal">
-        <div class="modal-box">
-            <div class="modal-header">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span>📦</span> FULL ITEM CATALOG
-                </div>
-                <button class="close-btn" onclick="closeCatalogModal()" title="Close Catalog">&times;</button>
-            </div>
-            <div class="modal-content">
-                
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px;">
-                    <button class="btn btn-primary" onclick="toggleCatalogForm()" style="font-size: 1rem; padding: 10px 20px;">+ Add / Edit Item ▼</button>
-                    
-                    <div style="position: relative;">
-                        <input type="text" id="catalogSearchInput" placeholder="🔍 Search catalog..." oninput="filterCatalogTable()" style="padding: 10px 15px 10px 35px; border: 1px solid var(--border-color); border-radius: 6px; width: 300px; font-size: 0.95rem; outline: none;">
-                        <svg style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #9ca3af;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    </div>
-                </div>
-                
-                <div class="dropdown-form" id="catalogFormDropdown">
-                    <h3 style="margin-top: 0; color: #111827;" id="catalogFormTitle">Add New Item</h3>
-                    <input type="hidden" id="cat-id">
-                    <div class="catalog-add-row">
-                        <div class="form-group">
-                            <label>Item Description <span>*</span></label>
-                            <input type="text" id="cat-desc" placeholder="e.g. iPhone 15 Cover">
+                    <div class="form-grid">
+                        <div class="form-group col-span-2">
+                            <label>Payment Mode <span>*</span></label>
+                            <div class="segmented-input">
+                                <button type="button" class="pay-btn active" id="payCash" onclick="setPaymentMode('Cash')">Cash</button>
+                                <button type="button" class="pay-btn" id="payUPI" onclick="setPaymentMode('UPI')">UPI</button>
+                                <button type="button" class="pay-btn credit" id="payCredit" onclick="setPaymentMode('Credit')">Credit</button>
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label>Amount (₹) <span>*</span></label>
-                            <input type="number" id="cat-amount" placeholder="0.00">
+                            <label>Date</label>
+                            <input type="date" id="inv-date">
+                        </div>
+                        
+                        <!-- Dynamic UPI Notes -->
+                        <div class="form-group col-span-2" id="upiNotesGroup" style="display: none;">
+                            <label style="color: #4b5563;">UPI Account Details / Notes</label>
+                            <input type="text" id="upiAccountNotes" placeholder="e.g. Paid to GPay / Personal Acct" style="width: 100%;">
                         </div>
                     </div>
-                    <div style="display: flex; gap: 10px; margin-top: 10px;">
-                        <button class="btn btn-primary" onclick="saveCatalogItem()" style="padding: 10px 25px;">Save Item</button>
-                        <button class="btn" onclick="toggleCatalogForm()" style="padding: 10px 25px;">Cancel</button>
-                    </div>
-                </div>
 
-                <table class="catalog-table" style="margin-top: 15px; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <button class="btn btn-primary" id="btnSubmitInv" style="margin-top: 10px;" onclick="saveInvoice()">+ Create Invoice</button>
+                </div>
+            </div>
+
+            <!-- Table Header with Export Controls -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div class="form-title" style="border:none; margin:0;" id="tableTitle">INVOICES</div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="month" id="exportMonth" style="padding: 7px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem;">
+                    <button class="btn btn-success" onclick="exportToExcel()">📊 Export to Excel</button>
+                </div>
+            </div>
+
+            <div class="table-card">
+                <table>
                     <thead>
                         <tr>
-                            <th>Description</th>
-                            <th>Amount (₹)</th>
-                            <th style="text-align: center;">Action</th>
+                            <th>Invoice</th>
+                            <th>Created By</th>
+                            <th>Date & Time</th>
+                            <th>Name</th>
+                            <th>Mobile</th>
+                            <th>Items Summary</th>
+                            <th>Total (₹)</th>
+                            <th>Mode</th>
+                            <th style="text-align:center;">Action</th>
                         </tr>
                     </thead>
-                    <tbody id="catalogTableBody"></tbody>
+                    <tbody id="invoicesTableBody">
+                        <!-- Data injected via JS -->
+                    </tbody>
                 </table>
+                <div class="pagination">
+                    <button class="btn" onclick="prevPage()">Previous</button>
+                    <span id="pageInfo" style="font-size:0.9rem; font-weight:bold;">Page 1</span>
+                    <button class="btn" onclick="nextPage()">Next</button>
+                </div>
             </div>
         </div>
-    </div>
+
+        <!-- Edit Payment Mode Modal (Admin Only) -->
+        <div class="modal-overlay modal-overlay-center" id="modalEditPaymentMode">
+            <div class="modal-box-small">
+                <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
+                    Change Payment Mode
+                    <button class="close-btn" onclick="closeEditModeModal()" style="font-size: 1.5rem; margin-top:-5px;">×</button>
+                </div>
+                <p id="editModeSubtitle" style="font-size: 0.85rem; color: #2563eb; font-weight: bold; margin-top: 0; margin-bottom: 20px;">Invoice #AC00 | Customer | ₹0</p>
+
+                <div class="form-group">
+                    <label>New Payment Mode</label>
+                    <select id="editPaymentModeSelect" class="search-bar" style="width: 100%; padding: 10px; font-weight: bold; background:#fdfdfd;" onchange="toggleEditModeUpiNote()">
+                        <option value="Cash">Cash</option>
+                        <option value="UPI">UPI</option>
+                        <option value="Credit">Credit</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="editPaymentUpiSection" style="display: none; margin-bottom: 15px;">
+                    <label style="font-weight:bold; color: #374151; font-size: 0.9rem;">UPI Account Received In (Note)</label>
+                    <input type="text" id="editPaymentUpiNote" class="search-bar" style="width: 100%; padding: 10px; background:#fdfdfd;" placeholder="e.g. Shop QR, Personal GPay, etc.">
+                </div>
+
+                <p style="font-size: 0.75rem; color: #ef4444; margin-top: 5px; line-height: 1.4;">
+                    * This will rewrite the Cashbook & UPI book and update customer credit automatically.
+                </p>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                    <button class="btn" onclick="closeEditModeModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="savePaymentModeChange()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Full Screen Catalog Modal -->
+        <div class="modal-overlay" id="catalogModal">
+            <div class="modal-box">
+                <div class="modal-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span>📦</span> FULL ITEM CATALOG
+                    </div>
+                    <button class="close-btn" onclick="closeCatalogModal()" title="Close Catalog">&times;</button>
+                </div>
+                <div class="modal-content">
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px;">
+                        <button class="btn btn-primary" onclick="toggleCatalogForm()" style="font-size: 1rem; padding: 10px 20px;">+ Add / Edit Item ▼</button>
+                        
+                        <div style="position: relative;">
+                            <input type="text" id="catalogSearchInput" placeholder="🔍 Search catalog..." oninput="filterCatalogTable()" style="padding: 10px 15px 10px 35px; border: 1px solid var(--border-color); border-radius: 6px; width: 300px; font-size: 0.95rem; outline: none;">
+                            <svg style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #9ca3af;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        </div>
+                    </div>
+                    
+                    <div class="dropdown-form" id="catalogFormDropdown">
+                        <h3 style="margin-top: 0; color: #111827;" id="catalogFormTitle">Add New Item</h3>
+                        <input type="hidden" id="cat-id">
+                        <div class="catalog-add-row">
+                            <div class="form-group">
+                                <label>Item Description <span>*</span></label>
+                                <input type="text" id="cat-desc" placeholder="e.g. iPhone 15 Cover">
+                            </div>
+                            <div class="form-group">
+                                <label>Amount (₹) <span>*</span></label>
+                                <input type="number" id="cat-amount" placeholder="0.00">
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button class="btn btn-primary" onclick="saveCatalogItem()" style="padding: 10px 25px;">Save Item</button>
+                            <button class="btn" onclick="toggleCatalogForm()" style="padding: 10px 25px;">Cancel</button>
+                        </div>
+                    </div>
+
+                    <table class="catalog-table" style="margin-top: 15px; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Amount (₹)</th>
+                                <th style="text-align: center;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="catalogTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
@@ -435,9 +440,11 @@
                 const list = document.getElementById('globalSearchResults');
                 if (list) list.style.display = 'none';
             }
-            if (!e.target.closest('#customerSelectMode')) {
+            if (!e.target.closest('#customerSelectMode') && !e.target.closest('#customerCreateMode')) {
                 const list = document.getElementById('customerDropdownList');
                 if (list) list.style.display = 'none';
+                const newCustList = document.getElementById('newCustMobileDropdown');
+                if (newCustList) newCustList.style.display = 'none';
             }
             if (!e.target.closest('.search-select-container')) {
                 document.querySelectorAll('.items-section .search-select-list').forEach(list => list.style.display = 'none');
@@ -481,7 +488,7 @@
             const list = document.getElementById('customerDropdownList');
             list.innerHTML = '';
             customersList.forEach(c => {
-                list.innerHTML += `<li onclick="selectCustomer(${c.id}, '${c.name.replace(/'/g, "\\'")}', '${c.mobile}')">${c.name} - ${c.mobile}</li>`;
+                list.innerHTML += `<li onclick="selectCustomer(${c.id}, '${escapeStr(c.name)}', '${escapeStr(c.mobile)}')">${c.name} - ${c.mobile}</li>`;
             });
         }
 
@@ -508,6 +515,43 @@
             document.getElementById('selectedCustMobile').value = mobile;
             document.getElementById('customerDropdownList').style.display = 'none';
         }
+
+        // --- NEW: Check existing mobile dynamically while typing ---
+        window.checkExistingMobile = function() {
+            const input = document.getElementById('newCustMobile').value.trim();
+            const list = document.getElementById('newCustMobileDropdown');
+            list.innerHTML = '';
+
+            if (input.length >= 3) {
+                const matches = customersList.filter(c => c.mobile.includes(input));
+
+                if (matches.length > 0) {
+                    matches.forEach(c => {
+                        list.innerHTML += `<li onclick="autoSelectFromNew(${c.id}, '${escapeStr(c.name)}', '${escapeStr(c.mobile)}')"><span style="color:#2563eb; font-weight:bold;">Existing:</span> ${c.name} - ${c.mobile}</li>`;
+                    });
+                    list.style.display = 'block';
+                } else {
+                    list.style.display = 'none';
+                }
+            } else {
+                list.style.display = 'none';
+            }
+        }
+
+        window.autoSelectFromNew = function(id, name, mobile) {
+            document.getElementById('newCustMobileDropdown').style.display = 'none';
+            
+            document.getElementById('newCustName').value = '';
+            document.getElementById('newCustMobile').value = '';
+            
+            isNewCustomerMode = false;
+            document.getElementById('customerSelectMode').style.display = 'block';
+            document.getElementById('customerCreateMode').style.display = 'none';
+            document.getElementById('btnToggleCustomerMode').innerText = '➕ Create New Customer';
+            
+            selectCustomer(id, name, mobile);
+        }
+        // -------------------------------------------------------------
 
         window.toggleCustomerMode = function() {
             isNewCustomerMode = !isNewCustomerMode;
@@ -784,7 +828,7 @@
                 let actionBtns = `<button class="btn-icon" onclick='printInvoice(${JSON.stringify(inv).replace(/'/g, "&#39;")})' style="color:#374151;">📄 Bill</button>`;
                 
                 if (currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase()) {
-                    actionBtns += `<button class="btn-icon" onclick="openEditModeModal(${inv.id}, '${inv.invoice_no}', '${inv.payment_mode}', ${inv.total_amt}, '${inv.customer_name}', '${inv.mobile}', '${inv.date}')" style="color:#2563eb;" title="Edit Payment">✏️</button>`;
+                    actionBtns += `<button class="btn-icon" onclick="openEditModeModal(${inv.id}, '${inv.invoice_no}', '${inv.payment_mode}', ${inv.total_amt}, '${escapeStr(inv.customer_name)}', '${inv.mobile}', '${inv.date}')" style="color:#2563eb;" title="Edit Payment">✏️</button>`;
                     actionBtns += `<button class="btn-icon" onclick="deleteInvoice(${inv.id}, '${inv.invoice_no}', '${inv.payment_mode}', ${inv.total_amt}, '${inv.mobile}')" style="color:red;" title="Delete">🗑️</button>`;
                 }
 
@@ -826,8 +870,17 @@
             // Handle Customer Processing
             if (isNewCustomerMode) {
                 custName = document.getElementById('newCustName').value.trim();
-                contactNo = document.getElementById('newCustMobile').value.trim();
-                if(!custName || !contactNo) return alert("Please fill in New Customer details.");
+                let rawContact = document.getElementById('newCustMobile').value.trim();
+                
+                if(!custName || rawContact.length !== 10) return alert("Please provide a valid Customer Name and a 10-digit Mobile Number.");
+                contactNo = '+91' + rawContact;
+
+                // --- NEW: Duplicate Number Check ---
+                const { data: existing } = await db.from('customers').select('id').eq('mobile', contactNo).limit(1);
+                if (existing && existing.length > 0) {
+                    return alert("A customer with this mobile number already exists in the database. Please click 'Search Existing Database' to select them instead.");
+                }
+                // -----------------------------------
                 
                 // Insert new customer and return data to get ID
                 const { data: newCustData, error: custErr } = await db.from('customers').insert([{ name: custName, mobile: contactNo, credit_balance: 0 }]).select();
@@ -902,7 +955,6 @@
 
             try {
                 if (selectedPaymentMode === 'Credit') {
-                    // FIX 406 ERROR HERE: Replaced .single() with .limit(1) and array fallback
                     const { data: custDataArr, error: fetchCustErr } = await db.from('customers').select('credit_balance').eq('id', custId).limit(1);
                     if (fetchCustErr) throw fetchCustErr;
                     
@@ -966,7 +1018,6 @@
 
                 // Revert credit balance if it was a credit transaction
                 if (paymentMode === 'Credit') {
-                    // FIX 406 ERROR HERE: Replaced .single() with .limit(1) and array fallback
                     const { data: custDataArr, error: custFetchErr } = await db.from('customers').select('id, credit_balance').eq('mobile', mobile).limit(1);
                     if (custFetchErr) throw custFetchErr;
                     
@@ -1036,7 +1087,6 @@
                     const { error } = await db.from('upi_entries').delete().ilike('description', searchString);
                     if (error) throw new Error("UPI Book delete failed: " + error.message);
                 } else if (editInvOldMode === 'Credit') {
-                    // FIX 406 ERROR HERE: Replaced .single() with .limit(1) and array fallback
                     const { data: custDataArr, error: custFetchErr } = await db.from('customers').select('id, credit_balance').eq('mobile', editInvMobile).limit(1);
                     if (custFetchErr) throw new Error("Customer fetch failed: " + custFetchErr.message);
                     
@@ -1067,7 +1117,6 @@
                     }]);
                     if (error) throw new Error("UPI Book insert failed: " + error.message);
                 } else if (newMode === 'Credit') {
-                    // FIX 406 ERROR HERE: Replaced .single() with .limit(1) and array fallback
                     const { data: custDataArr, error: custFetchErr } = await db.from('customers').select('id, credit_balance').eq('mobile', editInvMobile).limit(1);
                     if (custFetchErr) throw new Error("Customer fetch failed: " + custFetchErr.message);
                     
