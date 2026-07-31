@@ -420,16 +420,22 @@
 
     // --- Core Customer Data Logic ---
     async function fetchCustomers() {
-        const { data, error } = await supabaseClient.from('customers').select('*').order('created_at', { ascending: false });
+        const { data, error } = await supabaseClient.from('customers').select('*');
         if (error) return console.error(error);
 
-        // Fix: Always trust the credit_balance column strictly for due calculations.
         allCustomers = data.map(c => {
             c.display_due = parseFloat(c.credit_balance) || 0;
             return c;
         });
 
-        allCustomers.sort((a, b) => b.display_due - a.display_due);
+        // BULLETPROOF SORTING: Highest Due amount first, then fallback to newest customers
+        allCustomers.sort((a, b) => {
+            if (b.display_due !== a.display_due) {
+                return b.display_due - a.display_due; // Descending by Due Amount
+            }
+            // Secondary Sort (If dues are equal, newest customer first)
+            return new Date(b.created_at) - new Date(a.created_at); 
+        });
 
         filteredCustomers = [...allCustomers]; 
         currentPage = 1; 
@@ -503,7 +509,6 @@
         document.getElementById('modalLedger').style.display = 'flex';
 
         try {
-            // Fetch everything related to this mobile
             const [repRes, accRes, credRes] = await Promise.all([
                 supabaseClient.from('repairOrders').select('*').eq('contactNo', mobile),
                 supabaseClient.from('accessories_invoices').select('*').eq('mobile', mobile),
@@ -512,7 +517,6 @@
 
             let ledgerItems = [];
 
-            // 1. Process Repairs
             if (repRes.data) {
                 repRes.data.forEach(r => {
                     let amt = r.finalAmount || r.estimateAmount || r.approxEstimate || 0;
@@ -529,7 +533,6 @@
                 });
             }
 
-            // 2. Process Accessories
             if (accRes.data) {
                 accRes.data.forEach(a => {
                     ledgerItems.push({
@@ -545,7 +548,6 @@
                 });
             }
 
-            // 3. Process Credit History (Given, Settled, Discount)
             if (credRes.data) {
                 credRes.data.forEach(c => {
                     ledgerItems.push({
@@ -556,13 +558,12 @@
                         amount: parseFloat(c.amount),
                         method: c.type,
                         isCredit: true,
-                        id: c.id, // for deletion
+                        id: c.id, 
                         mobile: c.mobile
                     });
                 });
             }
 
-            // Sort chronologically (newest first)
             ledgerItems.sort((a, b) => b.rawDate - a.rawDate);
 
             tbody.innerHTML = '';
@@ -684,9 +685,10 @@
             const { error } = await supabaseClient.from('customer_credits').delete().eq('id', id);
             if (error) throw error;
 
-            // Mathematical rollback on Customers table
-            const { data: custData } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', mobile).single();
-            if (custData) {
+            // FIX: Replaced .single() with .limit(1) to avoid 406 Error on duplicate mobile numbers
+            const { data: custDataArr } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', mobile).limit(1);
+            if (custDataArr && custDataArr.length > 0) {
+                const custData = custDataArr[0];
                 let currentBal = parseFloat(custData.credit_balance) || 0;
                 
                 if (type === 'Settled' || type === 'Discount') {
@@ -816,7 +818,6 @@
             let baseDesc = '';
             let jobRef = '';
 
-            // Update specific bill status if selected and fully cleared
             if (selectedBillStr) {
                 const parts = selectedBillStr.split('|');
                 const billType = parts[0];
@@ -842,7 +843,6 @@
             // 2. INSERT HISTORY & LEDGERS
             let ledgerDesc = mode === 'UPI' && upiNote ? `${baseDesc} (${mode} - ${upiNote})` : `${baseDesc} (${mode})`;
 
-            // If actual money was paid
             if (amountPaying > 0) {
                 await supabaseClient.from('customer_credits').insert([{
                     customer_name: settleCustName, mobile: settleCustMobile, amount: amountPaying, date: currentDate,
@@ -861,7 +861,6 @@
                 }
             }
 
-            // If discount was given
             if (discount > 0) {
                 await supabaseClient.from('customer_credits').insert([{
                     customer_name: settleCustName, mobile: settleCustMobile, amount: discount, date: currentDate,
@@ -873,7 +872,6 @@
             
             // Refresh tables
             await fetchCustomers(); 
-            // Update the ledger view if it's currently open
             if(document.getElementById('modalLedger').style.display === 'flex') {
                 openLedger(settleCustId, settleCustName, settleCustMobile, newBal);
             }
