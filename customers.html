@@ -85,7 +85,7 @@
         #modalLedger { z-index: 105; }
         #modalSettle { z-index: 110; }
         .ledger-header-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: inline-block; white-space: nowrap; }
         .b-repair { background: #dbeafe; color: #1e40af; }
         .b-acc { background: #fef3c7; color: #b45309; }
         .b-cred { background: #fee2e2; color: #991b1b; }
@@ -171,7 +171,7 @@
     <div class="modal-container" style="width: 850px; max-width: 95%;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
             <div>
-                <h2 class="modal-title">📖 Customer Ledger</h2>
+                <h2 class="modal-title">📖 Customer Ledger & Transactions</h2>
                 <p class="modal-subtitle" id="ledgerSubtitle" style="margin-bottom: 0; padding-bottom: 0; border: none;">Loading...</p>
             </div>
             <button class="btn" onclick="closeLedgerModal()" style="font-size: 1.2rem; padding: 2px 10px; border:none; background:transparent;">✖</button>
@@ -204,11 +204,11 @@
     </div>
 </div>
 
-<!-- HISTORY MODAL -->
+<!-- JOBS HISTORY MODAL -->
 <div class="modal-overlay" id="modalHistory">
-    <div class="modal-container" style="width: 650px; max-width: 95%;">
-        <h2 class="modal-title">Credit History</h2>
-        <p class="modal-subtitle" id="historySubtitle">Loading...</p>
+    <div class="modal-container" style="width: 750px; max-width: 95%;">
+        <h2 class="modal-title">Customer Jobs History</h2>
+        <p class="modal-subtitle" id="historySubtitle">All repairs and accessories for this customer</p>
         
         <div class="table-card" style="max-height: 350px; overflow-y: auto; margin-bottom: 0; box-shadow: none; border: 1px solid #e5e7eb;">
             <table style="margin-bottom: 0;">
@@ -216,13 +216,13 @@
                     <tr>
                         <th style="padding: 12px;">Date</th>
                         <th style="padding: 12px;">Type</th>
-                        <th style="padding: 12px;">Job No / Note</th>
-                        <th style="padding: 12px; text-align: right;">Amount (₹)</th>
-                        <th style="padding: 12px; text-align: center;" class="admin-col admin-hidden">Action</th>
+                        <th style="padding: 12px;">Job ID / Item</th>
+                        <th style="padding: 12px;">Status & Mode</th>
+                        <th style="padding: 12px; text-align: right;">Final Amount (₹)</th>
                     </tr>
                 </thead>
                 <tbody id="historyTableBody">
-                    <!-- History Injected Here -->
+                    <!-- Jobs Injected Here -->
                 </tbody>
             </table>
         </div>
@@ -251,7 +251,7 @@
                     <option value="">-- General Settlement (No specific bill) --</option>
                 </select>
                 <p style="font-size: 0.7rem; color: #6b7280; margin-top: 5px; margin-bottom:0;">
-                    Payment will be recorded against the ledger.
+                    Payment will be dynamically deducted from total market dues.
                 </p>
             </div>
 
@@ -369,6 +369,8 @@
         if (!str) return '';
         return String(str).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, " ");
     };
+    
+    const sanitizeMob = (mob) => (mob || '').replace(/\s+/g, ''); // Ensure whitespace doesn't break calculations
 
     let sidebarTimer;
     window.resetSidebarTimer = function() {
@@ -454,31 +456,30 @@
         }
     });
 
-    // --- PURE LEDGER MATH AGGREGATION (BULLETPROOF DOUBLE COUNTING FIX) ---
+    // --- BULLETPROOF LEDGER MATH ENGINE ---
     async function fetchCustomers() {
         // Fetch raw base data
         const { data: customers, error: custErr } = await supabaseClient.from('customers').select('*');
         if (custErr) return console.error(custErr);
 
         // Fetch live ledger components to dynamically calculate accurate dues
-        const { data: repairs } = await supabaseClient.from('repairOrders').select('jobNo, contactNo, finalAmount, estimateAmount, approxEstimate, paymentMethod');
+        const { data: repairs } = await supabaseClient.from('repairOrders').select('jobNo, contactNo, finalAmount, estimateAmount, approxEstimate, paymentMethod, status');
         const { data: accs } = await supabaseClient.from('accessories_invoices').select('invoice_no, mobile, total_amt, payment_mode');
         const { data: credits } = await supabaseClient.from('customer_credits').select('mobile, amount, type, job_no');
 
         let calcDues = {};
-        if (customers) customers.forEach(c => calcDues[(c.mobile || '').trim()] = 0);
+        if (customers) customers.forEach(c => calcDues[sanitizeMob(c.mobile)] = 0);
 
-        // Track jobs that are ALREADY fully counted by the Repair or Accessory table
         const fullCreditInvoices = new Set();
 
         // 1. Add all Repair Jobs that were generated as 'Credit'
         if (repairs) {
             repairs.forEach(r => {
-                if (r.paymentMethod === 'Credit') {
-                    const mob = (r.contactNo || '').trim();
+                if (r.paymentMethod === 'Credit' && !(r.status || '').toLowerCase().includes('refusal')) {
+                    const mob = sanitizeMob(r.contactNo);
                     let amt = r.finalAmount || r.estimateAmount || r.approxEstimate || 0;
                     if (calcDues[mob] !== undefined) calcDues[mob] += parseFloat(amt);
-                    if (r.jobNo) fullCreditInvoices.add(r.jobNo.trim());
+                    if (r.jobNo) fullCreditInvoices.add(sanitizeMob(r.jobNo));
                 }
             });
         }
@@ -487,9 +488,9 @@
         if (accs) {
             accs.forEach(a => {
                 if (a.payment_mode === 'Credit') {
-                    const mob = (a.mobile || '').trim();
+                    const mob = sanitizeMob(a.mobile);
                     if (calcDues[mob] !== undefined) calcDues[mob] += parseFloat(a.total_amt);
-                    if (a.invoice_no) fullCreditInvoices.add(a.invoice_no.trim());
+                    if (a.invoice_no) fullCreditInvoices.add(sanitizeMob(a.invoice_no));
                 }
             });
         }
@@ -497,19 +498,17 @@
         // 3. Process Credits Table (Subtract Settlements, Add Split/Manual Credits)
         if (credits) {
             credits.forEach(c => {
-                const mob = (c.mobile || '').trim();
+                const mob = sanitizeMob(c.mobile);
                 if (calcDues[mob] !== undefined) {
                     const amt = parseFloat(c.amount) || 0;
                     const cType = (c.type || '').trim().toLowerCase();
                     
                     if (cType === 'given') {
-                        // FIX: If the job is already fully counted in Step 1 or 2, SKIP IT to prevent double counting.
-                        // However, if the job was a "Split" payment, it isn't in `fullCreditInvoices`, 
-                        // so this will correctly add the credit portion!
-                        if (!c.job_no || !fullCreditInvoices.has(c.job_no.trim())) {
+                        // Avoid double counting if already captured in Step 1/2
+                        if (!c.job_no || !fullCreditInvoices.has(sanitizeMob(c.job_no))) {
                             calcDues[mob] += amt;
                         }
-                    } else if (cType === 'settled' || cType === 'discount') {
+                    } else if (cType === 'settled' || cType === 'discount' || cType === 'payment') {
                         // Settlements and discounts always deduct mathematically
                         calcDues[mob] -= amt; 
                     }
@@ -520,12 +519,12 @@
         let globalTotal = 0;
 
         allCustomers = customers.map(c => {
-            const mob = (c.mobile || '').trim();
+            const mob = sanitizeMob(c.mobile);
             let actualDue = calcDues[mob] || 0;
-            if (actualDue < 0) actualDue = 0; // Guard against negative balances
+            if (actualDue < 0.01) actualDue = 0; // Guard against negative floating decimals
             
             // Background auto-heal: Fix database if it's out of sync with real-time math
-            if (actualDue !== parseFloat(c.credit_balance)) {
+            if (Math.abs(actualDue - parseFloat(c.credit_balance || 0)) > 0.01) {
                 supabaseClient.from('customers').update({ credit_balance: actualDue }).eq('id', c.id).then();
             }
 
@@ -565,7 +564,7 @@
             let due = c.display_due; 
             
             let actionHtml = `<button class="btn-ledger" onclick="openLedger(${c.id}, '${escapeStr(c.name)}', '${escapeStr(c.mobile)}', ${due})">📖 Ledger</button>`;
-            actionHtml += `<button class="btn-history" onclick="openHistoryModal('${escapeStr(c.mobile)}', '${escapeStr(c.name)}')">📜 History</button>`;
+            actionHtml += `<button class="btn-history" onclick="openHistoryModal('${escapeStr(c.mobile)}', '${escapeStr(c.name)}')">📜 Jobs</button>`;
             actionHtml += `<button class="btn-edit" onclick="openEditCustomerModal(${c.id}, '${escapeStr(c.name)}', '${escapeStr(c.mobile)}')">✏️ Edit</button>`;
 
             if (isAdmin) {
@@ -686,7 +685,7 @@
             if (repRes.data) {
                 repRes.data.forEach(r => {
                     let amt = r.finalAmount || r.estimateAmount || r.approxEstimate || 0;
-                    if (r.paymentMethod === 'Credit' && r.jobNo) fullCreditInvoices.add(r.jobNo.trim());
+                    if (r.paymentMethod === 'Credit' && r.jobNo) fullCreditInvoices.add(sanitizeMob(r.jobNo));
                     
                     ledgerItems.push({
                         rawDate: new Date(r.created_at),
@@ -703,7 +702,7 @@
 
             if (accRes.data) {
                 accRes.data.forEach(a => {
-                    if (a.payment_mode === 'Credit' && a.invoice_no) fullCreditInvoices.add(a.invoice_no.trim());
+                    if (a.payment_mode === 'Credit' && a.invoice_no) fullCreditInvoices.add(sanitizeMob(a.invoice_no));
                     
                     ledgerItems.push({
                         rawDate: new Date(a.created_at),
@@ -722,9 +721,8 @@
                 credRes.data.forEach(c => {
                     const cType = (c.type || '').trim().toLowerCase();
                     
-                    // FIX: Hide auto-generated "Given" rows from UI to avoid visual double-printing,
-                    // IF they are completely represented by the Repair/Accessory Full Credit row above.
-                    if (cType === 'given' && c.job_no && fullCreditInvoices.has(c.job_no.trim())) return;
+                    // Hide auto-generated "Given" rows from UI if represented by the Repair/Acc row above
+                    if (cType === 'given' && c.job_no && fullCreditInvoices.has(sanitizeMob(c.job_no))) return;
 
                     ledgerItems.push({
                         rawDate: new Date(c.created_at || c.date),
@@ -758,10 +756,10 @@
                 if (iType === 'repair') badgeHtml = `<span class="badge b-repair">REPAIR</span>`;
                 else if (iType === 'accessory') badgeHtml = `<span class="badge b-acc">ACC INVOICE</span>`;
                 else if (iType === 'given') { badgeHtml = `<span class="badge b-cred">CREDIT DUE</span>`; colorSign = '+'; amtColor = '#ef4444'; }
-                else if (iType === 'settled') { badgeHtml = `<span class="badge b-settle">PAID</span>`; colorSign = '-'; amtColor = '#10b981'; }
+                else if (iType === 'settled' || iType === 'payment') { badgeHtml = `<span class="badge b-settle">PAID</span>`; colorSign = '-'; amtColor = '#10b981'; }
                 else if (iType === 'discount') { badgeHtml = `<span class="badge b-disc">DISCOUNT</span>`; colorSign = '-'; amtColor = '#4338ca'; }
 
-                let extraMethod = item.isCredit ? '' : `<br><span style="font-size:0.75rem; color:gray;">[${item.method}]</span>`;
+                let extraMethod = item.isCredit ? '' : `<br><span style="font-size:0.75rem; color:gray;">[Paid via: ${item.method}]</span>`;
 
                 let deleteBtn = '';
                 if (isAdmin && item.isCredit) {
@@ -789,49 +787,69 @@
     }
 
 
-    // --- HISTORY MODAL ---
+    // --- JOBS HISTORY MODAL (All Jobs/Invoices Tracker) ---
     window.openHistoryModal = async function(mobile, name) {
-        document.getElementById('historySubtitle').innerText = `Transaction history for ${name}`;
-        document.getElementById('historyTableBody').innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px;">Loading history...</td></tr>`;
+        document.getElementById('historySubtitle').innerText = `All Repair Jobs and Accessories Invoices for ${name}`;
+        document.getElementById('historyTableBody').innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px;">Loading records...</td></tr>`;
         document.getElementById('modalHistory').style.display = 'flex';
 
         try {
-            const { data, error } = await supabaseClient
-                .from('customer_credits')
-                .select('*')
-                .eq('mobile', mobile)
-                .order('created_at', { ascending: false });
+            const [repRes, accRes] = await Promise.all([
+                supabaseClient.from('repairOrders').select('*').eq('contactNo', mobile),
+                supabaseClient.from('accessories_invoices').select('*').eq('mobile', mobile)
+            ]);
 
-            if (error) throw error;
+            let records = [];
 
+            if (repRes.data) {
+                repRes.data.forEach(r => {
+                    records.push({
+                        date: new Date(r.created_at),
+                        dateStr: new Date(r.created_at).toLocaleDateString('en-GB'),
+                        type: 'Repair',
+                        id: r.jobNo,
+                        desc: r.problemDesc || 'Device Repair',
+                        amount: r.finalAmount || r.estimateAmount || r.approxEstimate || 0,
+                        status: r.status,
+                        paymentMethod: r.paymentMethod || 'Unpaid'
+                    });
+                });
+            }
+
+            if (accRes.data) {
+                accRes.data.forEach(a => {
+                    records.push({
+                        date: new Date(a.created_at),
+                        dateStr: new Date(a.created_at).toLocaleDateString('en-GB'),
+                        type: 'Accessory',
+                        id: a.invoice_no,
+                        desc: a.item_desc || 'Accessories',
+                        amount: a.total_amt,
+                        status: 'Completed',
+                        paymentMethod: a.payment_mode
+                    });
+                });
+            }
+
+            records.sort((a, b) => b.date - a.date);
             const tbody = document.getElementById('historyTableBody');
             tbody.innerHTML = '';
 
-            if (!data || data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px; color: gray;">No credit history found for this customer.</td></tr>`;
+            if (records.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px; color: gray;">No jobs found for this customer.</td></tr>`;
                 return;
             }
 
-            data.forEach(entry => {
-                const dateStr = new Date(entry.created_at || entry.date).toLocaleDateString('en-GB');
-                const isGiven = entry.type === 'Given';
+            records.forEach(rec => {
+                let badge = rec.type === 'Repair' ? '<span class="badge b-repair">Repair Job</span>' : '<span class="badge b-acc">Accessory</span>';
                 
-                const color = isGiven ? '#ef4444' : '#10b981';
-                const sign = isGiven ? '+' : '-';
-                const typeLabel = isGiven ? 'Credit Taken' : (entry.type === 'Discount' ? 'Discount' : 'Settled');
-
-                let deleteBtn = '';
-                if (isAdmin) {
-                    deleteBtn = `<button class="action-delete" onclick="deleteHistoryEntry('${entry.id}', '${entry.type}', ${entry.amount}, '${escapeStr(entry.description)}', '${entry.mobile}')" title="Delete Entry & Rollback">🗑️</button>`;
-                }
-
                 tbody.innerHTML += `
                     <tr>
-                        <td style="padding: 12px;">${dateStr}</td>
-                        <td style="padding: 12px;"><span style="font-weight:bold; color:${color};">${typeLabel}</span></td>
-                        <td style="padding: 12px;">${entry.job_no || entry.description || 'Manual Entry'}</td>
-                        <td style="text-align: right; padding: 12px; font-weight:bold; color:${color};">${sign}₹${parseFloat(entry.amount).toFixed(2)}</td>
-                        <td style="text-align: center; padding: 12px;" class="admin-col ${isAdmin ? '' : 'admin-hidden'}">${deleteBtn}</td>
+                        <td style="padding: 12px; font-size: 0.85rem;">${rec.dateStr}</td>
+                        <td style="padding: 12px;">${badge}</td>
+                        <td style="padding: 12px;"><strong>${rec.id}</strong><br><span style="font-size:0.75rem; color:gray;">${rec.desc}</span></td>
+                        <td style="padding: 12px; font-size: 0.85rem;">${rec.status}<br><span style="font-size:0.75rem; color:gray; font-weight:bold;">[${rec.paymentMethod}]</span></td>
+                        <td style="text-align: right; padding: 12px; font-weight:bold; color: #111827;">₹${parseFloat(rec.amount).toFixed(2)}</td>
                     </tr>
                 `;
             });
@@ -852,25 +870,20 @@
         if (!confirm(`Are you sure you want to delete this ledger record?\n\nIf this was a payment/settlement, it will be removed from your Cash/UPI book, and the due amount will automatically recalculate.`)) return;
 
         try {
-            if (type === 'Settled') {
-                await supabaseClient.from('cashbook_entries').delete().ilike('description', `${description}%`);
-                await supabaseClient.from('upi_entries').delete().ilike('description', `${description}%`);
+            if (type === 'Settled' || type === 'Payment') {
+                await supabaseClient.from('cashbook_entries').delete().ilike('description', `%${description}%`);
+                await supabaseClient.from('upi_entries').delete().ilike('description', `%${description}%`);
             }
 
             const { error } = await supabaseClient.from('customer_credits').delete().eq('id', id);
             if (error) throw error;
 
-            // Simply Re-fetch, it automatically triggers the math correction and heals the database!
+            // Simple Re-fetch handles the math correction entirely
             await fetchCustomers();
             
-            const cInfo = allCustomers.find(c => c.mobile === mobile);
-            if (cInfo) {
-                if (document.getElementById('modalLedger').style.display === 'flex') {
-                    openLedger(cInfo.id, cInfo.name, mobile, cInfo.display_due);
-                }
-                if (document.getElementById('modalHistory').style.display === 'flex') {
-                    openHistoryModal(mobile, cInfo.name);
-                }
+            const cInfo = allCustomers.find(c => sanitizeMob(c.mobile) === sanitizeMob(mobile));
+            if (cInfo && document.getElementById('modalLedger').style.display === 'flex') {
+                openLedger(cInfo.id, cInfo.name, mobile, cInfo.display_due);
             }
 
             alert("Entry deleted and balances reverted successfully.");
@@ -977,7 +990,7 @@
             let baseDesc = '';
             let jobRef = '';
 
-            // We do NOT change the original bill. It stays Credit, and this payment mathematically counters it automatically.
+            // We explicitly use type "Settled". The Fetch math engine dynamically deducts anything marked as 'Settled' or 'Discount'
             if (selectedBillStr) {
                 const parts = selectedBillStr.split('|');
                 const billNo = parts[2];
@@ -1016,16 +1029,16 @@
 
             closeSettleModal();
             
-            // Re-fetch triggers the auto-heal and mathematically updates UI seamlessly!
+            // Re-fetch strictly parses "Settled" type from above inserts and calculates a pristine new due.
             await fetchCustomers(); 
             
-            // Find updated details to refresh ledger
+            // Refresh ledger modal content instantly if open
             const cInfo = allCustomers.find(c => c.id === settleCustId);
             if(cInfo && document.getElementById('modalLedger').style.display === 'flex') {
                 openLedger(cInfo.id, cInfo.name, cInfo.mobile, cInfo.display_due);
             }
             
-            alert("Settlement processed successfully!");
+            alert("Settlement processed successfully! Deducted from dues.");
         } catch (err) {
             alert("Error settling credit: " + err.message);
         }
