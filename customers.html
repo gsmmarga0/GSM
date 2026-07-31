@@ -35,7 +35,7 @@
         #globalSearchResults li.no-results { justify-content: center; color: #6b7280; font-style: italic; }
 
         .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; border: 1px solid var(--border-color); background: white; }
-        .btn-primary { background: black; color: white; border: none; }
+        .btn-primary { background: black; color: white; border: none; font-weight: bold; }
         .btn-settle { background: #10b981; color: white; border: none; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer; transition: 0.2s;}
         .btn-settle:hover { background: #059669; }
         
@@ -47,6 +47,9 @@
         
         .btn-edit { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; font-weight: bold; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; margin-left: 8px; }
         .btn-edit:hover { background: #dbeafe; }
+
+        .btn-delete { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; font-weight: bold; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; margin-left: 8px; }
+        .btn-delete:hover { background: #fecaca; }
 
         .dashboard-padding { padding: 20px 30px; }
 
@@ -129,6 +132,8 @@
                 <ul id="globalSearchResults"></ul>
             </div>
             <input type="text" id="searchInput" class="search-bar" placeholder="🔍 Search Name or Mobile..." onkeyup="searchTable()">
+            <!-- NEW: Add Customer Button -->
+            <button class="btn btn-primary" onclick="openAddCustomerModal()" style="margin-left: 10px;">➕ Add Customer</button>
         </div>
     </div>
 
@@ -277,6 +282,31 @@
         <div class="modal-footer">
             <button class="btn" onclick="closeSettleModal()">Cancel</button>
             <button class="btn-confirm" onclick="confirmSettlement()">Process Settlement</button>
+        </div>
+    </div>
+</div>
+
+<!-- NEW: ADD CUSTOMER MODAL -->
+<div class="modal-overlay" id="modalAddCustomer">
+    <div class="modal-container">
+        <h2 class="modal-title">Add New Customer</h2>
+        <p class="modal-subtitle">Manually add a customer to the database.</p>
+        
+        <div class="modal-body">
+            <div class="billing-row" style="flex-direction: column; align-items: flex-start;">
+                <label style="margin-bottom: 5px;">Customer Name</label>
+                <input type="text" id="addCustName" placeholder="Full Name" style="width: 100%; box-sizing:border-box; text-align: left;">
+            </div>
+
+            <div class="billing-row" style="flex-direction: column; align-items: flex-start; margin-bottom: 0;">
+                <label style="margin-bottom: 5px;">Mobile Number</label>
+                <input type="text" id="addCustMobile" placeholder="10-Digit Mobile" style="width: 100%; box-sizing:border-box; text-align: left;">
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button class="btn" onclick="closeAddCustomerModal()">Cancel</button>
+            <button class="btn-confirm" onclick="saveNewCustomer()">Save Customer</button>
         </div>
     </div>
 </div>
@@ -462,6 +492,11 @@
             actionHtml += `<button class="btn-history" onclick="openHistoryModal('${escapeStr(c.mobile)}', '${escapeStr(c.name)}')">📜 History</button>`;
             actionHtml += `<button class="btn-edit" onclick="openEditCustomerModal(${c.id}, '${escapeStr(c.name)}', '${escapeStr(c.mobile)}')">✏️ Edit</button>`;
 
+            // NEW: Add Delete button if Admin
+            if (isAdmin) {
+                actionHtml += `<button class="btn-delete" onclick="deleteCustomer(${c.id}, '${escapeStr(c.name)}')">🗑️ Del</button>`;
+            }
+
             let dateStr = new Date(c.created_at).toLocaleDateString('en-GB');
 
             tbody.innerHTML += `
@@ -489,6 +524,66 @@
 
     window.prevPage = function() { if (currentPage > 1) { currentPage--; renderTable(filteredCustomers); } }
     window.nextPage = function() { if (currentPage < Math.ceil(filteredCustomers.length / rowsPerPage)) { currentPage++; renderTable(filteredCustomers); } }
+
+
+    // --- ADD / DELETE CUSTOMER LOGIC ---
+
+    // NEW: Open Add Customer Modal
+    window.openAddCustomerModal = function() {
+        document.getElementById('addCustName').value = '';
+        document.getElementById('addCustMobile').value = '';
+        document.getElementById('modalAddCustomer').style.display = 'flex';
+    }
+
+    window.closeAddCustomerModal = function() {
+        document.getElementById('modalAddCustomer').style.display = 'none';
+    }
+
+    // NEW: Save New Customer (with restriction check)
+    window.saveNewCustomer = async function() {
+        const name = document.getElementById('addCustName').value.trim();
+        const mobile = document.getElementById('addCustMobile').value.trim();
+
+        if (!name || !mobile) return alert("Please provide both Name and Mobile Number.");
+
+        try {
+            // Check for existing duplicate mobile number
+            const { data: existing } = await supabaseClient.from('customers').select('id').eq('mobile', mobile).limit(1);
+            if (existing && existing.length > 0) {
+                return alert("A customer with this mobile number already exists in the database. Please use a different number.");
+            }
+
+            const { error } = await supabaseClient.from('customers').insert([{ 
+                name: name, 
+                mobile: mobile, 
+                credit_balance: 0 
+            }]);
+
+            if (error) throw error;
+
+            closeAddCustomerModal();
+            fetchCustomers();
+            alert("Customer added successfully!");
+        } catch (err) {
+            alert("Error adding customer: " + err.message);
+        }
+    }
+
+    // NEW: Delete Customer (Admin Only)
+    window.deleteCustomer = async function(id, name) {
+        if (!isAdmin) return;
+        if (!confirm(`Are you absolutely sure you want to permanently delete customer: ${name}?\n\nWARNING: Their ledger and invoices will still exist but will no longer link to a profile.`)) return;
+
+        try {
+            const { error } = await supabaseClient.from('customers').delete().eq('id', id);
+            if (error) throw error;
+            
+            fetchCustomers();
+            alert("Customer deleted successfully!");
+        } catch (err) {
+            alert("Error deleting customer: " + err.message);
+        }
+    }
 
 
     // --- FULL LEDGER LOGIC ---
@@ -685,7 +780,7 @@
             const { error } = await supabaseClient.from('customer_credits').delete().eq('id', id);
             if (error) throw error;
 
-            // FIX: Replaced .single() with .limit(1) to avoid 406 Error on duplicate mobile numbers
+            // Use .limit(1) to avoid 406 Error on duplicate mobile numbers
             const { data: custDataArr } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', mobile).limit(1);
             if (custDataArr && custDataArr.length > 0) {
                 const custData = custDataArr[0];
@@ -910,6 +1005,14 @@
         if (!confirm(`Update customer details across all Invoices, Repairs, and Credit History?`)) return;
 
         try {
+            // NEW: Restrict edit if new mobile already exists in DB
+            if (newMobile !== oldMobile) {
+                const { data: existing } = await supabaseClient.from('customers').select('id').eq('mobile', newMobile).limit(1);
+                if (existing && existing.length > 0) {
+                    return alert("A customer with this mobile number already exists in the database. Please use a different number or delete the duplicate first.");
+                }
+            }
+
             const updates = [
                 supabaseClient.from('customers').update({ name: newName, mobile: newMobile }).eq('id', id),
                 supabaseClient.from('repairOrders').update({ customerName: newName, contactNo: newMobile }).eq('contactNo', oldMobile).eq('customerName', oldName),
