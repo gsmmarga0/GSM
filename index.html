@@ -228,9 +228,12 @@
 
                     <div id="customerCreateMode" style="display: none; gap: 15px;">
                         <input type="text" id="newCustName" placeholder="Full Name" style="flex:1;">
-                        <div style="display:flex; border: 1px solid var(--border-color); border-radius: 6px; overflow:hidden; flex:1;">
-                            <span style="background: #f3f4f6; padding: 10px; color: #6b7280; font-weight: bold; border-right: 1px solid var(--border-color);">+91</span>
-                            <input type="text" id="newCustMobile" placeholder="10-digit mobile number" style="border: none; padding: 10px; outline: none; width: 100%; font-family: inherit;" maxlength="10">
+                        <div style="position: relative; flex: 1;">
+                            <div style="display:flex; border: 1px solid var(--border-color); border-radius: 6px; overflow:hidden;">
+                                <span style="background: #f3f4f6; padding: 10px; color: #6b7280; font-weight: bold; border-right: 1px solid var(--border-color);">+91</span>
+                                <input type="text" id="newCustMobile" placeholder="10-digit mobile number" style="border: none; padding: 10px; outline: none; width: 100%; font-family: inherit;" maxlength="10" oninput="checkExistingMobile()" autocomplete="off">
+                            </div>
+                            <ul class="search-select-list" id="newCustMobileDropdown" style="width: 100%;"></ul>
                         </div>
                     </div>
                 </div>
@@ -548,11 +551,13 @@
     }
 
     document.addEventListener('click', function(e) {
-        if (!e.target.closest('.search-select-container')) {
+        if (!e.target.closest('.search-select-container') && !e.target.closest('#customerCreateMode')) {
             const list = document.getElementById('customerDropdownList');
             if (list) list.style.display = 'none';
             const creditList = document.getElementById('creditCustomerDropdownList');
             if (creditList) creditList.style.display = 'none';
+            const newCustList = document.getElementById('newCustMobileDropdown');
+            if (newCustList) newCustList.style.display = 'none';
         }
         if (!e.target.closest('#globalJobSearch') && !e.target.closest('#globalSearchResults')) {
             const list = document.getElementById('globalSearchResults');
@@ -598,6 +603,43 @@
         document.getElementById('selectedCustMobile').value = mobile;
         document.getElementById('customerDropdownList').style.display = 'none';
     }
+
+    // --- NEW: Check existing mobile dynamically while typing ---
+    window.checkExistingMobile = function() {
+        const input = document.getElementById('newCustMobile').value.trim();
+        const list = document.getElementById('newCustMobileDropdown');
+        list.innerHTML = '';
+
+        if (input.length >= 3) {
+            const matches = customersList.filter(c => c.mobile.includes(input));
+
+            if (matches.length > 0) {
+                matches.forEach(c => {
+                    list.innerHTML += `<li onclick="autoSelectFromNew('${escapeStr(c.name)}', '${escapeStr(c.mobile)}')"><span style="color:#2563eb; font-weight:bold;">Existing:</span> ${c.name} - ${c.mobile}</li>`;
+                });
+                list.style.display = 'block';
+            } else {
+                list.style.display = 'none';
+            }
+        } else {
+            list.style.display = 'none';
+        }
+    }
+
+    window.autoSelectFromNew = function(name, mobile) {
+        document.getElementById('newCustMobileDropdown').style.display = 'none';
+        
+        document.getElementById('newCustName').value = '';
+        document.getElementById('newCustMobile').value = '';
+        
+        isNewCustomerMode = false;
+        document.getElementById('customerSelectMode').style.display = 'block';
+        document.getElementById('customerCreateMode').style.display = 'none';
+        document.getElementById('btnToggleCustomerMode').innerText = '➕ Create New Customer';
+        
+        selectCustomer(name, mobile);
+    }
+    // -------------------------------------------------------------
 
     function populateCreditCustomerDropdown() {
         const list = document.getElementById('creditCustomerDropdownList');
@@ -1392,12 +1434,10 @@
             if(!custName || rawContact.length !== 10) return alert("Please provide a valid Customer Name and a 10-digit Mobile Number.");
             contactNo = '+91' + rawContact;
 
-            // --- NEW: Duplicate Number Check ---
             const { data: existing } = await supabaseClient.from('customers').select('id').eq('mobile', contactNo).limit(1);
             if (existing && existing.length > 0) {
                 return alert("A customer with this mobile number already exists in the database. Please click 'Search Existing Database' to select them instead.");
             }
-            // -----------------------------------
 
             const { error: custErr } = await supabaseClient.from('customers').insert([{ name: custName, mobile: contactNo }]);
             if(!custErr) fetchCustomers(); 
