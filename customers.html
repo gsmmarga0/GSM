@@ -454,53 +454,31 @@
         }
     });
 
-    // --- PURE LEDGER MATH AGGREGATION (FIXED DOUBLE COUNTING) ---
+    // --- PURE LEDGER MATH AGGREGATION (FIXED DOUBLE COUNTING & DEDUCTIONS) ---
     async function fetchCustomers() {
         // Fetch raw base data
         const { data: customers, error: custErr } = await supabaseClient.from('customers').select('*');
         if (custErr) return console.error(custErr);
 
-        // Fetch live ledger components to dynamically calculate accurate dues
-        const { data: repairs } = await supabaseClient.from('repairOrders').select('contactNo, finalAmount, estimateAmount, approxEstimate, paymentMethod');
-        const { data: accs } = await supabaseClient.from('accessories_invoices').select('mobile, total_amt, payment_mode');
-        const { data: credits } = await supabaseClient.from('customer_credits').select('mobile, amount, type, job_no');
+        // Fetch ONLY customer_credits for live math. This perfectly avoids double-counting repair orders!
+        const { data: credits } = await supabaseClient.from('customer_credits').select('mobile, amount, type');
 
         let calcDues = {};
-        if (customers) customers.forEach(c => calcDues[c.mobile] = 0);
+        if (customers) customers.forEach(c => calcDues[(c.mobile || '').trim()] = 0);
 
-        // 1. Add all Repair Jobs that were generated as 'Credit'
-        if (repairs) {
-            repairs.forEach(r => {
-                if (r.paymentMethod === 'Credit') {
-                    let amt = r.finalAmount || r.estimateAmount || r.approxEstimate || 0;
-                    if (calcDues[r.contactNo] !== undefined) calcDues[r.contactNo] += parseFloat(amt);
-                }
-            });
-        }
-
-        // 2. Add all Accessory Invoices that were generated as 'Credit'
-        if (accs) {
-            accs.forEach(a => {
-                if (a.payment_mode === 'Credit') {
-                    if (calcDues[a.mobile] !== undefined) calcDues[a.mobile] += parseFloat(a.total_amt);
-                }
-            });
-        }
-
-        // 3. Process Credits Table (Subtract Settlements, Add purely manual given credits)
         if (credits) {
             credits.forEach(c => {
-                if (calcDues[c.mobile] !== undefined) {
+                const mob = (c.mobile || '').trim();
+                if (calcDues[mob] !== undefined) {
                     const amt = parseFloat(c.amount) || 0;
-                    if (c.type === 'Given') {
-                        // FIX: Only add this amount if it's a PURE MANUAL credit. 
-                        // If it has a job_no, it came from a repair or accessory invoice 
-                        // which we already counted in Step 1 or Step 2. We skip it to avoid doubling.
-                        if (!c.job_no || c.job_no.trim() === '') {
-                            calcDues[c.mobile] += amt;
-                        }
-                    } else if (c.type === 'Settled' || c.type === 'Discount') {
-                        calcDues[c.mobile] -= amt; // Pure math: subtract any paid/discounted amount
+                    const cType = (c.type || '').trim().toLowerCase();
+                    
+                    if (cType === 'given') {
+                        // Any credit given (from Repairs, Accessories, or Manual) is summed up.
+                        calcDues[mob] += amt;
+                    } else if (cType === 'settled' || cType === 'discount') {
+                        // Any settlement or discount correctly deducts from the total.
+                        calcDues[mob] -= amt;
                     }
                 }
             });
@@ -509,7 +487,10 @@
         let globalTotal = 0;
 
         allCustomers = customers.map(c => {
-            let actualDue = calcDues[c.mobile] || 0;
+            const mob = (c.mobile || '').trim();
+            let actualDue = calcDues[mob] || 0;
+            if (actualDue < 0) actualDue = 0; // Guard against negative balances
+            
             // Background auto-heal: Fix database if it's out of sync with real-time math
             if (actualDue !== parseFloat(c.credit_balance)) {
                 supabaseClient.from('customers').update({ credit_balance: actualDue }).eq('id', c.id).then();
@@ -701,9 +682,10 @@
 
             if (credRes.data) {
                 credRes.data.forEach(c => {
-                    // FIX: To avoid double-printing in the ledger, hide auto-generated "Given" rows.
-                    // The repair/accessory row already shows the exact same transaction!
-                    if (c.type === 'Given' && c.job_no && c.job_no.trim() !== '') return;
+                    const cType = (c.type || '').trim().toLowerCase();
+                    // FIX: To avoid visual double-printing in the ledger, hide auto-generated "Given" rows if they have a Job No.
+                    // The Repair/Accessory row already displays this transaction visually.
+                    if (cType === 'given' && c.job_no && c.job_no.trim() !== '') return;
 
                     ledgerItems.push({
                         rawDate: new Date(c.created_at || c.date),
@@ -732,11 +714,13 @@
                 let colorSign = '';
                 let amtColor = '#111827';
                 
-                if (item.type === 'Repair') badgeHtml = `<span class="badge b-repair">REPAIR</span>`;
-                else if (item.type === 'Accessory') badgeHtml = `<span class="badge b-acc">ACC INVOICE</span>`;
-                else if (item.type === 'Given') { badgeHtml = `<span class="badge b-cred">CREDIT DUE</span>`; colorSign = '+'; amtColor = '#ef4444'; }
-                else if (item.type === 'Settled') { badgeHtml = `<span class="badge b-settle">PAID</span>`; colorSign = '-'; amtColor = '#10b981'; }
-                else if (item.type === 'Discount') { badgeHtml = `<span class="badge b-disc">DISCOUNT</span>`; colorSign = '-'; amtColor = '#4338ca'; }
+                const iType = (item.type || '').trim().toLowerCase();
+                
+                if (iType === 'repair') badgeHtml = `<span class="badge b-repair">REPAIR</span>`;
+                else if (iType === 'accessory') badgeHtml = `<span class="badge b-acc">ACC INVOICE</span>`;
+                else if (iType === 'given') { badgeHtml = `<span class="badge b-cred">CREDIT DUE</span>`; colorSign = '+'; amtColor = '#ef4444'; }
+                else if (iType === 'settled') { badgeHtml = `<span class="badge b-settle">PAID</span>`; colorSign = '-'; amtColor = '#10b981'; }
+                else if (iType === 'discount') { badgeHtml = `<span class="badge b-disc">DISCOUNT</span>`; colorSign = '-'; amtColor = '#4338ca'; }
 
                 let extraMethod = item.isCredit ? '' : `<br><span style="font-size:0.75rem; color:gray;">[${item.method}]</span>`;
 
@@ -822,7 +806,6 @@
     window.closeHistoryModal = function() {
         document.getElementById('modalHistory').style.display = 'none';
     }
-
 
     window.deleteHistoryEntry = async function(id, type, amount, description, mobile) {
         if (!isAdmin) return;
@@ -954,7 +937,7 @@
             let baseDesc = '';
             let jobRef = '';
 
-            // We NO LONGER update the original bill to 'Cash'. It stays 'Credit', and this payment perfectly counters it!
+            // We do NOT change the original bill. It stays Credit, and this payment completely balances it dynamically.
             if (selectedBillStr) {
                 const parts = selectedBillStr.split('|');
                 const billNo = parts[2];
@@ -993,7 +976,7 @@
 
             closeSettleModal();
             
-            // Re-fetch triggers the auto-heal and updates UI!
+            // Re-fetch triggers the auto-heal and mathematically updates UI seamlessly!
             await fetchCustomers(); 
             
             // Find updated details to refresh ledger
