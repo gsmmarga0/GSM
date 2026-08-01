@@ -29,28 +29,18 @@
 
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; position: relative; color: var(--text-main); }
         
-        /* Sidebar Styling */
-        .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; transition: width 0.4s ease; overflow-y: auto; overflow-x: hidden; white-space: nowrap; z-index: 40; }
-        .sidebar.collapsed { width: 0; border-right: none; }
-        
-        .logo-area { display: flex; align-items: center; padding: 20px; font-weight: 800; font-size: 1.2rem; border-bottom: 1px solid var(--border-color); margin-bottom: 10px;}
-        .logo-icon { background: #0f172a; color: white; padding: 6px 8px; border-radius: 6px; margin-right: 10px; font-size: 0.8rem; letter-spacing: 1px;}
-        
-        .nav-item { padding: 10px 20px; color: var(--text-muted); text-decoration: none; display: flex; align-items: center; gap: 12px; font-size: 0.9rem; cursor: pointer; font-weight: 500; transition: 0.2s;}
-        .nav-item.active { background: #0f172a; color: white; border-radius: 0 24px 24px 0; margin-right: 20px; }
-        .nav-item:hover:not(.active) { background: #f1f5f9; color: var(--text-main); }
-        
-        .admin-badge { background: #e2e8f0; color: #475569; font-size: 0.6rem; padding: 2px 6px; border-radius: 12px; font-weight: bold; margin-left: auto; }
-        .nav-item.active .admin-badge { background: #334155; color: #cbd5e1; }
+        /* Sidebar Styling (Matched to Expenses) */
+        .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; transition: width 0.4s ease, padding 0.4s ease; overflow: hidden; white-space: nowrap; z-index: 40; }
+        .sidebar.collapsed { width: 0; padding-left: 0; padding-right: 0; border-right: none; }
 
-        .user-profile { margin-top: auto; padding: 15px 20px; border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px; cursor: pointer; }
-        .user-avatar { background: #e2e8f0; color: #475569; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem; }
-        .user-info { display: flex; flex-direction: column; }
-        .user-name { font-size: 0.85rem; font-weight: bold; color: var(--text-main); }
-        .user-role { font-size: 0.75rem; color: var(--text-muted); }
+        .logo-area { display: flex; align-items: center; padding: 0 20px 20px 20px; font-weight: bold; font-size: 1.2rem; }
+        .logo-icon { background: black; color: white; padding: 5px 10px; border-radius: 4px; margin-right: 10px; font-size: 0.9rem; }
+        .nav-item { padding: 12px 20px; color: #4b5563 !important; text-decoration: none; display: flex; align-items: center; font-size: 0.95rem; cursor: pointer; transition: 0.2s;}
+        .nav-item.active { background: black !important; color: white !important; border-radius: 0 20px 20px 0; margin-right: 20px; }
+        .nav-item:hover:not(.active) { background: #f3f4f6; }
 
-        /* Sidebar Toggle Button */
-        .sidebar-toggle-btn { position: absolute; left: var(--sidebar-width); top: 50%; transform: translateY(-50%); background: #0f172a; color: white; width: 20px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; border-radius: 0 8px 8px 0; transition: left 0.4s ease; font-weight: bold; box-shadow: 2px 0 5px rgba(0,0,0,0.2);}
+        /* Fixed Toggle Button CSS */
+        .sidebar-toggle-btn { position: absolute; left: var(--sidebar-width); top: 50%; transform: translateY(-50%); background: black; color: white; width: 20px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; border-radius: 0 8px 8px 0; box-shadow: 2px 0 5px rgba(0,0,0,0.2); transition: left 0.4s ease; font-weight: bold; }
         .sidebar-collapsed-btn { left: 0 !important; }
 
         /* Top Bar */
@@ -165,31 +155,34 @@
 </head>
 <body>
 
+<!-- MATCHED SIDEBAR -->
 <div class="sidebar" id="sidebar" onmouseenter="clearSidebarTimer()" onmouseleave="resetSidebarTimer()">
-    <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTION</div>
-    
+    <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
     <a href="index.html" class="nav-item">📋 Order Details</a>
     <a href="customers.html" class="nav-item">👥 Customers</a>
     <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
     <a href="upi-book.html" class="nav-item">📖 UPI Book</a>
     <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
-
+    
     <!-- Admin Only Links -->
     <a href="sales-report.html" class="nav-item admin-only" style="display: none;">📊 Sales Report</a>
     <a href="expenses.html" class="nav-item admin-only" style="display: none;">💸 Expenses</a>
-    <a href="profit.html" class="nav-item active admin-only" style="display: none;">📈 Profit Book</a>
-    <a href="users.html" class="nav-item admin-only" style="display: none;">👥 Users <span class="admin-badge">ADMIN</span></a>
+    <a href="profit.html" class="nav-item admin-only active" style="display: none;">📈 Profit Book</a>
+    <a href="users.html" class="nav-item admin-only" style="display: none; color: #2563eb; font-weight:bold;">👥 Manage Users</a>
 
-    <div class="user-profile" onclick="logOut()">
-        <div class="user-avatar" id="userAvatar">A</div>
-        <div class="user-info">
-            <span class="user-name" id="userNameDisplay">Administrator</span>
-            <span class="user-role">Administrator</span>
-        </div>
+    <div style="flex-grow: 1;"></div> 
+    
+    <div class="nav-item" onclick="logOut()" style="color: black !important; font-weight: bold; cursor: pointer; border-top: 1px solid var(--border-color); padding-top: 15px; margin: 10px 20px; display: flex; justify-content: space-between; align-items: center;">
+        <span id="userNameDisplay">User</span> 
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
     </div>
-</div>    
+</div>
 
-<!-- Sidebar Toggle Button -->
+<!-- Floating sidebar toggle button -->
 <div class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">⋮</div>
 
 <div class="main-content-wrapper">
@@ -223,7 +216,7 @@
             </div>
         </div>
 
-        <!-- NEW TOP SECTION: UPI and Cashbook -->
+        <!-- TOP SECTION: UPI and Cashbook -->
         <div class="collection-grid">
             <!-- Left: UPI Collection -->
             <div class="card card-upi">
@@ -275,7 +268,7 @@
                     <div class="ow-text">
                         <span class="ow-icon">⚡</span>
                         <div>
-                            <h4>Profit From Sales</h4>
+                            <h4>Profit From OW Parts</h4>
                             <p>Auto - from Sales Report</p>
                         </div>
                     </div>
@@ -397,7 +390,6 @@
             currentUserEmail = data.session.user.email;
             let displayEmail = currentUserEmail.split('@')[0];
             document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
-            document.getElementById('userAvatar').innerText = displayEmail.charAt(0).toUpperCase();
             
             if (currentUserEmail.trim().toLowerCase() !== ADMIN_EMAIL.trim().toLowerCase()) {
                 alert("Access Denied: Administrators only.");
@@ -601,7 +593,6 @@
         } catch (error) { console.error("Error fetching Other Income:", error.message); }
     }
 
-    // --- FIX: fetchExpensesData mapped accurately to your expenses schema ---
     async function fetchExpensesData(start, end) {
         try {
             const { data, error } = await supabaseClient
@@ -631,10 +622,7 @@
                     sum += amt;
                     const d = new Date(item.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
-                    // USING item.category INSTEAD OF item.title
                     const expCategory = item.category || 'Uncategorized';
-                    
-                    // Show staff_name if present, otherwise description
                     let descriptionText = item.description || '';
                     if (item.staff_name) {
                         descriptionText = descriptionText ? `Staff: ${item.staff_name} - ${descriptionText}` : `Staff: ${item.staff_name}`;
@@ -733,6 +721,30 @@
         resetSidebarTimer(); 
         fetchData();
     });
+
+    // ==========================================
+    // AUTO-LOGOUT AFTER 30 MINUTES OF INACTIVITY
+    // ==========================================
+    const setupAutoLogout = function() {
+        let inactivityTimer;
+        const timeoutDuration = 30 * 60 * 1000; // 30 minutes in milliseconds
+
+        function resetTimer() {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(logOut, timeoutDuration); 
+        }
+
+        // Reset the timer when the user interacts with the page
+        window.onload = resetTimer;
+        document.onmousemove = resetTimer;
+        document.onkeypress = resetTimer;
+        document.onclick = resetTimer;
+        document.onscroll = resetTimer;
+        document.ontouchstart = resetTimer;
+    };
+
+    // Start the inactivity tracker
+    setupAutoLogout();
 </script>
 </body>
 </html>
