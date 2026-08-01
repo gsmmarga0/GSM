@@ -227,6 +227,7 @@
                             <input type="text" id="custSearchInput" class="search-select-input" placeholder="🔍 Search existing customer by Name or Mobile..." oninput="filterCustomerSearch()" onfocus="openCustomerDropdown()">
                             <input type="hidden" id="selectedCustName">
                             <input type="hidden" id="selectedCustMobile">
+                            <!-- Dropdown list populated dynamically for speed -->
                             <ul class="search-select-list" id="customerDropdownList"></ul>
                         </div>
                     </div>
@@ -244,9 +245,9 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Job Number</label>
+                    <label id="jobNoLabel">Job Number</label>
                     <input type="text" id="jobNo" readonly placeholder="Auto-Generated on Save">
-                    <p style="font-size: 0.7rem; color: #6b7280; margin-top: 4px; margin-bottom: 0;">System safely handles duplicates.</p>
+                    <p style="font-size: 0.7rem; color: #6b7280; margin-top: 4px; margin-bottom: 0;">System safely handles duplicates if multiple devices save.</p>
                 </div>
                 
                 <div class="form-group">
@@ -575,35 +576,51 @@
         const { data } = await supabaseClient.from('customers').select('*').order('name', { ascending: true });
         if (data) { 
             customersList = data; 
-            populateCustomerDropdown(); 
-            populateCreditCustomerDropdown();
+            // We no longer pre-load elements into the DOM, keeping it fast.
         }
     }
 
-    function populateCustomerDropdown() {
+    // NEW DYNAMIC CUSTOMER RENDERER (SUPER FAST)
+    window.renderCustomerDropdown = function(filterStr = '') {
         const list = document.getElementById('customerDropdownList');
         list.innerHTML = '';
-        customersList.forEach(c => {
+        
+        filterStr = filterStr.toLowerCase().trim();
+        
+        let matches = customersList;
+        if (filterStr) {
+            matches = customersList.filter(c => (c.name + ' ' + c.mobile).toLowerCase().includes(filterStr));
+        }
+        
+        // Render max 50 items to keep DOM blazing fast
+        const topMatches = matches.slice(0, 50);
+        
+        if (topMatches.length === 0) {
             const li = document.createElement('li');
-            li.textContent = `${c.name} - ${c.mobile}`;
-            li.onclick = () => selectCustomer(c.name, c.mobile);
+            li.style.textAlign = 'center';
+            li.style.color = '#9ca3af';
+            li.style.fontStyle = 'italic';
+            li.textContent = 'No matching customers found';
             list.appendChild(li);
-        });
+        } else {
+            topMatches.forEach(c => {
+                const li = document.createElement('li');
+                li.textContent = `${c.name} - ${c.mobile}`;
+                li.onclick = () => selectCustomer(c.name, c.mobile);
+                list.appendChild(li);
+            });
+        }
     }
 
     window.filterCustomerSearch = function() {
-        const filter = document.getElementById('custSearchInput').value.toLowerCase();
-        const list = document.getElementById('customerDropdownList');
-        const items = list.getElementsByTagName('li');
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].innerText.toLowerCase().includes(filter)) items[i].style.display = 'block';
-            else items[i].style.display = 'none';
-        }
+        const filter = document.getElementById('custSearchInput').value;
+        renderCustomerDropdown(filter);
     }
 
     window.openCustomerDropdown = function() {
         document.getElementById('customerDropdownList').style.display = 'block';
-        filterCustomerSearch();
+        const filter = document.getElementById('custSearchInput').value;
+        renderCustomerDropdown(filter);
     }
 
     window.selectCustomer = function(name, mobile) {
@@ -651,30 +668,46 @@
         selectCustomer(name, mobile);
     }
 
-    function populateCreditCustomerDropdown() {
+    // NEW DYNAMIC CREDIT CUSTOMER RENDERER
+    window.renderCreditCustomerDropdown = function(filterStr = '') {
         const list = document.getElementById('creditCustomerDropdownList');
         list.innerHTML = '';
-        customersList.forEach(c => {
+        
+        filterStr = filterStr.toLowerCase().trim();
+        
+        let matches = customersList;
+        if (filterStr) {
+            matches = customersList.filter(c => (c.name + ' ' + c.mobile).toLowerCase().includes(filterStr));
+        }
+        
+        const topMatches = matches.slice(0, 50);
+        
+        if (topMatches.length === 0) {
             const li = document.createElement('li');
-            li.textContent = `${c.name} - ${c.mobile}`;
-            li.onclick = () => selectCreditCustomer(c.name, c.mobile);
+            li.style.textAlign = 'center';
+            li.style.color = '#9ca3af';
+            li.style.fontStyle = 'italic';
+            li.textContent = 'No matching customers found';
             list.appendChild(li);
-        });
+        } else {
+            topMatches.forEach(c => {
+                const li = document.createElement('li');
+                li.textContent = `${c.name} - ${c.mobile}`;
+                li.onclick = () => selectCreditCustomer(c.name, c.mobile);
+                list.appendChild(li);
+            });
+        }
     }
 
     window.filterCreditCustomer = function() {
-        const filter = document.getElementById('creditCustSearch').value.toLowerCase();
-        const list = document.getElementById('creditCustomerDropdownList');
-        const items = list.getElementsByTagName('li');
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].innerText.toLowerCase().includes(filter)) items[i].style.display = 'block';
-            else items[i].style.display = 'none';
-        }
+        const filter = document.getElementById('creditCustSearch').value;
+        renderCreditCustomerDropdown(filter);
     }
 
     window.openCreditCustomerDropdown = function() {
         document.getElementById('creditCustomerDropdownList').style.display = 'block';
-        filterCreditCustomer();
+        const filter = document.getElementById('creditCustSearch').value;
+        renderCreditCustomerDropdown(filter);
     }
 
     window.selectCreditCustomer = function(name, mobile) {
@@ -908,7 +941,6 @@
                         actionHtml += `<button class="btn" style="font-size: 0.7rem; padding: 4px 8px;" onclick="openEditPaymentModal('${orderIdSafe}', '${jobNoSafe}', ${displayAmount}, '${customerNameSafe}', '${contactNoSafe}', '${order.paymentMethod}')">✏️ Edit Payment</button>`;
                     }
                 }
-                // Universal access to revert
                 actionHtml += `<button class="btn" style="font-size: 0.7rem; padding: 4px 8px; color: #d97706; border-color: #fde68a; background: #fffbeb;" onclick="revertToRepairCompleted('${orderIdSafe}', '${jobNoSafe}', '${order.paymentMethod}', ${displayAmount}, '${contactNoSafe}', 'Repair Completed')">⏪ Revert Status</button>`;
                 actionHtml += `</div>`;
             
@@ -919,7 +951,6 @@
                 actionHtml = `<div style="display:flex; flex-direction:column; gap:8px; align-items:center;">`;
                 actionHtml += `<span class="status-badge" style="background:#fca5a5; color:#7f1d1d;">Returned (Refused)</span>`;
                 
-                // Universal access to revert
                 actionHtml += `<button class="btn" style="font-size: 0.7rem; padding: 4px 8px; color: #d97706; border-color: #fde68a; background: #fffbeb;" onclick="revertToRepairCompleted('${orderIdSafe}', '${jobNoSafe}', '${order.paymentMethod}', ${displayAmount}, '${contactNoSafe}', 'Repair Refusal')">⏪ Revert Status</button>`;
                 actionHtml += `</div>`;
                 rowStyle = 'background-color: #fef2f2;';
@@ -1409,9 +1440,33 @@
     window.prevPage = function() { if (currentPage > 1) { currentPage--; renderOrdersTable(); } }
     window.nextPage = function() { const maxPage = Math.ceil(filteredOrdersData.length / rowsPerPage); if (currentPage < maxPage) { currentPage++; renderOrdersTable(); } }
 
+    window.fetchNextJobNoPreview = async function() {
+        const label = document.getElementById('jobNoLabel');
+        label.innerHTML = `Job Number <span style="color:#6b7280; font-weight:normal; font-size:0.75rem;">(Next: Loading...)</span>`;
+        try {
+            const { data: maxData } = await supabaseClient.from('repairOrders').select('jobNo').ilike('jobNo', 'GSM%').order('created_at', { ascending: false }).limit(100);
+            let currentMax = 0;
+            if (maxData && maxData.length > 0) {
+                maxData.forEach(order => {
+                    const match = order.jobNo.match(/^GSM(\d+)$/i);
+                    if (match) { const num = parseInt(match[1], 10); if (num > currentMax) currentMax = num; }
+                });
+            }
+            label.innerHTML = `Job Number <span style="color:#2563eb; font-weight:bold; font-size:0.8rem;">(Next Available: GSM${String(currentMax + 1).padStart(2, '0')})</span>`;
+        } catch(e) {
+            label.innerHTML = `Job Number <span style="color:#ef4444; font-weight:normal; font-size:0.75rem;">(Error loading preview)</span>`;
+        }
+    }
+
     window.toggleForm = async function() {
         const form = document.getElementById('orderFormCard');
-        if (form.style.display === 'block') { form.style.display = 'none'; } else { form.style.display = 'block'; if(isNewCustomerMode) document.getElementById('newCustName').focus(); else document.getElementById('custSearchInput').focus(); }
+        if (form.style.display === 'block') { 
+            form.style.display = 'none'; 
+        } else { 
+            form.style.display = 'block'; 
+            await fetchNextJobNoPreview();
+            if(isNewCustomerMode) document.getElementById('newCustName').focus(); else document.getElementById('custSearchInput').focus(); 
+        }
     }
 
     // ==========================================
@@ -1443,7 +1498,6 @@
         let currentDate = new Date().toISOString().split('T')[0];
         let currentTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-        // Retrieve current max number to formulate our first attempt
         const { data: maxData } = await supabaseClient.from('repairOrders').select('jobNo').ilike('jobNo', 'GSM%').order('created_at', { ascending: false }).limit(100);
         let currentMax = 0;
         if (maxData && maxData.length > 0) {
@@ -1463,7 +1517,6 @@
             is_deleted: false
         };
 
-        // Retry Loop Algorithm against Unique Constraint
         try {
             while (!saved) {
                 orderData.jobNo = `GSM${String(attemptNum).padStart(2, '0')}`;
@@ -1471,9 +1524,8 @@
                 const { error: orderError } = await supabaseClient.from('repairOrders').insert([orderData]);
                 
                 if (orderError) {
-                    // Check if the error is due to a Unique Constraint failure (Code 23505)
                     if (orderError.code === '23505' || orderError.message.toLowerCase().includes('unique constraint')) {
-                        attemptNum++; // Algorithm automatically shifts to next possible number and loops back
+                        attemptNum++; 
                     } else {
                         throw orderError;
                     }
