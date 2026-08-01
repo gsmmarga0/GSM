@@ -392,19 +392,39 @@
         }
     }
 
+    // ==========================================
+    // DYNAMIC AUTHENTICATION CHECK
+    // ==========================================
     async function checkAuth() {
-        const { data } = await supabaseClient.auth.getSession();
-        if (!data.session) window.location.href = 'login.html';
-        else {
-            currentUserEmail = data.session.user.email;
-            document.getElementById('userNameDisplay').innerText = currentUserEmail.split('@')[0];
-            if (currentUserEmail.toLowerCase() === ADMIN_EMAIL) {
-                isAdmin = true;
-                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
-                document.querySelectorAll('.admin-col').forEach(el => el.classList.remove('admin-hidden'));
-            }
+        const { data: sessionData } = await supabaseClient.auth.getSession();
+        
+        if (!sessionData.session) {
+            window.location.href = 'login.html';
+            return;
         }
+
+        currentUserEmail = sessionData.session.user.email;
+        let displayEmail = currentUserEmail.split('@')[0];
+        document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
+
+        const isMasterAdmin = currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase();
+        
+        const { data: profile } = await supabaseClient
+            .from('user_profiles')
+            .select('role')
+            .eq('email', currentUserEmail)
+            .single();
+        
+        const isDbAdmin = profile && profile.role === 'Admin';
+
+        if (isMasterAdmin || isDbAdmin) {
+            isAdmin = true;
+            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
+            document.querySelectorAll('.admin-col').forEach(el => el.classList.remove('admin-hidden'));
+        }
+        // NO KICK LOGIC because Customers is a shared page.
     }
+
     async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
 
     let globalSearchTimeout = null;
@@ -1123,30 +1143,28 @@
         await checkAuth();
         fetchCustomers();
     });
+
     // ==========================================
-// AUTO-LOGOUT AFTER 30 MINUTES OF INACTIVITY
-// ==========================================
-const setupAutoLogout = function() {
-    let inactivityTimer;
-    const timeoutDuration = 30 * 60 * 1000; // 30 minutes in milliseconds
+    // AUTO-LOGOUT AFTER 30 MINUTES OF INACTIVITY
+    // ==========================================
+    const setupAutoLogout = function() {
+        let inactivityTimer;
+        const timeoutDuration = 30 * 60 * 1000; // 30 minutes in milliseconds
 
-    function resetTimer() {
-        clearTimeout(inactivityTimer);
-        // Calls your existing logOut() function when the timer finishes
-        inactivityTimer = setTimeout(logOut, timeoutDuration); 
-    }
+        function resetTimer() {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(logOut, timeoutDuration); 
+        }
 
-    // Reset the timer when the user interacts with the page
-    window.onload = resetTimer;
-    document.onmousemove = resetTimer;
-    document.onkeypress = resetTimer;
-    document.onclick = resetTimer;
-    document.onscroll = resetTimer;
-    document.ontouchstart = resetTimer; // For mobile devices
-};
+        window.onload = resetTimer;
+        document.onmousemove = resetTimer;
+        document.onkeypress = resetTimer;
+        document.onclick = resetTimer;
+        document.onscroll = resetTimer;
+        document.ontouchstart = resetTimer; 
+    };
 
-// Start the inactivity tracker
-setupAutoLogout();
+    setupAutoLogout();
 </script>
 </body>
 </html>
