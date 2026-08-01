@@ -320,6 +320,7 @@
 
     const ADMIN_EMAIL = 'faizan@gsmsolution.com'; 
     let currentUserEmail = '';
+    let isAdmin = false;
 
     // Global Pagination State
     let allUpiData = [];
@@ -362,19 +363,36 @@
     document.getElementById('filterFromDate').value = todayString;
     document.getElementById('filterToDate').value = todayString;
 
+    // ==========================================
+    // DYNAMIC AUTHENTICATION CHECK
+    // ==========================================
     async function checkAuth() {
-        const { data } = await supabaseClient.auth.getSession();
-        if (!data.session) window.location.href = 'login.html';
-        else {
-            currentUserEmail = data.session.user.email;
-            let displayEmail = currentUserEmail.split('@')[0];
-            document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
-            
-            // Show Admin Tabs
-            if (currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase()) {
-                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
-            }
+        const { data: sessionData } = await supabaseClient.auth.getSession();
+        
+        if (!sessionData.session) {
+            window.location.href = 'login.html';
+            return;
         }
+
+        currentUserEmail = sessionData.session.user.email;
+        let displayEmail = currentUserEmail.split('@')[0];
+        document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
+
+        const isMasterAdmin = currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase();
+        
+        const { data: profile } = await supabaseClient
+            .from('user_profiles')
+            .select('role')
+            .eq('email', currentUserEmail)
+            .single();
+        
+        const isDbAdmin = profile && profile.role === 'Admin';
+
+        if (isMasterAdmin || isDbAdmin) {
+            isAdmin = true;
+            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
+        }
+        // NO KICK LOGIC because UPI Book is a shared page.
     }
 
     async function logOut() {
@@ -669,6 +687,28 @@
         resetSidebarTimer();
         fetchLedgerData();
     });
+
+    // ==========================================
+    // AUTO-LOGOUT AFTER 30 MINUTES OF INACTIVITY
+    // ==========================================
+    const setupAutoLogout = function() {
+        let inactivityTimer;
+        const timeoutDuration = 30 * 60 * 1000; // 30 minutes in milliseconds
+
+        function resetTimer() {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(logOut, timeoutDuration); 
+        }
+
+        window.onload = resetTimer;
+        document.onmousemove = resetTimer;
+        document.onkeypress = resetTimer;
+        document.onclick = resetTimer;
+        document.onscroll = resetTimer;
+        document.ontouchstart = resetTimer; 
+    };
+
+    setupAutoLogout();
 </script>
 </body>
 </html>
