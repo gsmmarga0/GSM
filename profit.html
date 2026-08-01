@@ -31,8 +31,10 @@
         
         /* Sidebar Styling */
         .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; transition: width 0.4s ease; overflow-y: auto; overflow-x: hidden; white-space: nowrap; z-index: 40; }
+        .sidebar.collapsed { width: 0; border-right: none; }
+        
         .logo-area { display: flex; align-items: center; padding: 20px; font-weight: 800; font-size: 1.2rem; border-bottom: 1px solid var(--border-color); margin-bottom: 10px;}
-        .logo-icon { background: #1e293b; color: white; padding: 6px 8px; border-radius: 6px; margin-right: 10px; font-size: 0.8rem; letter-spacing: 1px;}
+        .logo-icon { background: #0f172a; color: white; padding: 6px 8px; border-radius: 6px; margin-right: 10px; font-size: 0.8rem; letter-spacing: 1px;}
         
         .nav-item { padding: 10px 20px; color: var(--text-muted); text-decoration: none; display: flex; align-items: center; gap: 12px; font-size: 0.9rem; cursor: pointer; font-weight: 500; transition: 0.2s;}
         .nav-item.active { background: #0f172a; color: white; border-radius: 0 24px 24px 0; margin-right: 20px; }
@@ -46,6 +48,10 @@
         .user-info { display: flex; flex-direction: column; }
         .user-name { font-size: 0.85rem; font-weight: bold; color: var(--text-main); }
         .user-role { font-size: 0.75rem; color: var(--text-muted); }
+
+        /* Sidebar Toggle Button */
+        .sidebar-toggle-btn { position: absolute; left: var(--sidebar-width); top: 50%; transform: translateY(-50%); background: #0f172a; color: white; width: 20px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; border-radius: 0 8px 8px 0; transition: left 0.4s ease; font-weight: bold; box-shadow: 2px 0 5px rgba(0,0,0,0.2);}
+        .sidebar-collapsed-btn { left: 0 !important; }
 
         /* Top Bar */
         .top-bar { background: white; border-bottom: 1px solid var(--border-color); height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 30px; font-size: 0.9rem;}
@@ -159,7 +165,8 @@
 </head>
 <body>
 
-<div class="sidebar" id="sidebar">
+<!-- ADDED onmouseenter and onmouseleave -->
+<div class="sidebar" id="sidebar" onmouseenter="clearSidebarTimer()" onmouseleave="resetSidebarTimer()">
     <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTION</div>
     
     <a href="index.html" class="nav-item">📋 Order Details</a>
@@ -182,6 +189,9 @@
         </div>
     </div>
 </div>    
+
+<!-- ADDED Sidebar Toggle Button -->
+<div class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">⋮</div>
 
 <div class="main-content-wrapper">
     <div class="top-bar">
@@ -345,6 +355,32 @@
         otherIncome: 0,
         totalExpenses: 0
     };
+
+    // Sidebar Hover Timers added back
+    let sidebarTimer;
+    window.resetSidebarTimer = function() {
+        clearTimeout(sidebarTimer);
+        sidebarTimer = setTimeout(() => {
+            const sb = document.getElementById('sidebar');
+            const btn = document.getElementById('sidebarToggle');
+            if(sb && btn) {
+                sb.classList.add('collapsed');
+                btn.classList.add('sidebar-collapsed-btn');
+            }
+        }, 5000);
+    }
+    window.clearSidebarTimer = function() { clearTimeout(sidebarTimer); }
+
+    window.toggleSidebar = function() {
+        const sb = document.getElementById('sidebar');
+        const btn = document.getElementById('sidebarToggle');
+        if(sb && btn) {
+            sb.classList.toggle('collapsed');
+            btn.classList.toggle('sidebar-collapsed-btn');
+            if(!sb.classList.contains('collapsed')) resetSidebarTimer();
+            else clearSidebarTimer();
+        }
+    }
 
     // Set Date Formats
     const dateOptions = { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' };
@@ -685,6 +721,8 @@
 
     document.addEventListener("DOMContentLoaded", async () => {
         await checkAuth();
+        // Initialize the auto-collapse timer on load
+        resetSidebarTimer(); 
         fetchData();
     });
 </script>
