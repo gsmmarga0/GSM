@@ -17,6 +17,8 @@
             --c-purple-light: #faf5ff;
             --c-green: #10b981;
             --c-green-light: #ecfdf5;
+            --c-red: #ef4444;
+            --c-red-light: #fef2f2;
         }
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; position: relative; }
         
@@ -55,22 +57,26 @@
         .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
         .stat-card { background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; display: flex; flex-direction: column; position: relative;}
         
-        .stat-card-main { background: var(--c-blue-light); border-color: #bfdbfe; }
+        .stat-card-in { background: var(--c-blue-light); border-color: #bfdbfe; }
         .stat-card-card { background: var(--c-purple-light); border-color: #e9d5ff; }
+        .stat-card-out { background: var(--c-red-light); border-color: #fecaca; }
         
         .stat-card h3 { margin: 0; font-size: 0.85rem; font-weight: 600; color: #4b5563; }
-        .stat-card-main h3 { color: var(--c-blue); }
+        .stat-card-in h3 { color: var(--c-blue); }
         .stat-card-card h3 { color: var(--c-purple); }
+        .stat-card-out h3 { color: var(--c-red); }
         
         .stat-card .amount { font-size: 1.8rem; font-weight: 800; color: #111827; margin: 10px 0 5px 0; }
-        .stat-card-main .amount { color: var(--c-blue); }
+        .stat-card-in .amount { color: var(--c-blue); }
         .stat-card-card .amount { color: var(--c-purple); }
+        .stat-card-out .amount { color: var(--c-red); }
         
         .stat-card .subtitle { font-size: 0.75rem; color: #6b7280; }
-        .stat-card-main .subtitle { color: var(--c-blue); }
+        .stat-card-in .subtitle { color: var(--c-blue); }
         .stat-card-card .subtitle { color: var(--c-purple); }
+        .stat-card-out .subtitle { color: var(--c-red); }
 
-        /* Table Styles - Scrollable Container */
+        /* Table Styles */
         .table-card { background: white; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; margin-bottom: 50px; flex: 1;}
         .table-header-title { padding: 15px 20px; font-size: 0.9rem; font-weight: bold; color: #374151; border-bottom: 1px solid var(--border-color); display: flex; gap: 10px; align-items: center; background: white; z-index: 20;}
         .table-header-title span { font-weight: normal; color: #6b7280; font-size: 0.8rem; }
@@ -83,6 +89,7 @@
         
         .col-upi { font-weight: bold; color: var(--c-blue); }
         .col-card { font-weight: bold; color: var(--c-purple); }
+        .col-out { font-weight: bold; color: var(--c-red); }
 
         /* Group Headers and Footers */
         .group-header td { background: #f9fafb; font-size: 0.75rem; font-weight: bold; color: #4b5563; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e5e7eb; padding: 10px 20px;}
@@ -135,7 +142,7 @@
     <div class="header-top">
         <div class="header-title">
             <h1>UPI Book</h1>
-            <p>Master ledger for digital transactions (UPI & Card)</p>
+            <p>Master ledger for digital transactions (In & Out)</p>
         </div>
         
         <div class="filter-group">
@@ -160,25 +167,25 @@
 
     <!-- Stats Grid -->
     <div class="stats-grid">
-        <div class="stat-card stat-card-main">
-            <h3>Total UPI Received</h3>
+        <div class="stat-card stat-card-in">
+            <h3>Total UPI In (Received)</h3>
             <div class="amount" id="statTotalUPI">₹0.00</div>
             <div class="subtitle" id="statCountUPI">0 transactions</div>
         </div>
         <div class="stat-card stat-card-card">
-            <h3>Total Card Received</h3>
+            <h3>Total Card In (Received)</h3>
             <div class="amount" id="statTotalCard">₹0.00</div>
             <div class="subtitle" id="statCountCard">0 transactions</div>
         </div>
-        <div class="stat-card">
-            <h3>From Repair Payments</h3>
-            <div class="amount" id="statRepairAmount">₹0.00</div>
-            <div class="subtitle">UPI & Card combined</div>
+        <div class="stat-card stat-card-out">
+            <h3>Total UPI Out (Payments)</h3>
+            <div class="amount" id="statTotalOut">₹0.00</div>
+            <div class="subtitle" id="statCountOut">0 transactions</div>
         </div>
         <div class="stat-card">
-            <h3>From Accessories</h3>
-            <div class="amount" id="statAccessoriesAmount">₹0.00</div>
-            <div class="subtitle">UPI & Card combined</div>
+            <h3>Net Digital Balance</h3>
+            <div class="amount" id="statNetBalance">₹0.00</div>
+            <div class="subtitle">Total In minus Total Out</div>
         </div>
     </div>
 
@@ -197,8 +204,9 @@
                         <th>Time (IST)</th>
                         <th>Description</th>
                         <th>Category</th>
-                        <th style="text-align: right;">UPI (₹)</th>
-                        <th style="text-align: right;">Card (₹)</th>
+                        <th style="text-align: right;">UPI In (₹)</th>
+                        <th style="text-align: right;">Card In (₹)</th>
+                        <th style="text-align: right;">UPI Out (₹)</th>
                     </tr>
                 </thead>
                 <tbody id="dataTableBody">
@@ -295,7 +303,6 @@
         return 'badge-accessories';
     }
 
-    // FETCH FROM NEW UNIFIED UPI_ENTRIES TABLE
     window.fetchLedgerData = async function() {
         const fromDate = document.getElementById('filterFromDate').value;
         const toDate = document.getElementById('filterToDate').value;
@@ -324,29 +331,32 @@
     }
 
     function calculateStats(data) {
-        let totals = { upiAmount: 0, upiCount: 0, cardAmount: 0, cardCount: 0, repairTotal: 0, accessoriesTotal: 0 };
+        let totals = { upiIn: 0, upiCount: 0, cardIn: 0, cardCount: 0, upiOut: 0, outCount: 0 };
 
         data.forEach(item => {
             const upiAmt = parseFloat(item.upi_amount) || 0;
             const cardAmt = parseFloat(item.card_amount) || 0;
+            const outAmt = parseFloat(item.upi_payment) || 0; // The new column
 
-            if (upiAmt > 0) { totals.upiAmount += upiAmt; totals.upiCount += 1; }
-            if (cardAmt > 0) { totals.cardAmount += cardAmt; totals.cardCount += 1; }
-
-            let rowTotal = upiAmt + cardAmt;
-            if (item.category === 'Repair Sales' || item.category === 'Advances') {
-                totals.repairTotal += rowTotal;
-            } else {
-                totals.accessoriesTotal += rowTotal;
-            }
+            if (upiAmt > 0) { totals.upiIn += upiAmt; totals.upiCount += 1; }
+            if (cardAmt > 0) { totals.cardIn += cardAmt; totals.cardCount += 1; }
+            if (outAmt > 0) { totals.upiOut += outAmt; totals.outCount += 1; }
         });
 
-        document.getElementById('statTotalUPI').innerText = formatMoney(totals.upiAmount);
+        const netBalance = (totals.upiIn + totals.cardIn) - totals.upiOut;
+
+        document.getElementById('statTotalUPI').innerText = formatMoney(totals.upiIn);
         document.getElementById('statCountUPI').innerText = `${totals.upiCount} transactions`;
-        document.getElementById('statTotalCard').innerText = formatMoney(totals.cardAmount);
+        
+        document.getElementById('statTotalCard').innerText = formatMoney(totals.cardIn);
         document.getElementById('statCountCard').innerText = `${totals.cardCount} transactions`;
-        document.getElementById('statRepairAmount').innerText = formatMoney(totals.repairTotal);
-        document.getElementById('statAccessoriesAmount').innerText = formatMoney(totals.accessoriesTotal);
+        
+        document.getElementById('statTotalOut').innerText = formatMoney(totals.upiOut);
+        document.getElementById('statCountOut').innerText = `${totals.outCount} transactions`;
+        
+        const netDisplay = document.getElementById('statNetBalance');
+        netDisplay.innerText = formatMoney(netBalance);
+        netDisplay.style.color = netBalance >= 0 ? 'var(--c-green)' : 'var(--c-red)';
     }
 
     // --- Pagination Functions ---
@@ -368,27 +378,26 @@
         const start = (currentPage - 1) * rowsPerPage;
         const paginatedData = allUpiData.slice(start, start + rowsPerPage);
 
-        // Calculate overall period totals for the footer to ensure accuracy across pages
-        let periodUpi = 0, periodCard = 0;
+        let periodUpi = 0, periodCard = 0, periodOut = 0;
         allUpiData.forEach(item => {
             periodUpi += parseFloat(item.upi_amount) || 0;
             periodCard += parseFloat(item.card_amount) || 0;
+            periodOut += parseFloat(item.upi_payment) || 0;
         });
 
-        renderTable(paginatedData, periodUpi, periodCard, allUpiData.length);
+        renderTable(paginatedData, periodUpi, periodCard, periodOut, allUpiData.length);
     }
 
-    function renderTable(data, periodUpi, periodCard, totalItems) {
+    function renderTable(data, periodUpi, periodCard, periodOut, totalItems) {
         const tbody = document.getElementById('dataTableBody');
         tbody.innerHTML = '';
 
         if (totalItems === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="no-data">No UPI or Card transactions found for this date range.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="no-data">No digital transactions found for this date range.</td></tr>`;
             document.getElementById('pageInfo').innerText = `Page 1 of 1`;
             return;
         }
 
-        // Group the data specifically for this page chunk
         const groupedData = {};
         data.forEach(item => {
             if (!groupedData[item.date]) groupedData[item.date] = [];
@@ -396,10 +405,11 @@
         });
 
         for (const [dateStr, transactions] of Object.entries(groupedData)) {
-            let dayUpi = 0, dayCard = 0;
+            let dayUpi = 0, dayCard = 0, dayOut = 0;
             transactions.forEach(t => { 
                 dayUpi += parseFloat(t.upi_amount) || 0; 
                 dayCard += parseFloat(t.card_amount) || 0; 
+                dayOut += parseFloat(t.upi_payment) || 0; 
             });
 
             const dateObj = new Date(dateStr);
@@ -411,14 +421,16 @@
                 <td colspan="4">${formattedDate} <span style="text-transform:none; font-weight:normal; color:#9ca3af; margin-left:10px;">(Page Subtotal)</span></td>
                 <td style="text-align: right;">${formatMoney(dayUpi)}</td>
                 <td style="text-align: right;">${formatMoney(dayCard)}</td>
+                <td style="text-align: right;">${formatMoney(dayOut)}</td>
             `;
             tbody.appendChild(headerRow);
 
             transactions.forEach(item => {
                 const upiAmt = parseFloat(item.upi_amount) || 0;
                 const cardAmt = parseFloat(item.card_amount) || 0;
+                const outAmt = parseFloat(item.upi_payment) || 0;
                 
-                const timeStr = item.time ? item.time.substring(0, 5) : '00:00'; // Format HH:MM
+                const timeStr = item.time ? item.time.substring(0, 5) : '00:00'; 
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -428,6 +440,7 @@
                     <td><span class="badge ${getBadgeClass(item.category)}">${item.category}</span></td>
                     <td class="col-upi" style="text-align: right;">${upiAmt > 0 ? formatMoney(upiAmt) : '-'}</td>
                     <td class="col-card" style="text-align: right;">${cardAmt > 0 ? formatMoney(cardAmt) : '-'}</td>
+                    <td class="col-out" style="text-align: right;">${outAmt > 0 ? formatMoney(outAmt) : '-'}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -439,33 +452,31 @@
             <td colspan="4" style="text-align: right;">PERIOD TOTAL (All Pages)</td>
             <td style="text-align: right;">${formatMoney(periodUpi)}</td>
             <td style="text-align: right;">${formatMoney(periodCard)}</td>
+            <td style="text-align: right;">${formatMoney(periodOut)}</td>
         `;
         tbody.appendChild(footerRow);
         
         document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(totalItems / rowsPerPage) || 1}`;
     }
 
-    // --- Export to Excel (CSV Format) Function ---
     window.exportToExcel = function() {
         if (!allUpiData || allUpiData.length === 0) {
             alert("No data available to export for the selected date range.");
             return;
         }
 
-        // Create CSV Header
-        let csvContent = "Date,Time,Description,Category,UPI Amount (INR),Card Amount (INR)\n";
+        let csvContent = "Date,Time,Description,Category,UPI In (INR),Card In (INR),UPI Out (INR)\n";
 
-        // Append Rows
         allUpiData.forEach(row => {
             const safeDescription = row.description ? row.description.replace(/,/g, " ") : "";
             const upiAmt = parseFloat(row.upi_amount) || 0;
             const cardAmt = parseFloat(row.card_amount) || 0;
+            const outAmt = parseFloat(row.upi_payment) || 0;
             const timeStr = row.time ? row.time.substring(0, 5) : '00:00';
             
-            csvContent += `${row.date},${timeStr},${safeDescription},${row.category},${upiAmt},${cardAmt}\n`;
+            csvContent += `${row.date},${timeStr},${safeDescription},${row.category},${upiAmt},${cardAmt},${outAmt}\n`;
         });
 
-        // Trigger file download using a Blob
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
