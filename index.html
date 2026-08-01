@@ -52,8 +52,8 @@
         .c-green { color: #059669; background: #ecfdf5; border-color: #a7f3d0; }
         .c-red { color: #ef4444; background: #fef2f2; border-color: #fecaca; }
 
-        .tabs-container { display: flex; gap: 25px; border-bottom: 2px solid var(--border-color); margin-bottom: 25px; padding-bottom: 0; }
-        .tab-btn { background: transparent; border: none; padding: 10px 5px; font-size: 0.95rem; font-weight: 500; color: #6b7280; cursor: pointer; display: flex; align-items: center; gap: 8px; position: relative; }
+        .tabs-container { display: flex; gap: 25px; border-bottom: 2px solid var(--border-color); margin-bottom: 25px; padding-bottom: 0; overflow-x: auto;}
+        .tab-btn { background: transparent; border: none; padding: 10px 5px; font-size: 0.95rem; font-weight: 500; color: #6b7280; cursor: pointer; display: flex; align-items: center; gap: 8px; position: relative; white-space: nowrap;}
         .tab-btn::after { content: ''; position: absolute; bottom: -2px; left: 0; width: 100%; height: 3px; background: transparent; transition: background 0.3s; border-radius: 3px 3px 0 0; }
         .tab-btn:hover { color: #374151; }
         .tab-btn.active { color: #111827; font-weight: bold; }
@@ -62,12 +62,14 @@
         .tab-btn.active#tab-Repair-Completed::after { background: #3b82f6; }
         .tab-btn.active#tab-Goods-Delivered::after { background: #22c55e; }
         .tab-btn.active#tab-Repair-Refusal::after { background: #ef4444; }
+        .tab-btn.active#tab-Deleted-Orders::after { background: #6b7280; }
 
         .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
         .dot-pending { background: #eab308; }
         .dot-completed { background: #3b82f6; }
         .dot-delivered { background: #22c55e; }
         .dot-refusal { background: #ef4444; }
+        .dot-deleted { background: #6b7280; }
 
         .tab-badge { background: #f3f4f6; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; color: #4b5563; }
         
@@ -205,6 +207,9 @@
             <button class="tab-btn" id="tab-Repair-Refusal" onclick="switchTab('Repair Refusal')">
                 <span class="dot dot-refusal"></span> Repair Refusal <span class="tab-badge" id="badge-Refusal">0</span>
             </button>
+            <button class="tab-btn admin-only" id="tab-Deleted-Orders" onclick="switchTab('Deleted Orders')" style="display: none;">
+                <span class="dot dot-deleted"></span> Deleted Orders <span class="tab-badge" id="badge-Deleted">0</span>
+            </button>
         </div>
         <p style="font-size: 0.85rem; color: #6b7280; margin-top: -10px; margin-bottom: 15px;" id="tabDescription">Showing all pending service orders awaiting repair.</p>
 
@@ -239,8 +244,9 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Job Number <span>(Auto-Generated)</span></label>
-                    <input type="text" id="jobNo" readonly placeholder="Generating...">
+                    <label>Job Number</label>
+                    <input type="text" id="jobNo" readonly placeholder="Auto-Generated on Save">
+                    <p style="font-size: 0.7rem; color: #6b7280; margin-top: 4px; margin-bottom: 0;">System safely handles duplicates.</p>
                 </div>
                 
                 <div class="form-group">
@@ -513,7 +519,7 @@
         const resultsList = document.getElementById('globalSearchResults');
         if (input.length < 3) { resultsList.style.display = 'none'; return; }
 
-        const { data, error } = await supabaseClient.from('repairOrders').select('jobNo, status, customerName').ilike('jobNo', `%${input}%`).limit(5);
+        const { data, error } = await supabaseClient.from('repairOrders').select('jobNo, status, customerName').ilike('jobNo', `%${input}%`).eq('is_deleted', false).limit(5);
 
         if (error) { console.error(error); return; }
 
@@ -704,6 +710,9 @@
         } else if (tabName === 'Repair Refusal') {
             desc.innerText = "Showing orders marked as refused or cancelled.";
             thEstimate.innerText = "Inspection Charges (₹)";
+        } else if (tabName === 'Deleted Orders') {
+            desc.innerText = "Showing permanently archived records for auditing (Admin only).";
+            thEstimate.innerText = "Amount (₹)";
         }
 
         applyFilters();
@@ -712,54 +721,29 @@
     window.applyFilters = function() {
         const input = document.getElementById("searchInput").value.toLowerCase();
         
-        if (input.trim() !== '') {
-            const allMatches = allOrdersData.filter(order => {
-                const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc} ${order.devicePassword}`.toLowerCase();
-                return combinedString.includes(input);
-            });
-
-            if (allMatches.length > 0) {
-                const matchesInCurrentTab = allMatches.some(order => {
-                    return currentTab === 'Goods Delivered' 
-                        ? (order.status === 'Goods Delivered' || order.status === 'Delivered (Refused)') 
-                        : (order.status || 'Pending') === currentTab;
-                });
-
-                if (!matchesInCurrentTab) {
-                    let newTab = allMatches[0].status;
-                    if (newTab === 'Delivered (Refused)') newTab = 'Goods Delivered';
-                    
-                    if (newTab && newTab !== currentTab) {
-                        currentTab = newTab;
-                        
-                        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-                        const tabId = 'tab-' + newTab.replace(' ', '-');
-                        const element = document.getElementById(tabId);
-                        if(element) element.classList.add('active');
-                        
-                        const desc = document.getElementById('tabDescription');
-                        const thEstimate = document.getElementById('thEstimate');
-                        if(newTab === 'Pending') { desc.innerText = "Showing all pending service orders awaiting repair."; thEstimate.innerText = "Approx Est. (₹)"; } 
-                        else if (newTab === 'Repair Completed') { desc.innerText = "Showing all items where repairs have successfully concluded."; thEstimate.innerText = "Balance Amount (₹)"; } 
-                        else if (newTab === 'Goods Delivered') { desc.innerText = "Showing history of completed & returned items."; thEstimate.innerText = "Total Amount (₹)"; } 
-                        else if (newTab === 'Repair Refusal') { desc.innerText = "Showing orders marked as refused or cancelled."; thEstimate.innerText = "Inspection Charges (₹)"; }
-                    }
-                }
-            }
-        }
-
         filteredOrdersData = allOrdersData.filter(order => {
             const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc} ${order.devicePassword}`.toLowerCase();
             const matchesSearch = combinedString.includes(input);
-            const matchesTab = currentTab === 'Goods Delivered' 
-                ? (order.status === 'Goods Delivered' || order.status === 'Delivered (Refused)') 
-                : (order.status || 'Pending') === currentTab;
+            
+            let matchesTab = false;
+            
+            if (currentTab === 'Deleted Orders') {
+                matchesTab = (order.is_deleted === true);
+            } else {
+                if (order.is_deleted === true) return false; // Hide deleted from other tabs
+                
+                if (currentTab === 'Goods Delivered') {
+                    matchesTab = (order.status === 'Goods Delivered' || order.status === 'Delivered (Refused)');
+                } else {
+                    matchesTab = (order.status || 'Pending') === currentTab;
+                }
+            }
                 
             return matchesSearch && matchesTab;
         });
 
         filteredOrdersData.sort((a, b) => {
-            if (currentTab === 'Goods Delivered') {
+            if (currentTab === 'Goods Delivered' || currentTab === 'Deleted Orders') {
                 const timeA = a.gd_timestamp ? new Date(a.gd_timestamp).getTime() : new Date(a.created_at || 0).getTime();
                 const timeB = b.gd_timestamp ? new Date(b.gd_timestamp).getTime() : new Date(b.created_at || 0).getTime();
                 return timeB - timeA;
@@ -788,8 +772,12 @@
     }
 
     function updateStats(data) {
-        let pending = 0; let completed = 0; let delivered = 0; let refusal = 0;
+        let pending = 0; let completed = 0; let delivered = 0; let refusal = 0; let deleted = 0;
         data.forEach(order => {
+            if (order.is_deleted === true) {
+                deleted++;
+                return;
+            }
             if(order.status === 'Pending') pending++;
             if(order.status === 'Repair Completed') completed++;
             if(order.status === 'Goods Delivered' || order.status === 'Delivered (Refused)') delivered++;
@@ -805,6 +793,11 @@
         document.getElementById('badge-Completed').innerText = completed;
         document.getElementById('badge-Delivered').innerText = delivered;
         document.getElementById('badge-Refusal').innerText = refusal;
+        
+        if (isAdmin) {
+            const badgeDeleted = document.getElementById('badge-Deleted');
+            if(badgeDeleted) badgeDeleted.innerText = deleted;
+        }
     }
 
     window.updateInlineEstimate = async function(id, num, status) {
@@ -871,7 +864,13 @@
                 notesHtml = `<div style="font-size: 0.75rem; color: #4b5563; margin-top: 6px; background: #f3f4f6; padding: 5px 8px; border-radius: 4px; display: inline-block;"><strong>Notes:</strong> ${notesSafe}</div>`;
             }
 
-            if (order.status === 'Pending') {
+            if (currentTab === 'Deleted Orders') {
+                displayAmount = order.finalAmount || order.estimateAmount || order.approxEstimate || 0;
+                displayAmountHtml = `<span style="font-weight:bold; color:#6b7280;">₹${displayAmount}</span>`;
+                actionHtml = `<span class="status-badge" style="background:#e5e7eb; color:#4b5563;">Archived (${order.status})</span>`;
+                rowStyle = 'opacity: 0.7; background-color: #f9fafb;';
+            }
+            else if (order.status === 'Pending') {
                 displayAmount = order.approxEstimate || 0;
                 displayAmountHtml = `<span style="font-weight:bold; color:#059669;">₹${displayAmount}</span>`;
                 if (isAdmin) {
@@ -885,7 +884,8 @@
                 if (isAdmin) {
                     displayAmountHtml += `<span onclick="promptUpdateEstimate('${orderIdSafe}', 'Repair Completed', ${displayAmount})">${pencilSVG}</span>`;
                 }
-                actionHtml = `<button class="btn-bill" style="background:#2563eb;" onclick="openDeliveryModal('${orderIdSafe}', '${jobNoSafe}', ${displayAmount}, '${customerNameSafe}', '${contactNoSafe}', '${order.status}')">Deliver Goods 📦</button>`;
+                actionHtml = `<button class="btn-bill" style="background:#2563eb; margin-bottom:5px;" onclick="openDeliveryModal('${orderIdSafe}', '${jobNoSafe}', ${displayAmount}, '${customerNameSafe}', '${contactNoSafe}', '${order.status}')">Deliver Goods 📦</button>
+                <button class="btn" style="font-size: 0.7rem; padding: 4px 8px; color: #d97706; border-color: #fde68a; background: #fffbeb;" onclick="revertToPending('${orderIdSafe}', '${jobNoSafe}')">⏪ Revert to Pending</button>`;
             
             } else if (order.status === 'Goods Delivered') {
                 displayAmount = order.finalAmount || order.estimateAmount || order.approxEstimate || 0;
@@ -898,8 +898,9 @@
                     if (displayAmount > 0) {
                         actionHtml += `<button class="btn" style="font-size: 0.7rem; padding: 4px 8px;" onclick="openEditPaymentModal('${orderIdSafe}', '${jobNoSafe}', ${displayAmount}, '${customerNameSafe}', '${contactNoSafe}', '${order.paymentMethod}')">✏️ Edit Payment</button>`;
                     }
-                    actionHtml += `<button class="btn" style="font-size: 0.7rem; padding: 4px 8px; color: #d97706; border-color: #fde68a; background: #fffbeb;" onclick="revertToRepairCompleted('${orderIdSafe}', '${jobNoSafe}', '${order.paymentMethod}', ${displayAmount}, '${contactNoSafe}', 'Repair Completed')">⏪ Revert Status</button>`;
                 }
+                // Universal access to revert
+                actionHtml += `<button class="btn" style="font-size: 0.7rem; padding: 4px 8px; color: #d97706; border-color: #fde68a; background: #fffbeb;" onclick="revertToRepairCompleted('${orderIdSafe}', '${jobNoSafe}', '${order.paymentMethod}', ${displayAmount}, '${contactNoSafe}', 'Repair Completed')">⏪ Revert Status</button>`;
                 actionHtml += `</div>`;
             
             } else if (order.status === 'Delivered (Refused)') {
@@ -908,9 +909,9 @@
                 
                 actionHtml = `<div style="display:flex; flex-direction:column; gap:8px; align-items:center;">`;
                 actionHtml += `<span class="status-badge" style="background:#fca5a5; color:#7f1d1d;">Returned (Refused)</span>`;
-                if (isAdmin) {
-                    actionHtml += `<button class="btn" style="font-size: 0.7rem; padding: 4px 8px; color: #d97706; border-color: #fde68a; background: #fffbeb;" onclick="revertToRepairCompleted('${orderIdSafe}', '${jobNoSafe}', '${order.paymentMethod}', ${displayAmount}, '${contactNoSafe}', 'Repair Refusal')">⏪ Revert Status</button>`;
-                }
+                
+                // Universal access to revert
+                actionHtml += `<button class="btn" style="font-size: 0.7rem; padding: 4px 8px; color: #d97706; border-color: #fde68a; background: #fffbeb;" onclick="revertToRepairCompleted('${orderIdSafe}', '${jobNoSafe}', '${order.paymentMethod}', ${displayAmount}, '${contactNoSafe}', 'Repair Refusal')">⏪ Revert Status</button>`;
                 actionHtml += `</div>`;
                 rowStyle = 'background-color: #fef2f2;';
             
@@ -921,15 +922,18 @@
                     <div style="display:flex; flex-direction:column; gap:8px; align-items:center;">
                         <span class="status-badge" style="background:#fee2e2; color:#991b1b;">Refused</span>
                         <button class="btn-bill" style="background:#2563eb; font-size: 0.75rem; padding: 5px 10px;" onclick="openDeliveryModal('${orderIdSafe}', '${jobNoSafe}', ${displayAmount}, '${customerNameSafe}', '${contactNoSafe}', '${order.status}')">Deliver Goods 📦</button>
-                        ${isAdmin ? `<button class="btn" style="font-size: 0.7rem; padding: 4px 8px; color: #d97706; border-color: #fde68a; background: #fffbeb;" onclick="revertToPending('${orderIdSafe}', '${jobNoSafe}')">⏪ Revert to Pending</button>` : ''}
+                        <button class="btn" style="font-size: 0.7rem; padding: 4px 8px; color: #d97706; border-color: #fde68a; background: #fffbeb;" onclick="revertToPending('${orderIdSafe}', '${jobNoSafe}')">⏪ Revert to Pending</button>
                     </div>`;
             }
             
-            if (isAdmin && order.status !== 'Goods Delivered' && order.status !== 'Delivered (Refused)') {
-                actionHtml += `<button class="btn-icon" style="color:#ef4444; margin-top: 5px;" onclick="deleteOrder('${orderIdSafe}', '${jobNoSafe}', '${order.status}')" title="Delete Order">🗑️</button>`;
+            if (isAdmin && currentTab !== 'Deleted Orders' && order.status !== 'Goods Delivered' && order.status !== 'Delivered (Refused)') {
+                actionHtml += `<button class="btn-icon" style="color:#ef4444; margin-top: 5px; display:block; margin: 5px auto;" onclick="deleteOrder('${orderIdSafe}', '${jobNoSafe}', '${order.status}')" title="Delete Order">🗑️ Delete</button>`;
             }
 
-            const editIconHtml = `<span onclick="openEditModal('${orderIdSafe}', '${jobNoSafe}', '${problemSafe}', '${passwordSafe}')" title="Edit Problem/Password">${pencilSVG}</span>`;
+            let editIconHtml = '';
+            if (currentTab !== 'Deleted Orders') {
+                editIconHtml = `<span onclick="openEditModal('${orderIdSafe}', '${jobNoSafe}', '${problemSafe}', '${passwordSafe}')" title="Edit Problem/Password">${pencilSVG}</span>`;
+            }
 
             tbody.innerHTML += `
                 <tr style="${rowStyle}">
@@ -968,7 +972,7 @@
     }
 
     // ==========================================
-    // REVERT ORDER STATUS LOGIC (ADMIN)
+    // REVERT ORDER STATUS LOGIC (Universal Access)
     // ==========================================
     window.revertToRepairCompleted = async function(id, jobNo, paymentMode, amount, mobile, targetStatus) {
         if (!confirm(`Are you sure you want to revert Job No: ${jobNo} back to '${targetStatus}'?\n\nThis will DELETE any final delivery records and remove the related Cash, UPI, and Credit entries from the ledgers.`)) return;
@@ -976,41 +980,20 @@
         try {
             const searchString = `%${jobNo}%`;
 
-            // 1. Rollback Ledgers based on payment mode
             if (paymentMode === 'Cash') {
                 await supabaseClient.from('cashbook_entries').delete().ilike('description', searchString);
             } else if (paymentMode === 'UPI') {
                 await supabaseClient.from('upi_entries').delete().ilike('description', searchString);
             } else if (paymentMode === 'Credit') {
-                // Revert customer credit balance
                 const { data: custData } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', mobile).single();
                 if (custData) {
                     let newBal = (parseFloat(custData.credit_balance) || 0) - amount;
                     if (newBal < 0) newBal = 0;
                     await supabaseClient.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
                 }
-                // Delete credit history
                 await supabaseClient.from('customer_credits').delete().eq('job_no', jobNo);
-            } else if (paymentMode === 'Split') {
-                // Split payments hit multiple ledgers. Wipe all related to this jobNo.
-                await supabaseClient.from('cashbook_entries').delete().ilike('description', searchString);
-                await supabaseClient.from('upi_entries').delete().ilike('description', searchString);
-                const { data: credits } = await supabaseClient.from('customer_credits').select('*').eq('job_no', jobNo);
-                if (credits && credits.length > 0) {
-                    for (let c of credits) {
-                        if (c.type === 'Given') {
-                            const { data: custData } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', c.mobile).single();
-                            if (custData) {
-                                let newBal = (parseFloat(custData.credit_balance) || 0) - parseFloat(c.amount);
-                                if (newBal < 0) newBal = 0;
-                                await supabaseClient.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
-                            }
-                        }
-                    }
-                    await supabaseClient.from('customer_credits').delete().eq('job_no', jobNo);
-                }
             } else {
-                // Fallback catch-all for old data structures
+                // Catch all combinations for Split Payments
                 await supabaseClient.from('cashbook_entries').delete().ilike('description', searchString);
                 await supabaseClient.from('upi_entries').delete().ilike('description', searchString);
                 const { data: credits } = await supabaseClient.from('customer_credits').select('*').eq('job_no', jobNo);
@@ -1029,7 +1012,6 @@
                 }
             }
 
-            // 2. Revert the Repair Order Record
             const { error } = await supabaseClient.from('repairOrders').update({
                 status: targetStatus,
                 paymentMethod: null,
@@ -1050,7 +1032,7 @@
     }
 
     window.revertToPending = async function(id, jobNo) {
-        if (!confirm(`Are you sure you want to revert Job No: ${jobNo} back to 'Pending'?\n\nThis will remove its refusal status.`)) return;
+        if (!confirm(`Are you sure you want to revert Job No: ${jobNo} back to 'Pending'?\n\nThis will remove its completion/refusal status.`)) return;
 
         try {
             const { error } = await supabaseClient.from('repairOrders').update({
@@ -1072,7 +1054,6 @@
         }
     }
 
-
     // ==========================================
     // EDIT PAYMENT MODE (ADMIN) LOGIC
     // ==========================================
@@ -1092,7 +1073,7 @@
         document.getElementById('editPaymentSubtitle').innerText = `Job No: ${jobNo} | Amount: ₹${amount}`;
         
         let initMode = currentMethod;
-        if(initMode === 'Split') initMode = 'Cash'; // simplified fallback if they try to edit a split
+        if(initMode === 'Split') initMode = 'Cash';
         
         const modeSelect = document.getElementById('newPaymentMode');
         if (modeSelect) modeSelect.value = initMode || 'Cash';
@@ -1109,9 +1090,7 @@
         }
     }
 
-    window.closeEditPaymentModal = function() {
-        document.getElementById('modalEditPayment').style.display = 'none';
-    }
+    window.closeEditPaymentModal = function() { document.getElementById('modalEditPayment').style.display = 'none'; }
 
     window.saveNewPaymentMode = async function() {
         const newMode = document.getElementById('newPaymentMode').value;
@@ -1122,7 +1101,6 @@
         if(!confirm(`Are you sure you want to change the payment mode for ${editPaymentJobNo} to ${newMode}? This will rewrite the accounting books.`)) return;
 
         try {
-            // 1. Rollback old entries completely
             const { data: credits } = await supabaseClient.from('customer_credits').select('*').eq('job_no', editPaymentJobNo);
             if (credits && credits.length > 0) {
                 for (let c of credits) {
@@ -1141,7 +1119,6 @@
             await supabaseClient.from('cashbook_entries').delete().ilike('description', `%${editPaymentJobNo}%`);
             await supabaseClient.from('upi_entries').delete().ilike('description', `%${editPaymentJobNo}%`);
 
-            // 2. Insert new entries based on new mode
             if (editPaymentAmount > 0) {
                 if (newMode === 'Cash') {
                     const { error: cashError } = await supabaseClient.from('cashbook_entries').insert([{
@@ -1152,7 +1129,6 @@
                 else if (newMode === 'UPI') {
                     let upiDesc = `Repair Job No: ${editPaymentJobNo}`;
                     if (upiNote) upiDesc += ` - UPI Acc: ${upiNote}`;
-
                     const { error: upiError } = await supabaseClient.from('upi_entries').insert([{
                         date: ledgerDate, time: gdTime, description: upiDesc, category: 'Repair Sales', upi_amount: editPaymentAmount, card_amount: 0, created_by: currentUserEmail
                     }]);
@@ -1172,7 +1148,6 @@
                 }
             }
 
-            // 3. Update the repairOrder
             const { error: updateError } = await supabaseClient.from('repairOrders').update({ 
                 paymentMethod: newMode
             }).eq('id', editPaymentOrderId);
@@ -1221,9 +1196,7 @@
             closeBillingModal();
             await fetchOrders(); 
             switchTab('Repair Completed');
-        } catch (err) { 
-            alert("Error completing repair: " + err.message + "\n\nMake sure 'rc_date', 'rc_time', and 'rc_timestamp' columns exist in your Supabase table."); 
-        }
+        } catch (err) { alert("Error completing repair: " + err.message); }
     }
 
     window.markRepairNP = async function() {
@@ -1360,10 +1333,7 @@
                 } 
                 if (upiAmt > 0) {
                     let upiDesc = `Repair Job No: ${deliveryJobNo}`;
-                    if (upiNote) {
-                        upiDesc += ` - UPI Acc: ${upiNote}`;
-                    }
-
+                    if (upiNote) { upiDesc += ` - UPI Acc: ${upiNote}`; }
                     const { error: upiError } = await supabaseClient.from('upi_entries').insert([{
                         date: ledgerDate, time: gdTime, description: upiDesc, category: 'Repair Sales', upi_amount: upiAmt, card_amount: 0, created_by: currentUserEmail
                     }]);
@@ -1389,16 +1359,17 @@
             closeDeliveryModal();
             await fetchOrders(); 
             switchTab('Goods Delivered'); 
-        } catch (err) { alert("Error updating order: " + err.message + "\n\nMake sure 'gd_date', 'gd_time', 'gd_timestamp', and 'finalAmount' columns exist."); }
+        } catch (err) { alert("Error updating order: " + err.message); }
     }
 
+    // ==========================================
+    // SOFT DELETE ORDER LOGIC
+    // ==========================================
     window.deleteOrder = async function(id, jobNo, status) {
-        if (status === 'Goods Delivered' || status === 'Delivered (Refused)') {
-            return alert("Orders that have been delivered cannot be deleted.");
-        }
+        if (!confirm(`Are you sure you want to delete Job No: ${jobNo}? It will be moved to the Deleted Orders tab for audit purposes, and related financial records will be wiped.`)) return;
         
-        if(!confirm(`Are you sure you want to completely delete Job No: ${jobNo}? This will also delete related Cash, UPI, and Credit records.`)) return;
         try {
+            // Rollback Ledgers
             const { data: credits } = await supabaseClient.from('customer_credits').select('*').eq('job_no', jobNo);
             if (credits && credits.length > 0) {
                 for (let c of credits) {
@@ -1417,11 +1388,12 @@
             await supabaseClient.from('cashbook_entries').delete().ilike('description', `%${jobNo}%`);
             await supabaseClient.from('upi_entries').delete().ilike('description', `%${jobNo}%`);
 
-            const { error } = await supabaseClient.from('repairOrders').delete().eq('id', id);
+            // Mark as Deleted rather than wiping it completely
+            const { error } = await supabaseClient.from('repairOrders').update({ is_deleted: true }).eq('id', id);
             if (error) throw error;
             
             fetchOrders();
-            alert(`Order ${jobNo} and all related accounting entries were completely deleted.`);
+            alert(`Order ${jobNo} moved to Deleted Orders.`);
         } catch (err) { alert("Error deleting order: " + err.message); }
     }
 
@@ -1430,24 +1402,12 @@
 
     window.toggleForm = async function() {
         const form = document.getElementById('orderFormCard');
-        if (form.style.display === 'block') { form.style.display = 'none'; } else { form.style.display = 'block'; await generateNextJobNo(); if(isNewCustomerMode) document.getElementById('newCustName').focus(); else document.getElementById('custSearchInput').focus(); }
+        if (form.style.display === 'block') { form.style.display = 'none'; } else { form.style.display = 'block'; if(isNewCustomerMode) document.getElementById('newCustName').focus(); else document.getElementById('custSearchInput').focus(); }
     }
 
-    async function generateNextJobNo() {
-        try {
-            const { data, error } = await supabaseClient.from('repairOrders').select('jobNo').ilike('jobNo', 'GSM%').order('created_at', { ascending: false }).limit(100);
-            let maxNum = 0;
-            if (data && data.length > 0) {
-                data.forEach(order => {
-                    const match = order.jobNo.match(/^GSM(\d+)$/i);
-                    if (match) { const num = parseInt(match[1], 10); if (num > maxNum) maxNum = num; }
-                });
-            }
-            const nextNum = maxNum + 1;
-            document.getElementById('jobNo').value = `GSM${String(nextNum).padStart(2, '0')}`;
-        } catch(err) { document.getElementById('jobNo').value = "GSM01"; }
-    }
-
+    // ==========================================
+    // SMART ALGORITHM: RETRY SAVE ON JOB ID CLASH
+    // ==========================================
     window.saveOrder = async function() {
         let custName = ''; let contactNo = '';
         if (isNewCustomerMode) {
@@ -1460,7 +1420,6 @@
             if (existing && existing.length > 0) {
                 return alert("A customer with this mobile number already exists in the database. Please click 'Search Existing Database' to select them instead.");
             }
-
             const { error: custErr } = await supabaseClient.from('customers').insert([{ name: custName, mobile: contactNo }]);
             if(!custErr) fetchCustomers(); 
         } else {
@@ -1469,20 +1428,51 @@
             if(!custName || !contactNo) return alert("Please select a customer from the dropdown search.");
         }
 
-        let jobNoVal = document.getElementById('jobNo').value.trim();
         let problemDesc = document.getElementById('problemDesc').value.trim();
         let devicePassword = document.getElementById('devicePassword').value.trim();
         let approxEstimate = parseFloat(document.getElementById('approxEstimate').value) || 0;
         let currentDate = new Date().toISOString().split('T')[0];
         let currentTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-        if(!jobNoVal) return alert("Job Number is missing. Please close and reopen the form.");
+        // Retrieve current max number to formulate our first attempt
+        const { data: maxData } = await supabaseClient.from('repairOrders').select('jobNo').ilike('jobNo', 'GSM%').order('created_at', { ascending: false }).limit(100);
+        let currentMax = 0;
+        if (maxData && maxData.length > 0) {
+            maxData.forEach(order => {
+                const match = order.jobNo.match(/^GSM(\d+)$/i);
+                if (match) { const num = parseInt(match[1], 10); if (num > currentMax) currentMax = num; }
+            });
+        }
+        
+        let attemptNum = currentMax + 1;
+        let saved = false;
 
-        const orderData = { customerName: custName, contactNo: contactNo, jobNo: jobNoVal, problemDesc: problemDesc, devicePassword: devicePassword, approxEstimate: approxEstimate, date: currentDate, time: currentTime, status: "Pending", createdBy: currentUserEmail.split('@')[0] };
+        const orderData = { 
+            customerName: custName, contactNo: contactNo, problemDesc: problemDesc, 
+            devicePassword: devicePassword, approxEstimate: approxEstimate, date: currentDate, 
+            time: currentTime, status: "Pending", createdBy: currentUserEmail.split('@')[0],
+            is_deleted: false
+        };
 
+        // Retry Loop Algorithm against Unique Constraint
         try {
-            const { error: orderError } = await supabaseClient.from('repairOrders').insert([orderData]);
-            if (orderError) throw orderError;
+            while (!saved) {
+                orderData.jobNo = `GSM${String(attemptNum).padStart(2, '0')}`;
+                
+                const { error: orderError } = await supabaseClient.from('repairOrders').insert([orderData]);
+                
+                if (orderError) {
+                    // Check if the error is due to a Unique Constraint failure (Code 23505)
+                    if (orderError.code === '23505' || orderError.message.toLowerCase().includes('unique constraint')) {
+                        attemptNum++; // Algorithm automatically shifts to next possible number and loops back
+                    } else {
+                        throw orderError;
+                    }
+                } else {
+                    saved = true;
+                }
+            }
+
             document.getElementById('custSearchInput').value = ''; document.getElementById('selectedCustName').value = ''; document.getElementById('selectedCustMobile').value = ''; document.getElementById('newCustName').value = ''; document.getElementById('newCustMobile').value = ''; document.getElementById('problemDesc').value = ''; document.getElementById('devicePassword').value = ''; document.getElementById('approxEstimate').value = '';
             toggleForm(); switchTab('Pending'); fetchOrders();
         } catch (error) { alert("Error saving order: " + error.message); }
