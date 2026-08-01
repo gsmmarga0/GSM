@@ -29,7 +29,7 @@
 
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; position: relative; color: var(--text-main); }
         
-        /* Sidebar Styling (Matched to Expenses) */
+        /* Sidebar Styling */
         .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; transition: width 0.4s ease, padding 0.4s ease; overflow: hidden; white-space: nowrap; z-index: 40; }
         .sidebar.collapsed { width: 0; padding-left: 0; padding-right: 0; border-right: none; }
 
@@ -340,6 +340,7 @@
     const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
     const ADMIN_EMAIL = 'faizan@gsmsolution.com'; 
     let currentUserEmail = '';
+    let isAdmin = false;
     
     // Totals State
     let state = {
@@ -410,6 +411,7 @@
 
         // Profit Book is STRICTLY Admins only
         if (isMasterAdmin || isDbAdmin) {
+            isAdmin = true; // Sets our global admin flag
             document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
         } else {
             alert("Access Denied: Administrators only.");
@@ -600,7 +602,7 @@
                     <span style="color:var(--text-muted);">${item.label}</span>
                     <div style="display:flex; align-items:center; gap:10px;">
                         <span style="font-weight:600; color:var(--text-main);">${formatMoney(amt)}</span>
-                        ${currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase() ? `<button onclick="deleteOtherIncome('${item.id}')" style="background:none; border:none; color:var(--c-red); cursor:pointer; font-size:14px; padding:0;">✕</button>` : ''}
+                        ${isAdmin ? `<button onclick="deleteOtherIncome('${item.id}')" style="background:none; border:none; color:var(--c-red); cursor:pointer; font-size:14px; padding:0;">✕</button>` : ''}
                     </div>
                 `;
                 listDiv.appendChild(div);
@@ -725,6 +727,7 @@
     }
 
     window.deleteOtherIncome = async function(id) {
+        if(!isAdmin) return alert("Only admins can delete this.");
         if(!confirm("Delete this income record?")) return;
         try {
             const { error } = await supabaseClient.from('profit_other_income').delete().eq('id', id);
