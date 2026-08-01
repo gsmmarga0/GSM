@@ -575,9 +575,9 @@
             
             let actionHtml = `<button class="btn-ledger" onclick="openLedger(${c.id}, '${escapeStr(c.name)}', '${escapeStr(c.mobile)}', ${due})">📖 Ledger</button>`;
             actionHtml += `<button class="btn-history" onclick="openHistoryModal('${escapeStr(c.mobile)}', '${escapeStr(c.name)}')">📜 Jobs</button>`;
-            actionHtml += `<button class="btn-edit" onclick="openEditCustomerModal(${c.id}, '${escapeStr(c.name)}', '${escapeStr(c.mobile)}')">✏️ Edit</button>`;
-
+            
             if (isAdmin) {
+                actionHtml += `<button class="btn-edit" onclick="openEditCustomerModal(${c.id}, '${escapeStr(c.name)}', '${escapeStr(c.mobile)}')">✏️ Edit</button>`;
                 actionHtml += `<button class="btn-delete" onclick="deleteCustomer(${c.id}, '${escapeStr(c.name)}')">🗑️ Del</button>`;
             }
 
