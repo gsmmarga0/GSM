@@ -486,16 +486,47 @@
     }
 
     async function checkAuth() {
-        const { data } = await supabaseClient.auth.getSession();
-        if (!data.session) window.location.href = 'login.html';
-        else {
-            currentUserEmail = data.session.user.email;
-            document.getElementById('userNameDisplay').innerText = currentUserEmail.split('@')[0];
-            if (currentUserEmail.toLowerCase() === ADMIN_EMAIL) {
-                isAdmin = true;
-                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
-            }
+    // 1. Ensure supabaseClient is properly named based on the file (some files use 'db', some use 'supabaseClient')
+    const { data: sessionData } = await supabaseClient.auth.getSession();
+    
+    if (!sessionData.session) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    const currentUserEmail = sessionData.session.user.email;
+
+    // 2. Format UI Name
+    let displayEmail = currentUserEmail.split('@')[0];
+    document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
+    
+    // (If the page has a userAvatar element)
+    if(document.getElementById('userAvatar')) {
+        document.getElementById('userAvatar').innerText = displayEmail.charAt(0).toUpperCase();
+    }
+
+    // 3. Determine if user is Master Admin OR Database Admin
+    const isMasterAdmin = currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase();
+    
+    const { data: profile } = await supabaseClient
+        .from('user_profiles')
+        .select('role')
+        .eq('email', currentUserEmail)
+        .single();
+    
+    const isDbAdmin = profile && profile.role === 'Admin';
+
+    // 4. Reveal or Kick based on permissions
+    if (isMasterAdmin || isDbAdmin) {
+        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
+    } else {
+        // Only run this 'kick' logic on pages meant STRICTLY for admins (Profit, Expenses, Users, Sales Report)
+        // If this is a shared page (Index, Cashbook), remove the alert and window.location lines.
+        alert("Access Denied: Administrators only.");
+        window.location.href = 'index.html'; 
+        
         }
+      }
     }
     async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
 
