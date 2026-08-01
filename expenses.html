@@ -138,6 +138,7 @@
         .staff-form-grid { display: grid; grid-template-columns: 2fr 2fr 2fr 1fr; gap: 15px; align-items: end; margin-bottom: 25px;}
         
         .month-header { font-weight: bold; padding: 15px; border-bottom: 1px solid var(--border-color); background: white; margin-top: 10px; }
+        .admin-hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -321,7 +322,7 @@
                             <th>Staff / Description</th>
                             <th>Payment</th>
                             <th>Amount</th>
-                            <th></th>
+                            <th class="admin-only admin-hidden"></th>
                         </tr>
                     </thead>
                     <tbody id="expensesTableBody"></tbody>
@@ -355,7 +356,7 @@
                             <th>Name</th>
                             <th>Designation</th>
                             <th>Monthly Salary</th>
-                            <th></th>
+                            <th class="admin-only admin-hidden"></th>
                         </tr>
                     </thead>
                     <tbody id="staffTableBody"></tbody>
@@ -392,6 +393,7 @@
 
     const ADMIN_EMAIL = 'faizan@gsmsolution.com'; 
     let currentUserEmail = '';
+    let isAdmin = false;
     let allExpenses = [];
     let allStaff = [];
 
@@ -421,19 +423,38 @@
         }
     }
 
+    // ==========================================
+    // DYNAMIC AUTHENTICATION CHECK
+    // ==========================================
     async function checkAuth() {
-        const { data } = await supabaseClient.auth.getSession();
-        if (!data.session) {
+        const { data: sessionData } = await supabaseClient.auth.getSession();
+        
+        if (!sessionData.session) {
             window.location.href = 'login.html';
-        } else {
-            currentUserEmail = data.session.user.email;
-            let displayEmail = currentUserEmail.split('@')[0];
-            document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
-
-            if (currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase()) {
-                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
-            }
+            return;
         }
+
+        currentUserEmail = sessionData.session.user.email;
+        let displayEmail = currentUserEmail.split('@')[0];
+        document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
+
+        const isMasterAdmin = currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase();
+        
+        const { data: profile } = await supabaseClient
+            .from('user_profiles')
+            .select('role')
+            .eq('email', currentUserEmail)
+            .single();
+        
+        const isDbAdmin = profile && profile.role === 'Admin';
+
+        if (isMasterAdmin || isDbAdmin) {
+            isAdmin = true;
+            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
+            document.querySelectorAll('.admin-hidden').forEach(el => el.classList.remove('admin-hidden'));
+        }
+        // NO KICK LOGIC because Expenses might be viewed/used by staff, 
+        // though typically it's an admin section. The elements are protected.
     }
 
     async function logOut() {
@@ -614,7 +635,7 @@
         rows.forEach(exp => {
             runningTotal += parseFloat(exp.amount) || 0;
 
-            const deleteBtn = currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase()
+            const deleteBtn = isAdmin
                 ? `<button class="delete-icon-btn" onclick="deleteExpense('${exp.id}')" title="Delete">${svgTrash}</button>`
                 : '';
 
@@ -634,7 +655,7 @@
                 <td>${descHtml}</td>
                 <td><span class="payment-pill ${paymentClass(exp.payment)}">${exp.payment || ''}</span></td>
                 <td class="amount-cell">₹${(parseFloat(exp.amount) || 0).toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
-                <td>${deleteBtn}</td>
+                <td class="${isAdmin ? '' : 'admin-hidden'}">${deleteBtn}</td>
             `;
             tableBody.appendChild(row);
         });
@@ -644,7 +665,7 @@
         totalRow.innerHTML = `
             <td colspan="4" style="text-align:right;">TOTAL</td>
             <td class="amount-cell">₹${runningTotal.toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
-            <td></td>
+            <td class="${isAdmin ? '' : 'admin-hidden'}"></td>
         `;
         tableBody.appendChild(totalRow);
     }
@@ -708,7 +729,7 @@
     }
 
     window.deleteExpense = async function(id) {
-        if (currentUserEmail.trim().toLowerCase() !== ADMIN_EMAIL.trim().toLowerCase()) return alert("Permission denied.");
+        if (!isAdmin) return alert("Permission denied. Admins only.");
         if (!confirm("Are you sure you want to delete this expense?")) return;
         try {
             await supabaseClient.from('expenses').delete().eq('id', id);
@@ -729,13 +750,14 @@
         const svgTrash = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg>`;
 
         allStaff.forEach(st => {
+            let deleteBtn = isAdmin ? `<button class="delete-icon-btn" onclick="deleteStaff('${st.id}')">${svgTrash}</button>` : '';
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td style="font-weight:600;">${st.name}</td>
                 <td>${st.designation || '—'}</td>
                 <td>₹${(parseFloat(st.monthly_salary)||0).toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
-                <td>
-                    <button class="delete-icon-btn" onclick="deleteStaff('${st.id}')">${svgTrash}</button>
+                <td class="${isAdmin ? '' : 'admin-hidden'}">
+                    ${deleteBtn}
                 </td>
             `;
             tbody.appendChild(row);
@@ -760,6 +782,7 @@
     }
 
     window.deleteStaff = async function(id) {
+        if (!isAdmin) return alert("Permission denied. Admins only.");
         if (!confirm("Remove this staff member?")) return;
         try {
             await supabaseClient.from('staff').delete().eq('id', id);
@@ -851,6 +874,7 @@
 
         container.innerHTML = html;
     }
+
 // ==========================================
 // AUTO-LOGOUT AFTER 30 MINUTES OF INACTIVITY
 // ==========================================
