@@ -19,6 +19,10 @@
             --c-red-dark: #b91c1c;
             --bg-red-light: #fef2f2;
             --border-red: #fecaca;
+            --c-blue: #3b82f6;
+            --c-blue-dark: #1d4ed8;
+            --bg-blue-light: #eff6ff;
+            --border-blue: #bfdbfe;
             --text-main: #0f172a;
             --text-muted: #64748b;
         }
@@ -69,11 +73,30 @@
         
         .selected-month-text { font-weight: bold; color: var(--text-main); font-size: 1.1rem; min-width: 120px; text-align: right; }
 
-        /* Layout Grid */
+        /* Layout Grids */
+        .collection-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 25px; }
         .profit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 25px; align-items: start;}
 
         /* Base Card */
-        .card { background: white; border-radius: 12px; padding: 25px; display: flex; flex-direction: column; min-height: 380px;}
+        .card { background: white; border-radius: 12px; padding: 25px; display: flex; flex-direction: column; }
+        .card-tall { min-height: 380px; }
+
+        /* Collection Cards (Top Section) */
+        .card-upi { border: 1px solid var(--border-blue); box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.05); }
+        .card-cash { border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        
+        .card-header-blue { color: var(--c-blue-dark); font-size: 0.85rem; font-weight: 700; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; letter-spacing: 0.5px; }
+        .card-header-neutral { color: var(--text-main); font-size: 0.85rem; font-weight: 700; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; letter-spacing: 0.5px; }
+        .card-header-link { color: var(--text-muted); text-decoration: none; font-size: 0.75rem; font-weight: 500; transition: 0.2s; }
+        .card-header-link:hover { color: var(--text-main); }
+
+        .collection-amount { font-size: 2.2rem; font-weight: 800; color: var(--c-blue-dark); margin: 10px 0; }
+        
+        .cashbook-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-color); }
+        .cashbook-row:last-child { border-bottom: none; }
+        .cash-in-text { color: var(--c-green-dark); font-weight: 600; }
+        .cash-out-text { color: var(--c-red-dark); font-weight: 600; }
+        .cash-net-text { font-weight: 800; color: var(--text-main); font-size: 1.1rem; }
 
         /* Income Card */
         .card-income { border: 1px solid var(--border-green); box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.05); }
@@ -174,7 +197,7 @@
         <div class="page-header">
             <div class="page-title">
                 <h1>Profit Book</h1>
-                <p>Monthly profit & expense summary</p>
+                <p>Monthly financial summary & profit calculation</p>
             </div>
             
             <div class="month-controls">
@@ -191,9 +214,42 @@
             </div>
         </div>
 
+        <!-- NEW TOP SECTION: UPI and Cashbook -->
+        <div class="collection-grid">
+            <!-- Left: UPI Collection -->
+            <div class="card card-upi">
+                <div class="card-header-blue">
+                    <span>📱 UPI COLLECTION</span>
+                    <a href="upi-book.html" class="card-header-link">↗ View Book</a>
+                </div>
+                <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">Total UPI received for the month</p>
+                <div class="collection-amount" id="upiCollectionDisplay">₹0.00</div>
+            </div>
+            
+            <!-- Right: Cashbook Summary -->
+            <div class="card card-cash">
+                <div class="card-header-neutral">
+                    <span>💵 CASHBOOK SUMMARY</span>
+                    <a href="cashbook.html" class="card-header-link">↗ View Book</a>
+                </div>
+                <div class="cashbook-row">
+                    <span style="color: var(--text-muted);">Total Cash In</span>
+                    <span class="cash-in-text" id="cashInDisplay">+ ₹0.00</span>
+                </div>
+                <div class="cashbook-row">
+                    <span style="color: var(--text-muted);">Total Cash Out</span>
+                    <span class="cash-out-text" id="cashOutDisplay">- ₹0.00</span>
+                </div>
+                <div class="cashbook-row" style="margin-top: 10px; padding-bottom: 0;">
+                    <span>Net Cash Flow</span>
+                    <span class="cash-net-text" id="cashNetDisplay">₹0.00</span>
+                </div>
+            </div>
+        </div>
+
         <div class="profit-grid">
-            <!-- LEFT COLUMN -->
-            <div class="card card-income">
+            <!-- LEFT COLUMN: Income -->
+            <div class="card card-tall card-income">
                 <div class="card-header-green">↗ INCOME / PROFIT</div>
                 
                 <div class="ow-profit-box">
@@ -231,15 +287,14 @@
                 </div>
             </div>
 
-            <!-- RIGHT COLUMN -->
-            <div class="card card-expenses">
+            <!-- RIGHT COLUMN: Expenses -->
+            <div class="card card-tall card-expenses">
                 <div class="card-header-red">
                     <span>↘ EXPENSES</span>
                     <a href="expenses.html">↗ from Expenses tab</a>
                 </div>
 
                 <div class="expense-list" id="expensesList">
-                    <!-- Empty state or list goes here -->
                     <div class="empty-state" id="expensesEmptyState">
                         No expenses recorded for <span id="emptyStateMonth">August 2026</span>.<br>
                         Add entries from the <strong>Expenses</strong> tab.
@@ -269,7 +324,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    // Supabase Configuration using your provided keys
+    // Supabase Configuration
     const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
     const ADMIN_EMAIL = 'faizan@gsmsolution.com'; 
     let currentUserEmail = '';
@@ -358,10 +413,13 @@
         document.getElementById('ebitdaTitleText').innerText = `EBITDA — ${longFormat.toUpperCase()}`;
         document.getElementById('emptyStateMonth').innerText = longFormat;
 
-        // Reset state
+        // Reset profit state
         state = { owProfit: 0, otherIncome: 0, totalExpenses: 0 };
 
+        // Fetch all data in parallel
         await Promise.all([
+            fetchUPICollection(startOfMonth, endOfMonth),
+            fetchCashbook(startOfMonth, endOfMonth),
             fetchOWProfit(startOfMonth, endOfMonth),
             fetchOtherIncomeData(startOfMonth, endOfMonth),
             fetchExpensesData(startOfMonth, endOfMonth)
@@ -370,7 +428,77 @@
         updateTotalsUI();
     }
 
-    // 1. Fetch Sales Report Profit based on your provided script's logic
+    // Fetch UPI Collection
+    async function fetchUPICollection(start, end) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('upi_book')
+                .select('*')
+                .gte('date', start)
+                .lte('date', end);
+
+            if (error) throw error;
+            
+            let totalUpi = 0;
+            // Handle potentially different schemas (amount vs amount_received)
+            data.forEach(item => {
+                totalUpi += parseFloat(item.amount || item.amount_received || 0);
+            });
+            
+            document.getElementById('upiCollectionDisplay').innerText = formatMoney(totalUpi);
+        } catch (error) { 
+            console.error("Error fetching UPI Collection:", error.message); 
+            document.getElementById('upiCollectionDisplay').innerText = "₹0.00";
+        }
+    }
+
+    // Fetch Cashbook Summary
+    async function fetchCashbook(start, end) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('cashbook')
+                .select('*')
+                .gte('date', start)
+                .lte('date', end);
+
+            if (error) throw error;
+            
+            let cashIn = 0;
+            let cashOut = 0;
+            
+            data.forEach(item => {
+                // Handle schema where cash_in and cash_out are separate columns
+                if (item.cash_in) cashIn += parseFloat(item.cash_in) || 0;
+                if (item.cash_out) cashOut += parseFloat(item.cash_out) || 0;
+                
+                // Handle schema where there is an amount and a type/status column
+                if (item.amount) {
+                    const type = (item.type || item.status || '').toLowerCase();
+                    if (type === 'in' || type === 'credit') {
+                        cashIn += parseFloat(item.amount) || 0;
+                    } else if (type === 'out' || type === 'debit') {
+                        cashOut += parseFloat(item.amount) || 0;
+                    }
+                }
+            });
+            
+            document.getElementById('cashInDisplay').innerText = "+ " + formatMoney(cashIn);
+            document.getElementById('cashOutDisplay').innerText = "- " + formatMoney(cashOut);
+            
+            const netCash = cashIn - cashOut;
+            const netDisplay = document.getElementById('cashNetDisplay');
+            netDisplay.innerText = formatMoney(netCash);
+            netDisplay.style.color = netCash >= 0 ? 'var(--c-green-dark)' : 'var(--c-red-dark)';
+            
+        } catch (error) { 
+            console.error("Error fetching Cashbook:", error.message);
+            document.getElementById('cashInDisplay').innerText = "+ ₹0.00";
+            document.getElementById('cashOutDisplay').innerText = "- ₹0.00";
+            document.getElementById('cashNetDisplay').innerText = "₹0.00";
+        }
+    }
+
+    // Fetch Sales Report Profit
     async function fetchOWProfit(start, end) {
         try {
             const { data, error } = await supabaseClient
@@ -394,7 +522,7 @@
         } catch (error) { console.error("Error fetching Sales Profit:", error.message); }
     }
 
-    // 2. Fetch Other Income
+    // Fetch Other Income
     async function fetchOtherIncomeData(start, end) {
         try {
             const { data, error } = await supabaseClient
@@ -430,7 +558,7 @@
         } catch (error) { console.error("Error fetching Other Income:", error.message); }
     }
 
-    // 3. Fetch Expenses
+    // Fetch Expenses
     async function fetchExpensesData(start, end) {
         try {
             const { data, error } = await supabaseClient
@@ -445,7 +573,6 @@
             const listDiv = document.getElementById('expensesList');
             const emptyState = document.getElementById('expensesEmptyState');
             
-            // Clear current list items, keeping empty state node if needed
             Array.from(listDiv.children).forEach(child => {
                 if(child.id !== 'expensesEmptyState') listDiv.removeChild(child);
             });
@@ -482,7 +609,7 @@
         } catch (error) { console.error("Error fetching Expenses:", error.message); }
     }
 
-    // Calculate and Update Final UI
+    // Calculate and Update Final EBITDA UI
     function updateTotalsUI() {
         const totalIncome = state.owProfit + state.otherIncome;
         const ebitda = totalIncome - state.totalExpenses;
@@ -490,7 +617,6 @@
         document.getElementById('totalIncomeDisplay').innerText = formatMoney(totalIncome);
         document.getElementById('ebitdaTotalDisplay').innerText = formatMoney(ebitda);
         
-        // The bottom calc text
         document.getElementById('ebitdaCalcText').innerText = `${formatMoney(totalIncome)} income - ${formatMoney(state.totalExpenses)} expenses`;
 
         // Color toggle for EBITDA depending on profit/loss
@@ -526,7 +652,6 @@
             return alert("Please enter a valid label and amount.");
         }
 
-        // Save to current selected month with day as 01 for reference
         const insertDate = `${monthInput.value}-01`;
 
         try {
