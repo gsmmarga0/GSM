@@ -3,146 +3,265 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profit Book - GSM SOLUTIONS</title>
+    <title>GSM Solution - Profit Book</title>
     <link rel="icon" href="data:,">
+    
     <style>
-        /* Shared UI Styles */
-        :root { --bg-color: #f4f5f7; --sidebar-width: 250px; --border-color: #e5e7eb; }
-        body { margin: 0; font-family: -apple-system, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; position: relative;}
+        :root {
+            --bg-color: #f8fafc;
+            --sidebar-width: 250px;
+            --border-color: #e2e8f0;
+            --c-green: #22c55e;
+            --c-green-dark: #15803d;
+            --bg-green-light: #f0fdf4;
+            --border-green: #bbf7d0;
+            --c-red: #ef4444;
+            --c-red-dark: #b91c1c;
+            --bg-red-light: #fef2f2;
+            --border-red: #fecaca;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+        }
+
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; position: relative; color: var(--text-main); }
         
         /* Sidebar Styling */
-        .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; transition: width 0.4s ease, padding 0.4s ease; overflow: hidden; white-space: nowrap; z-index: 40; }
-        .sidebar.collapsed { width: 0; padding-left: 0; padding-right: 0; border-right: none; }
-        .logo-area { display: flex; align-items: center; padding: 0 20px 20px 20px; font-weight: bold; font-size: 1.2rem; }
-        .logo-icon { background: black; color: white; padding: 5px 10px; border-radius: 4px; margin-right: 10px; font-size: 0.9rem; }
-        .nav-item { padding: 12px 20px; color: #4b5563 !important; text-decoration: none; display: flex; align-items: center; font-size: 0.95rem; cursor: pointer; }
-        .nav-item.active { background: black !important; color: white !important; border-radius: 0 20px 20px 0; margin-right: 20px; }
-        .nav-item:hover:not(.active) { background: #f3f4f6; }
-        .sidebar-toggle-btn { position: absolute; left: var(--sidebar-width); top: 50%; transform: translateY(-50%); background: black; color: white; width: 20px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; border-radius: 0 8px 8px 0; box-shadow: 2px 0 5px rgba(0,0,0,0.2); transition: left 0.4s ease; font-weight: bold;}
-        .sidebar-collapsed-btn { left: 0 !important; }
+        .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; transition: width 0.4s ease; overflow-y: auto; overflow-x: hidden; white-space: nowrap; z-index: 40; }
+        .logo-area { display: flex; align-items: center; padding: 20px; font-weight: 800; font-size: 1.2rem; border-bottom: 1px solid var(--border-color); margin-bottom: 10px;}
+        .logo-icon { background: #1e293b; color: white; padding: 6px 8px; border-radius: 6px; margin-right: 10px; font-size: 0.8rem; letter-spacing: 1px;}
         
-        /* Main Content */
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg-color); }
-        .header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
-        .header-left h1 { margin: 0; font-size: 1.5rem; }
-        .header-left p { margin: 5px 0 0 0; color: #6b7280; font-size: 0.9rem; }
-        .header-right .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; border: 1px solid var(--border-color); background: white; font-size: 0.85rem;}
-        .header-right .btn:hover { background: #f3f4f6; }
+        .nav-item { padding: 10px 20px; color: var(--text-muted); text-decoration: none; display: flex; align-items: center; gap: 12px; font-size: 0.9rem; cursor: pointer; font-weight: 500; transition: 0.2s;}
+        .nav-item.active { background: #0f172a; color: white; border-radius: 0 24px 24px 0; margin-right: 20px; }
+        .nav-item:hover:not(.active) { background: #f1f5f9; color: var(--text-main); }
+        
+        .admin-badge { background: #e2e8f0; color: #475569; font-size: 0.6rem; padding: 2px 6px; border-radius: 12px; font-weight: bold; margin-left: auto; }
+        .nav-item.active .admin-badge { background: #334155; color: #cbd5e1; }
 
-        .dashboard-padding { padding: 20px 30px; }
+        .user-profile { margin-top: auto; padding: 15px 20px; border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .user-avatar { background: #e2e8f0; color: #475569; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem; }
+        .user-info { display: flex; flex-direction: column; }
+        .user-name { font-size: 0.85rem; font-weight: bold; color: var(--text-main); }
+        .user-role { font-size: 0.75rem; color: var(--text-muted); }
+
+        /* Top Bar */
+        .top-bar { background: white; border-bottom: 1px solid var(--border-color); height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 30px; font-size: 0.9rem;}
+        .top-bar-left { display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--text-main); }
+        .top-bar-right { color: var(--text-muted); display: flex; align-items: center; gap: 10px;}
+
+        /* Main Content */
+        .main-content-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .main-content { flex: 1; overflow-y: auto; padding: 40px 50px; }
+
+        /* Header & Controls */
+        .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; }
+        .page-title h1 { margin: 0; font-size: 1.6rem; font-weight: 700; color: var(--text-main); }
+        .page-title p { margin: 5px 0 0 0; color: var(--text-muted); font-size: 0.95rem; }
         
-        /* Stats Grid */
-        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px; }
-        .stat-card { background: white; padding: 25px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 2px 10px rgba(0,0,0,0.02); display: flex; flex-direction: column; position: relative;}
-        .stat-card h3 { margin: 0 0 10px 0; font-size: 0.85rem; font-weight: 600; color: #6b7280; text-transform: uppercase;}
-        .stat-card .number { margin: 0; font-size: 2rem; font-weight: bold; }
+        .month-controls { display: flex; align-items: center; gap: 15px; }
+        .month-selector { display: flex; align-items: center; background: white; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
+        .month-btn { background: white; border: none; padding: 8px 15px; cursor: pointer; color: var(--text-muted); font-size: 1rem; transition: 0.2s; }
+        .month-btn:hover { background: #f8fafc; color: var(--text-main); }
+        .month-btn:first-child { border-right: 1px solid var(--border-color); }
+        .month-btn:last-child { border-left: 1px solid var(--border-color); }
         
-        /* Breakdowns */
-        .breakdown-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .breakdown-card { background: white; border-radius: 12px; border: 1px solid var(--border-color); padding: 25px; }
-        .breakdown-card h2 { margin-top: 0; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;}
-        .flex-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f3f4f6; font-size: 0.95rem;}
-        .flex-row:last-child { border-bottom: none; font-weight: bold; font-size: 1.1rem; padding-top: 15px;}
+        .month-display { position: relative; padding: 8px 15px; font-weight: 600; color: var(--text-main); font-size: 0.95rem; display: flex; align-items: center; gap: 8px; background: white; cursor: pointer; min-width: 130px; justify-content: center;}
+        .month-display input[type="month"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
         
-        .text-green { color: #10b981; }
-        .text-red { color: #ef4444; }
-        .text-blue { color: #3b82f6; }
-        .text-purple { color: #9333ea; }
+        .selected-month-text { font-weight: bold; color: var(--text-main); font-size: 1.1rem; min-width: 120px; text-align: right; }
+
+        /* Layout Grid */
+        .profit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 25px; align-items: start;}
+
+        /* Base Card */
+        .card { background: white; border-radius: 12px; padding: 25px; display: flex; flex-direction: column; min-height: 380px;}
+
+        /* Income Card */
+        .card-income { border: 1px solid var(--border-green); box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.05); }
+        .card-header-green { color: var(--c-green-dark); font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 8px; margin-bottom: 25px; letter-spacing: 0.5px; }
+        
+        .ow-profit-box { background: var(--bg-green-light); border: 1px solid var(--border-green); border-radius: 8px; padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;}
+        .ow-text { display: flex; align-items: center; gap: 12px; }
+        .ow-icon { color: var(--c-green); font-size: 1.2rem; }
+        .ow-text h4 { margin: 0; color: var(--c-green-dark); font-size: 0.95rem; font-weight: 600;}
+        .ow-text p { margin: 2px 0 0 0; font-size: 0.75rem; color: var(--c-green); }
+        .ow-amount { font-size: 1.3rem; font-weight: 800; color: var(--c-green-dark); }
+
+        .add-income-box { border: 1px dashed var(--border-green); border-radius: 8px; padding: 20px; margin-bottom: 25px; }
+        .add-income-box h5 { margin: 0 0 15px 0; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;}
+        .input-group { margin-bottom: 12px; }
+        .input-group input { width: 100%; padding: 12px 15px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; font-size: 0.9rem; box-sizing: border-box; color: var(--text-main); font-family: inherit;}
+        .input-group input:focus { border-color: var(--c-green); box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1); }
+        
+        .input-row { display: flex; gap: 12px; }
+        .currency-input { display: flex; flex: 1; align-items: center; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; background: white; }
+        .currency-input:focus-within { border-color: var(--c-green); box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1); }
+        .currency-input span { padding: 0 15px; color: var(--text-muted); background: #f8fafc; border-right: 1px solid var(--border-color); font-weight: 500;}
+        .currency-input input { border: none; box-shadow: none; border-radius: 0; }
+        
+        .btn-add { background: #94a3b8; color: white; border: none; padding: 0 25px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; white-space: nowrap;}
+        .btn-add:hover { background: #64748b; }
+
+        .other-income-list { max-height: 150px; overflow-y: auto; margin-bottom: 20px;}
+        .other-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-color); font-size: 0.9rem;}
+
+        .total-row-green { display: flex; justify-content: space-between; align-items: center; font-weight: 800; color: var(--c-green-dark); font-size: 1.1rem; padding-top: 20px; border-top: 1px solid var(--border-green); margin-top: auto;}
+
+        /* Expenses Card */
+        .card-expenses { border: 1px solid var(--border-red); box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.05); }
+        .card-header-red { color: var(--c-red-dark); font-size: 0.85rem; font-weight: 700; display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; letter-spacing: 0.5px; }
+        .card-header-red a { color: var(--c-red); text-decoration: none; font-size: 0.75rem; font-weight: 500; display: flex; align-items: center; gap: 5px; transition: 0.2s;}
+        .card-header-red a:hover { color: var(--c-red-dark); }
+
+        .expense-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+        .expense-item { border-bottom: 1px solid var(--border-color); padding: 12px 0; display: flex; justify-content: space-between; align-items: center; }
+        .expense-item:last-child { border-bottom: none; }
+        .expense-info h4 { margin: 0; color: var(--text-main); font-size: 0.9rem; font-weight: 600;}
+        .expense-info p { margin: 4px 0 0 0; color: var(--text-muted); font-size: 0.75rem; }
+        .expense-amount-date { text-align: right; }
+        .expense-amount-date h4 { margin: 0; color: var(--c-red); font-size: 0.95rem; font-weight: 600;}
+
+        .empty-state { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: var(--text-muted); font-size: 0.9rem; padding: 20px;}
+        
+        .total-row-red { display: flex; justify-content: space-between; align-items: center; font-weight: 800; color: var(--c-red-dark); font-size: 1.1rem; padding-top: 20px; border-top: 1px solid var(--border-red); margin-top: auto;}
+
+        /* EBITDA Card */
+        .ebitda-card { background: var(--bg-green-light); border: 1px solid var(--border-green); border-radius: 12px; padding: 30px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.05);}
+        .ebitda-title h2 { margin: 0; color: var(--c-green-dark); font-size: 1.1rem; font-weight: 800; letter-spacing: 0.5px;}
+        .ebitda-title p { margin: 6px 0 0 0; color: var(--text-muted); font-size: 0.85rem; }
+        .ebitda-value-box { text-align: right; }
+        .ebitda-value { font-size: 2.5rem; font-weight: 800; color: var(--c-green-dark); margin: 0; line-height: 1;}
+        .ebitda-calc { margin: 8px 0 0 0; font-size: 0.8rem; color: var(--text-muted); }
+
     </style>
 </head>
 <body>
 
-<div class="sidebar" id="sidebar" onmouseenter="clearSidebarTimer()" onmouseleave="resetSidebarTimer()">
-    <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
+<div class="sidebar" id="sidebar">
+    <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTION</div>
     
     <a href="index.html" class="nav-item">📋 Order Details</a>
     <a href="customers.html" class="nav-item">👥 Customers</a>
     <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
     <a href="upi-book.html" class="nav-item">📖 UPI Book</a>
     <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
-    
+
     <!-- Admin Only Links -->
     <a href="sales-report.html" class="nav-item admin-only" style="display: none;">📊 Sales Report</a>
     <a href="expenses.html" class="nav-item admin-only" style="display: none;">💸 Expenses</a>
     <a href="profit.html" class="nav-item active admin-only" style="display: none;">📈 Profit Book</a>
-    <a href="users.html" class="nav-item admin-only" style="display: none; color: #2563eb; font-weight:bold;">👥 Manage Users</a>
+    <a href="users.html" class="nav-item admin-only" style="display: none;">👥 Users <span class="admin-badge">ADMIN</span></a>
 
-    <div style="flex-grow: 1;"></div> 
-    
-    <!-- SVG Logout -->
-    <div class="nav-item" onclick="logOut()" style="color: black !important; font-weight: bold; cursor: pointer; border-top: 1px solid var(--border-color); padding-top: 15px; margin: 10px 20px; display: flex; justify-content: space-between; align-items: center;">
-        <span id="userNameDisplay">User</span> 
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-            <polyline points="16 17 21 12 16 7"></polyline>
-            <line x1="21" y1="12" x2="9" y2="12"></line>
-        </svg>
+    <div class="user-profile" onclick="logOut()">
+        <div class="user-avatar" id="userAvatar">A</div>
+        <div class="user-info">
+            <span class="user-name" id="userNameDisplay">Administrator</span>
+            <span class="user-role">Administrator</span>
+        </div>
     </div>
 </div>    
-<div class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">⋮</div>
 
-<div class="main-content">
-    <div class="header">
-        <div class="header-left">
-            <h1>Master Profit Book</h1>
-            <p>Comprehensive overview of Ledger Balances and Parts Margins</p>
+<div class="main-content-wrapper">
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <span>📄</span> Profit Book
         </div>
-        <div class="header-right">
-            <button class="btn" onclick="calculateProfit()">↻ Refresh Data</button>
+        <div class="top-bar-right" id="currentDateDisplay">
+            Sat, 01 Aug, 2026 | GSM SOLUTION
         </div>
     </div>
 
-    <div class="dashboard-padding">
-        <!-- Master Stats -->
-        <div class="stats-grid">
-            <div class="stat-card" style="border-top: 4px solid #10b981;">
-                <h3>Ledger Inflows (Revenue)</h3>
-                <p class="number text-green" id="masterRevenue">₹0</p>
+    <div class="main-content">
+        <div class="page-header">
+            <div class="page-title">
+                <h1>Profit Book</h1>
+                <p>Monthly profit & expense summary</p>
             </div>
-            <div class="stat-card" style="border-top: 4px solid #ef4444;">
-                <h3>Ledger Outflows (Expenses)</h3>
-                <p class="number text-red" id="masterExpenses">₹0</p>
-            </div>
-            <div class="stat-card" style="border-top: 4px solid #3b82f6;">
-                <h3>Net Ledger Balance</h3>
-                <p class="number text-blue" id="masterBalance">₹0</p>
-            </div>
-            <div class="stat-card" style="border-top: 4px solid #9333ea; background: #faf5ff;">
-                <h3 style="color:#9333ea;">Parts Profit (Sales Report)</h3>
-                <p class="number text-purple" id="masterPartsProfit">₹0</p>
+            
+            <div class="month-controls">
+                <div class="month-selector">
+                    <button class="month-btn" onclick="changeMonth(-1)">‹</button>
+                    <div class="month-display">
+                        <span id="monthDisplayText">August, 2026</span>
+                        <span>📅</span>
+                        <input type="month" id="monthInput" onchange="fetchData()">
+                    </div>
+                    <button class="month-btn" onclick="changeMonth(1)">›</button>
+                </div>
+                <div class="selected-month-text" id="selectedMonthLabel">August 2026</div>
             </div>
         </div>
 
-        <div class="breakdown-grid">
-            <!-- Ledger Breakdown -->
-            <div class="breakdown-card">
-                <h2>Ledger Breakdown (Cashbook + UPI)</h2>
-                <div class="flex-row"><span>Cash Income (Cashbook In)</span> <span id="cashInText">₹0</span></div>
-                <div class="flex-row"><span>Digital Income (UPI & Card Book)</span> <span id="upiInText">₹0</span></div>
-                <div class="flex-row" style="background: #f0fdf4; padding: 10px; margin-top: 5px; border-radius: 6px;">
-                    <span class="text-green" style="font-weight:bold;">Total Gross Inflows</span> 
-                    <span class="text-green" style="font-weight:bold;" id="totalRevText">₹0</span>
+        <div class="profit-grid">
+            <!-- LEFT COLUMN -->
+            <div class="card card-income">
+                <div class="card-header-green">↗ INCOME / PROFIT</div>
+                
+                <div class="ow-profit-box">
+                    <div class="ow-text">
+                        <span class="ow-icon">⚡</span>
+                        <div>
+                            <h4>Profit From OW Parts</h4>
+                            <p>Auto - from Sales Report</p>
+                        </div>
+                    </div>
+                    <div class="ow-amount" id="owProfitDisplay">₹0.00</div>
+                </div>
+
+                <div class="add-income-box">
+                    <h5>ADD OTHER INCOME</h5>
+                    <div class="input-group">
+                        <input type="text" id="otherIncomeLabel" placeholder="Income label (e.g. Labour charges)">
+                    </div>
+                    <div class="input-row">
+                        <div class="currency-input">
+                            <span>₹</span>
+                            <input type="number" id="otherIncomeAmount" placeholder="0.00">
+                        </div>
+                        <button class="btn-add" onclick="addOtherIncome()">+ Add</button>
+                    </div>
                 </div>
                 
-                <div class="flex-row" style="margin-top: 15px;"><span>Cash Expenses (Cashbook Out)</span> <span class="text-red" id="cashOutText">₹0</span></div>
-                <div class="flex-row"><span>Digital Expenses (UPI Refund/Out)</span> <span class="text-red" id="upiOutText">₹0</span></div>
-                <div class="flex-row" style="background: #fef2f2; padding: 10px; margin-top: 5px; border-radius: 6px;">
-                    <span class="text-red" style="font-weight:bold;">Total Gross Outflows</span> 
-                    <span class="text-red" style="font-weight:bold;" id="totalExpText">₹0</span>
+                <div class="other-income-list" id="otherIncomeList">
+                    <!-- Manual income populated here -->
+                </div>
+
+                <div class="total-row-green">
+                    <span>Total Income</span>
+                    <span id="totalIncomeDisplay">₹0.00</span>
                 </div>
             </div>
 
-            <!-- Parts Margin Breakdown -->
-            <div class="breakdown-card">
-                <h2>Parts Margin Breakdown (Sales Report)</h2>
-                <p style="font-size: 0.85rem; color:#6b7280; margin-top:-5px; margin-bottom: 15px;">Margins generated directly from individual part sales.</p>
-                
-                <div class="flex-row"><span>Total Retail Value (Sold)</span> <span class="text-green" id="salesRetailText">₹0</span></div>
-                <div class="flex-row"><span>Total Unit Cost (Sourced)</span> <span class="text-red" id="salesUnitText">₹0</span></div>
-                <div class="flex-row" style="background: #faf5ff; padding: 10px; margin-top: 15px; border-radius: 6px; border: 1px solid #e9d5ff;">
-                    <span class="text-purple" style="font-weight:bold;">Total Parts Profit</span> 
-                    <span class="text-purple" style="font-weight:bold;" id="salesProfitText">₹0</span>
+            <!-- RIGHT COLUMN -->
+            <div class="card card-expenses">
+                <div class="card-header-red">
+                    <span>↘ EXPENSES</span>
+                    <a href="expenses.html">↗ from Expenses tab</a>
                 </div>
+
+                <div class="expense-list" id="expensesList">
+                    <!-- Empty state or list goes here -->
+                    <div class="empty-state" id="expensesEmptyState">
+                        No expenses recorded for <span id="emptyStateMonth">August 2026</span>.<br>
+                        Add entries from the <strong>Expenses</strong> tab.
+                    </div>
+                </div>
+
+                <div class="total-row-red">
+                    <span>Total Expenses</span>
+                    <span id="totalExpensesDisplay">₹0.00</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOTTOM EBITDA -->
+        <div class="ebitda-card" id="ebitdaCard">
+            <div class="ebitda-title">
+                <h2 id="ebitdaTitleText">EBITDA — AUGUST 2026</h2>
+                <p>Earnings Before Interest, Taxes, Depreciation & Amortisation</p>
+            </div>
+            <div class="ebitda-value-box">
+                <h2 class="ebitda-value" id="ebitdaTotalDisplay">₹0.00</h2>
+                <p class="ebitda-calc" id="ebitdaCalcText">₹0.00 income - ₹0.00 expenses</p>
             </div>
         </div>
     </div>
@@ -150,35 +269,26 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+    // Supabase Configuration using your provided keys
     const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
     const ADMIN_EMAIL = 'faizan@gsmsolution.com'; 
     let currentUserEmail = '';
+    
+    // Totals State
+    let state = {
+        owProfit: 0,
+        otherIncome: 0,
+        totalExpenses: 0
+    };
 
-    // Sidebar Logic
-    let sidebarTimer;
-    window.resetSidebarTimer = function() {
-        clearTimeout(sidebarTimer);
-        sidebarTimer = setTimeout(() => {
-            const sb = document.getElementById('sidebar');
-            const btn = document.getElementById('sidebarToggle');
-            if(sb && btn) {
-                sb.classList.add('collapsed');
-                btn.classList.add('sidebar-collapsed-btn');
-            }
-        }, 5000);
-    }
-    window.clearSidebarTimer = function() { clearTimeout(sidebarTimer); }
-
-    window.toggleSidebar = function() {
-        const sb = document.getElementById('sidebar');
-        const btn = document.getElementById('sidebarToggle');
-        if(sb && btn) {
-            sb.classList.toggle('collapsed');
-            btn.classList.toggle('sidebar-collapsed-btn');
-            if(!sb.classList.contains('collapsed')) resetSidebarTimer();
-            else clearSidebarTimer();
-        }
-    }
+    // Set Date Formats
+    const dateOptions = { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' };
+    document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString('en-GB', dateOptions) + " | GSM SOLUTION";
+    
+    const monthInput = document.getElementById('monthInput');
+    let currentDate = new Date();
+    // Default to current month
+    monthInput.value = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
 
     async function checkAuth() {
         const { data } = await supabaseClient.auth.getSession();
@@ -186,7 +296,9 @@
             window.location.href = 'login.html';
         } else {
             currentUserEmail = data.session.user.email;
-            document.getElementById('userNameDisplay').innerText = currentUserEmail.split('@')[0].charAt(0).toUpperCase() + currentUserEmail.split('@')[0].slice(1);
+            let displayEmail = currentUserEmail.split('@')[0];
+            document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
+            document.getElementById('userAvatar').innerText = displayEmail.charAt(0).toUpperCase();
             
             // Kick out non-admins and show admin tabs
             if (currentUserEmail.trim().toLowerCase() !== ADMIN_EMAIL.trim().toLowerCase()) {
@@ -197,78 +309,255 @@
             }
         }
     }
-    async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
-
-    // Format Currency
-    const formatCurr = (num) => '₹' + parseFloat(num || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-
-    async function calculateProfit() {
-        // 1. Fetch Cashbook
-        const { data: cashData } = await supabaseClient.from('cashbook_entries').select('amount, type');
-        let cashIn = 0, cashOut = 0;
-        if(cashData) {
-            cashData.forEach(c => {
-                let val = parseFloat(c.amount) || 0;
-                if(c.type === 'in') cashIn += val;
-                if(c.type === 'out') cashOut += val;
-            });
-        }
-
-        // 2. Fetch UPI Book (Updated to use upi_entries and combine UPI & Card amounts)
-        const { data: upiData } = await supabaseClient.from('upi_entries').select('upi_amount, card_amount');
-        let upiIn = 0, upiOut = 0;
-        if(upiData) {
-            upiData.forEach(u => {
-                let upiVal = parseFloat(u.upi_amount) || 0;
-                let cardVal = parseFloat(u.card_amount) || 0;
-                let totalVal = upiVal + cardVal;
-                
-                if(totalVal >= 0) upiIn += totalVal;
-                if(totalVal < 0) upiOut += Math.abs(totalVal);
-            });
-        }
-
-        // 3. Fetch Sales Report (Parts Profit)
-        const { data: salesData } = await supabaseClient.from('sales_reports').select('unit_price, retail_price');
-        let totalUnit = 0, totalRetail = 0;
-        if (salesData) {
-            salesData.forEach(s => {
-                totalUnit += parseFloat(s.unit_price) || 0;
-                totalRetail += parseFloat(s.retail_price) || 0;
-            });
-        }
-        let partsProfit = totalRetail - totalUnit;
-
-        // Calculations
-        const totalRevenue = cashIn + upiIn;
-        const totalExpenses = cashOut + upiOut;
-        const netLedgerBalance = totalRevenue - totalExpenses;
-
-        // Update UI Dashboard Stats
-        document.getElementById('masterRevenue').innerText = formatCurr(totalRevenue);
-        document.getElementById('masterExpenses').innerText = formatCurr(totalExpenses);
-        document.getElementById('masterBalance').innerText = formatCurr(netLedgerBalance);
-        document.getElementById('masterPartsProfit').innerText = formatCurr(partsProfit);
-
-        // Ledger Breakdown texts
-        document.getElementById('cashInText').innerText = formatCurr(cashIn);
-        document.getElementById('upiInText').innerText = formatCurr(upiIn);
-        document.getElementById('totalRevText').innerText = formatCurr(totalRevenue);
-        
-        document.getElementById('cashOutText').innerText = formatCurr(cashOut);
-        document.getElementById('upiOutText').innerText = formatCurr(upiOut);
-        document.getElementById('totalExpText').innerText = formatCurr(totalExpenses);
-
-        // Parts Margin Breakdown texts
-        document.getElementById('salesRetailText').innerText = formatCurr(totalRetail);
-        document.getElementById('salesUnitText').innerText = formatCurr(totalUnit);
-        document.getElementById('salesProfitText').innerText = formatCurr(partsProfit);
+    
+    async function logOut() {
+        await supabaseClient.auth.signOut();
+        window.location.href = 'login.html';
     }
 
+    // --- Format Currency ---
+    function formatMoney(amount) {
+        return amount.toLocaleString('en-IN', { style: 'currency', currency: 'INR' });
+    }
+    
+    function formatMonthYearLong(dateString) {
+        const d = new Date(dateString + "-01");
+        return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+
+    function formatMonthYearShort(dateString) {
+        const d = new Date(dateString + "-01");
+        return d.toLocaleDateString('en-US', { month: 'long' }) + ', ' + d.getFullYear();
+    }
+
+    // --- Month Navigation ---
+    window.changeMonth = function(offset) {
+        let current = new Date(monthInput.value + "-01");
+        current.setMonth(current.getMonth() + offset);
+        monthInput.value = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+        fetchData();
+    }
+
+    // --- Main Fetch ---
+    window.fetchData = async function() {
+        const selectedMonth = monthInput.value; // YYYY-MM
+        const startOfMonth = `${selectedMonth}-01`;
+        
+        // Calculate end of month dynamically
+        const dateObj = new Date(startOfMonth);
+        const nextMonth = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 1);
+        const endOfMonthDate = new Date(nextMonth - 1);
+        const endOfMonth = endOfMonthDate.toISOString().split('T')[0];
+
+        // Update UI Labels
+        const longFormat = formatMonthYearLong(selectedMonth);
+        const shortFormat = formatMonthYearShort(selectedMonth);
+        
+        document.getElementById('monthDisplayText').innerText = shortFormat;
+        document.getElementById('selectedMonthLabel').innerText = longFormat;
+        document.getElementById('ebitdaTitleText').innerText = `EBITDA — ${longFormat.toUpperCase()}`;
+        document.getElementById('emptyStateMonth').innerText = longFormat;
+
+        // Reset state
+        state = { owProfit: 0, otherIncome: 0, totalExpenses: 0 };
+
+        await Promise.all([
+            fetchOWProfit(startOfMonth, endOfMonth),
+            fetchOtherIncomeData(startOfMonth, endOfMonth),
+            fetchExpensesData(startOfMonth, endOfMonth)
+        ]);
+
+        updateTotalsUI();
+    }
+
+    // 1. Fetch Sales Report Profit based on your provided script's logic
+    async function fetchOWProfit(start, end) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('sales_reports')
+                .select('unit_price, retail_price')
+                .gte('date', start)
+                .lte('date', end);
+
+            if (error) throw error;
+
+            let totalProfit = 0;
+
+            data.forEach(item => {
+                const unitTotal = parseFloat(item.unit_price) || 0;
+                const retailTotal = parseFloat(item.retail_price) || 0;
+                totalProfit += (retailTotal - unitTotal);
+            });
+
+            state.owProfit = totalProfit;
+            document.getElementById('owProfitDisplay').innerText = formatMoney(totalProfit);
+        } catch (error) { console.error("Error fetching Sales Profit:", error.message); }
+    }
+
+    // 2. Fetch Other Income
+    async function fetchOtherIncomeData(start, end) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('profit_other_income')
+                .select('*')
+                .gte('date', start)
+                .lte('date', end)
+                .order('date', { ascending: false });
+
+            if (error) throw error;
+
+            const listDiv = document.getElementById('otherIncomeList');
+            listDiv.innerHTML = '';
+            let sum = 0;
+
+            data.forEach(item => {
+                const amt = parseFloat(item.amount);
+                sum += amt;
+                
+                const div = document.createElement('div');
+                div.className = 'other-item';
+                div.innerHTML = `
+                    <span style="color:var(--text-muted);">${item.label}</span>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="font-weight:600; color:var(--text-main);">${formatMoney(amt)}</span>
+                        ${currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase() ? `<button onclick="deleteOtherIncome('${item.id}')" style="background:none; border:none; color:var(--c-red); cursor:pointer; font-size:14px; padding:0;">✕</button>` : ''}
+                    </div>
+                `;
+                listDiv.appendChild(div);
+            });
+
+            state.otherIncome = sum;
+        } catch (error) { console.error("Error fetching Other Income:", error.message); }
+    }
+
+    // 3. Fetch Expenses
+    async function fetchExpensesData(start, end) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('expenses')
+                .select('*')
+                .gte('date', start)
+                .lte('date', end)
+                .order('date', { ascending: false });
+
+            if (error) throw error;
+
+            const listDiv = document.getElementById('expensesList');
+            const emptyState = document.getElementById('expensesEmptyState');
+            
+            // Clear current list items, keeping empty state node if needed
+            Array.from(listDiv.children).forEach(child => {
+                if(child.id !== 'expensesEmptyState') listDiv.removeChild(child);
+            });
+
+            let sum = 0;
+
+            if(data.length === 0) {
+                emptyState.style.display = 'flex';
+            } else {
+                emptyState.style.display = 'none';
+                data.forEach(item => {
+                    const amt = parseFloat(item.amount);
+                    sum += amt;
+                    const d = new Date(item.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+                    const div = document.createElement('div');
+                    div.className = 'expense-item';
+                    div.innerHTML = `
+                        <div class="expense-info">
+                            <h4>${item.title}</h4>
+                            <p>${item.description || ''}</p>
+                        </div>
+                        <div class="expense-amount-date">
+                            <h4>${formatMoney(amt)}</h4>
+                            <p>${d}</p>
+                        </div>
+                    `;
+                    listDiv.appendChild(div);
+                });
+            }
+
+            state.totalExpenses = sum;
+            document.getElementById('totalExpensesDisplay').innerText = formatMoney(sum);
+        } catch (error) { console.error("Error fetching Expenses:", error.message); }
+    }
+
+    // Calculate and Update Final UI
+    function updateTotalsUI() {
+        const totalIncome = state.owProfit + state.otherIncome;
+        const ebitda = totalIncome - state.totalExpenses;
+
+        document.getElementById('totalIncomeDisplay').innerText = formatMoney(totalIncome);
+        document.getElementById('ebitdaTotalDisplay').innerText = formatMoney(ebitda);
+        
+        // The bottom calc text
+        document.getElementById('ebitdaCalcText').innerText = `${formatMoney(totalIncome)} income - ${formatMoney(state.totalExpenses)} expenses`;
+
+        // Color toggle for EBITDA depending on profit/loss
+        const ebitdaValText = document.getElementById('ebitdaTotalDisplay');
+        const ebitdaCard = document.getElementById('ebitdaCard');
+        const ebitdaTitle = document.querySelector('.ebitda-title h2');
+        const ebitdaSub = document.querySelector('.ebitda-title p');
+        const ebitdaCalc = document.getElementById('ebitdaCalcText');
+
+        if (ebitda < 0) {
+            ebitdaCard.style.backgroundColor = 'var(--bg-red-light)';
+            ebitdaCard.style.borderColor = 'var(--border-red)';
+            ebitdaTitle.style.color = 'var(--c-red-dark)';
+            ebitdaValText.style.color = 'var(--c-red-dark)';
+            ebitdaSub.style.color = 'var(--text-muted)';
+            ebitdaCalc.style.color = 'var(--text-muted)';
+        } else {
+            ebitdaCard.style.backgroundColor = 'var(--bg-green-light)';
+            ebitdaCard.style.borderColor = 'var(--border-green)';
+            ebitdaTitle.style.color = 'var(--c-green-dark)';
+            ebitdaValText.style.color = 'var(--c-green-dark)';
+            ebitdaSub.style.color = 'var(--text-muted)';
+            ebitdaCalc.style.color = 'var(--text-muted)';
+        }
+    }
+
+    // --- Add / Delete Manual Income ---
+    window.addOtherIncome = async function() {
+        const label = document.getElementById('otherIncomeLabel').value.trim();
+        const amount = parseFloat(document.getElementById('otherIncomeAmount').value);
+
+        if (!label || isNaN(amount) || amount <= 0) {
+            return alert("Please enter a valid label and amount.");
+        }
+
+        // Save to current selected month with day as 01 for reference
+        const insertDate = `${monthInput.value}-01`;
+
+        try {
+            const { error } = await supabaseClient.from('profit_other_income').insert([{
+                date: insertDate,
+                label: label,
+                amount: amount,
+                created_by: currentUserEmail
+            }]);
+
+            if (error) throw error;
+            
+            document.getElementById('otherIncomeLabel').value = '';
+            document.getElementById('otherIncomeAmount').value = '';
+            fetchData();
+        } catch (error) { alert("Failed to add income: " + error.message); }
+    }
+
+    window.deleteOtherIncome = async function(id) {
+        if(!confirm("Delete this income record?")) return;
+        try {
+            const { error } = await supabaseClient.from('profit_other_income').delete().eq('id', id);
+            if (error) throw error;
+            fetchData();
+        } catch (error) { alert("Failed to delete: " + error.message); }
+    }
+
+    // Initialization
     document.addEventListener("DOMContentLoaded", async () => {
         await checkAuth();
-        resetSidebarTimer();
-        calculateProfit();
+        fetchData();
     });
 </script>
 </body>
