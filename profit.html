@@ -219,11 +219,21 @@
             <!-- Left: UPI Collection -->
             <div class="card card-upi">
                 <div class="card-header-blue">
-                    <span>📱 UPI COLLECTION</span>
+                    <span>📱 UPI SUMMARY</span>
                     <a href="upi-book.html" class="card-header-link">↗ View Book</a>
                 </div>
-                <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">Total digital payments for the month</p>
-                <div class="collection-amount" id="upiCollectionDisplay">₹0.00</div>
+                <div class="cashbook-row">
+                    <span style="color: var(--text-muted);">Total Digital In</span>
+                    <span style="color: var(--c-blue-dark); font-weight: 600;" id="digitalInDisplay">+ ₹0.00</span>
+                </div>
+                <div class="cashbook-row">
+                    <span style="color: var(--text-muted);">Total Digital Out</span>
+                    <span class="cash-out-text" id="digitalOutDisplay">- ₹0.00</span>
+                </div>
+                <div class="cashbook-row" style="margin-top: 10px; padding-bottom: 0;">
+                    <span>Net Digital Balance</span>
+                    <span class="cash-net-text" id="digitalNetDisplay">₹0.00</span>
+                </div>
             </div>
             
             <!-- Right: Cashbook Summary -->
@@ -368,7 +378,6 @@
         window.location.href = 'login.html';
     }
 
-    // --- Format Currency ---
     function formatMoney(amount) {
         return amount.toLocaleString('en-IN', { style: 'currency', currency: 'INR' });
     }
@@ -420,37 +429,48 @@
         updateTotalsUI();
     }
 
-    // --- FETCH: upi_entries ---
+    // --- FETCH: upi_entries (Now including upi_payment) ---
     async function fetchUPICollection(start, end) {
         try {
-            // Using exact table name based on your schema
             const { data, error } = await supabaseClient
                 .from('upi_entries')
-                .select('upi_amount, card_amount, date')
+                .select('upi_amount, card_amount, upi_payment, date')
                 .gte('date', start)
                 .lte('date', end);
 
             if (error) throw error;
             
-            let totalUpi = 0;
+            let digitalIn = 0;
+            let digitalOut = 0;
+
             data.forEach(item => {
-                // Summing both upi_amount and card_amount for total digital collection
                 const upiAmt = parseFloat(item.upi_amount) || 0;
                 const cardAmt = parseFloat(item.card_amount) || 0;
-                totalUpi += (upiAmt + cardAmt);
+                const outAmt = parseFloat(item.upi_payment) || 0;
+
+                digitalIn += (upiAmt + cardAmt);
+                digitalOut += outAmt;
             });
             
-            document.getElementById('upiCollectionDisplay').innerText = formatMoney(totalUpi);
+            document.getElementById('digitalInDisplay').innerText = "+ " + formatMoney(digitalIn);
+            document.getElementById('digitalOutDisplay').innerText = "- " + formatMoney(digitalOut);
+            
+            const netDigital = digitalIn - digitalOut;
+            const netDisplay = document.getElementById('digitalNetDisplay');
+            netDisplay.innerText = formatMoney(netDigital);
+            netDisplay.style.color = netDigital >= 0 ? 'var(--c-blue-dark)' : 'var(--c-red-dark)';
+
         } catch (error) { 
             console.error("Error fetching UPI Collection:", error.message); 
-            document.getElementById('upiCollectionDisplay').innerText = "₹0.00";
+            document.getElementById('digitalInDisplay').innerText = "+ ₹0.00";
+            document.getElementById('digitalOutDisplay').innerText = "- ₹0.00";
+            document.getElementById('digitalNetDisplay').innerText = "₹0.00";
         }
     }
 
     // --- FETCH: cashbook_entries ---
     async function fetchCashbook(start, end) {
         try {
-            // Using exact table name and columns based on your schema
             const { data, error } = await supabaseClient
                 .from('cashbook_entries')
                 .select('amount, type, date')
@@ -464,7 +484,6 @@
             
             data.forEach(item => {
                 const amt = parseFloat(item.amount) || 0;
-                // Standardizing the type string safely
                 const typeStr = String(item.type || '').toLowerCase().trim();
                 
                 if (typeStr === 'in' || typeStr === 'credit') {
