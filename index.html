@@ -584,7 +584,10 @@
         const list = document.getElementById('customerDropdownList');
         list.innerHTML = '';
         customersList.forEach(c => {
-            list.innerHTML += `<li onclick="selectCustomer('${escapeStr(c.name)}', '${escapeStr(c.mobile)}')">${c.name} - ${c.mobile}</li>`;
+            const li = document.createElement('li');
+            li.textContent = `${c.name} - ${c.mobile}`;
+            li.onclick = () => selectCustomer(c.name, c.mobile);
+            list.appendChild(li);
         });
     }
 
@@ -620,7 +623,10 @@
 
             if (matches.length > 0) {
                 matches.forEach(c => {
-                    list.innerHTML += `<li onclick="autoSelectFromNew('${escapeStr(c.name)}', '${escapeStr(c.mobile)}')"><span style="color:#2563eb; font-weight:bold;">Existing:</span> ${c.name} - ${c.mobile}</li>`;
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span style="color:#2563eb; font-weight:bold;">Existing:</span> ${c.name} - ${c.mobile}`;
+                    li.onclick = () => autoSelectFromNew(c.name, c.mobile);
+                    list.appendChild(li);
                 });
                 list.style.display = 'block';
             } else {
@@ -649,7 +655,10 @@
         const list = document.getElementById('creditCustomerDropdownList');
         list.innerHTML = '';
         customersList.forEach(c => {
-            list.innerHTML += `<li onclick="selectCreditCustomer('${escapeStr(c.name)}', '${escapeStr(c.mobile)}')">${c.name} - ${c.mobile}</li>`;
+            const li = document.createElement('li');
+            li.textContent = `${c.name} - ${c.mobile}`;
+            li.onclick = () => selectCreditCustomer(c.name, c.mobile);
+            list.appendChild(li);
         });
     }
 
@@ -927,7 +936,7 @@
             }
             
             if (isAdmin && currentTab !== 'Deleted Orders' && order.status !== 'Goods Delivered' && order.status !== 'Delivered (Refused)') {
-                actionHtml += `<button class="btn-icon" style="color:#ef4444; margin-top: 5px; display:block; margin: 5px auto;" onclick="deleteOrder('${orderIdSafe}', '${jobNoSafe}', '${order.status}')" title="Delete Order">🗑️ Delete</button>`;
+                actionHtml += `<button class="btn-icon" style="color:#ef4444; margin-top: 5px; display:block; margin: 5px auto;" onclick="deleteOrder('${orderIdSafe}', '${jobNoSafe}', '${order.status}')" title="Delete Order">🗑️</button>`;
             }
 
             let editIconHtml = '';
