@@ -486,48 +486,35 @@
     }
 
     async function checkAuth() {
-    // 1. Ensure supabaseClient is properly named based on the file (some files use 'db', some use 'supabaseClient')
-    const { data: sessionData } = await supabaseClient.auth.getSession();
-    
-    if (!sessionData.session) {
-        window.location.href = 'login.html';
-        return;
-    }
-
-    const currentUserEmail = sessionData.session.user.email;
-
-    // 2. Format UI Name
-    let displayEmail = currentUserEmail.split('@')[0];
-    document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
-    
-    // (If the page has a userAvatar element)
-    if(document.getElementById('userAvatar')) {
-        document.getElementById('userAvatar').innerText = displayEmail.charAt(0).toUpperCase();
-    }
-
-    // 3. Determine if user is Master Admin OR Database Admin
-    const isMasterAdmin = currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase();
-    
-    const { data: profile } = await supabaseClient
-        .from('user_profiles')
-        .select('role')
-        .eq('email', currentUserEmail)
-        .single();
-    
-    const isDbAdmin = profile && profile.role === 'Admin';
-
-    // 4. Reveal or Kick based on permissions
-    if (isMasterAdmin || isDbAdmin) {
-        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
-    } else {
-        // Only run this 'kick' logic on pages meant STRICTLY for admins (Profit, Expenses, Users, Sales Report)
-        // If this is a shared page (Index, Cashbook), remove the alert and window.location lines.
-        alert("Access Denied: Administrators only.");
-        window.location.href = 'index.html'; 
+        const { data: sessionData } = await supabaseClient.auth.getSession();
         
+        if (!sessionData.session) {
+            window.location.href = 'login.html';
+            return;
         }
-      }
+
+        const currentUserEmail = sessionData.session.user.email;
+
+        let displayEmail = currentUserEmail.split('@')[0];
+        document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
+
+        const isMasterAdmin = currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase();
+        
+        const { data: profile } = await supabaseClient
+            .from('user_profiles')
+            .select('role')
+            .eq('email', currentUserEmail)
+            .single();
+        
+        const isDbAdmin = profile && profile.role === 'Admin';
+
+        if (isMasterAdmin || isDbAdmin) {
+            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
+            isAdmin = true; 
+        } 
+        // Note: Removed the kick logic (window.location.href) from here because this page is meant for everyone.
     }
+    
     async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
 
     const escapeStr = (str) => {
@@ -1037,9 +1024,6 @@
         document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(filteredOrdersData.length / rowsPerPage) || 1}`;
     }
 
-    // ==========================================
-    // REVERT ORDER STATUS LOGIC (Universal Access)
-    // ==========================================
     window.revertToRepairCompleted = async function(id, jobNo, paymentMode, amount, mobile, targetStatus) {
         if (!confirm(`Are you sure you want to revert Job No: ${jobNo} back to '${targetStatus}'?\n\nThis will DELETE any final delivery records and remove the related Cash, UPI, and Credit entries from the ledgers.`)) return;
 
@@ -1059,7 +1043,6 @@
                 }
                 await supabaseClient.from('customer_credits').delete().eq('job_no', jobNo);
             } else {
-                // Catch all combinations for Split Payments
                 await supabaseClient.from('cashbook_entries').delete().ilike('description', searchString);
                 await supabaseClient.from('upi_entries').delete().ilike('description', searchString);
                 const { data: credits } = await supabaseClient.from('customer_credits').select('*').eq('job_no', jobNo);
@@ -1120,9 +1103,6 @@
         }
     }
 
-    // ==========================================
-    // EDIT PAYMENT MODE (ADMIN) LOGIC
-    // ==========================================
     let editPaymentOrderId = null;
     let editPaymentJobNo = '';
     let editPaymentAmount = 0;
