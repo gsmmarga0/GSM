@@ -222,7 +222,7 @@
                     <span>📱 UPI COLLECTION</span>
                     <a href="upi-book.html" class="card-header-link">↗ View Book</a>
                 </div>
-                <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">Total UPI received for the month</p>
+                <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">Total digital payments for the month</p>
                 <div class="collection-amount" id="upiCollectionDisplay">₹0.00</div>
             </div>
             
@@ -420,79 +420,57 @@
         updateTotalsUI();
     }
 
-    // --- ULTRA-FLEXIBLE UPI FETCH ---
+    // --- FETCH: upi_entries ---
     async function fetchUPICollection(start, end) {
         try {
-            // We fetch everything to bypass strict date column naming errors (date vs created_at)
-            const { data, error } = await supabaseClient.from('upi_book').select('*');
+            // Using exact table name based on your schema
+            const { data, error } = await supabaseClient
+                .from('upi_entries')
+                .select('upi_amount, card_amount, date')
+                .gte('date', start)
+                .lte('date', end);
+
             if (error) throw error;
             
-            console.log("Found UPI Data from DB:", data); 
-
             let totalUpi = 0;
-            const startDate = new Date(start);
-            const endDate = new Date(end);
-            endDate.setHours(23, 59, 59);
-
             data.forEach(item => {
-                // Find whatever date column you actually used
-                const recordDateStr = item.date || item.created_at || item.timestamp;
-                if (!recordDateStr) return;
-                
-                const recordDate = new Date(recordDateStr);
-                if (recordDate >= startDate && recordDate <= endDate) {
-                    // Try every possible column name you might have used for amount
-                    totalUpi += parseFloat(item.amount || item.amount_received || item.price || item.total || item.credit || 0);
-                }
+                // Summing both upi_amount and card_amount for total digital collection
+                const upiAmt = parseFloat(item.upi_amount) || 0;
+                const cardAmt = parseFloat(item.card_amount) || 0;
+                totalUpi += (upiAmt + cardAmt);
             });
             
             document.getElementById('upiCollectionDisplay').innerText = formatMoney(totalUpi);
         } catch (error) { 
-            console.error("Error fetching UPI Collection. Check if your table is exactly named 'upi_book':", error.message); 
+            console.error("Error fetching UPI Collection:", error.message); 
             document.getElementById('upiCollectionDisplay').innerText = "₹0.00";
         }
     }
 
-    // --- ULTRA-FLEXIBLE CASHBOOK FETCH ---
+    // --- FETCH: cashbook_entries ---
     async function fetchCashbook(start, end) {
         try {
-            const { data, error } = await supabaseClient.from('cashbook').select('*');
+            // Using exact table name and columns based on your schema
+            const { data, error } = await supabaseClient
+                .from('cashbook_entries')
+                .select('amount, type, date')
+                .gte('date', start)
+                .lte('date', end);
+
             if (error) throw error;
             
-            console.log("Found Cashbook Data from DB:", data);
-
             let cashIn = 0;
             let cashOut = 0;
             
-            const startDate = new Date(start);
-            const endDate = new Date(end);
-            endDate.setHours(23, 59, 59);
-            
             data.forEach(item => {
-                const recordDateStr = item.date || item.created_at || item.timestamp;
-                if (!recordDateStr) return;
+                const amt = parseFloat(item.amount) || 0;
+                // Standardizing the type string safely
+                const typeStr = String(item.type || '').toLowerCase().trim();
                 
-                const recordDate = new Date(recordDateStr);
-                if (recordDate >= startDate && recordDate <= endDate) {
-                    
-                    // Scenario 1: You have separate columns for IN and OUT
-                    const cIn = parseFloat(item.cash_in || item.credit || item.cashIn || 0);
-                    const cOut = parseFloat(item.cash_out || item.debit || item.cashOut || 0);
-                    
-                    if (cIn > 0) cashIn += cIn;
-                    if (cOut > 0) cashOut += cOut;
-                    
-                    // Scenario 2: You have an Amount column + a Type/Status column
-                    const amt = parseFloat(item.amount || item.price || item.total || item.value || 0);
-                    if (amt > 0) {
-                        const typeStr = String(item.type || item.transaction_type || item.status || item.entry_type || '').toLowerCase().trim();
-                        
-                        if (typeStr.includes('in') || typeStr.includes('credit') || typeStr.includes('receive')) {
-                            cashIn += amt;
-                        } else if (typeStr.includes('out') || typeStr.includes('debit') || typeStr.includes('paid') || typeStr.includes('pay') || typeStr.includes('expense')) {
-                            cashOut += amt;
-                        }
-                    }
+                if (typeStr === 'in' || typeStr === 'credit') {
+                    cashIn += amt;
+                } else if (typeStr === 'out' || typeStr === 'debit') {
+                    cashOut += amt;
                 }
             });
             
@@ -505,7 +483,7 @@
             netDisplay.style.color = netCash >= 0 ? 'var(--c-green-dark)' : 'var(--c-red-dark)';
             
         } catch (error) { 
-            console.error("Error fetching Cashbook. Check if your table is exactly named 'cashbook':", error.message);
+            console.error("Error fetching Cashbook:", error.message);
             document.getElementById('cashInDisplay').innerText = "+ ₹0.00";
             document.getElementById('cashOutDisplay').innerText = "- ₹0.00";
             document.getElementById('cashNetDisplay').innerText = "₹0.00";
