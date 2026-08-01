@@ -154,20 +154,44 @@
             else clearSidebarTimer();
         }
 
+        // ==========================================
+        // DYNAMIC AUTHENTICATION CHECK
+        // ==========================================
         async function checkAuth() {
-            const { data } = await db.auth.getSession();
-            if (!data.session) {
+            const { data: sessionData } = await db.auth.getSession();
+            
+            if (!sessionData.session) {
                 window.location.href = 'login.html';
-            } else if (data.session.user.email.trim().toLowerCase() !== ADMIN_EMAIL.trim().toLowerCase()) {
+                return;
+            }
+
+            const currentUserEmail = sessionData.session.user.email;
+
+            // 1. Check if it is the master hardcoded admin
+            const isMasterAdmin = currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase();
+
+            // 2. Fetch the user's role from the database
+            const { data: profile, error } = await db
+                .from('user_profiles')
+                .select('role')
+                .eq('email', currentUserEmail)
+                .single();
+            
+            const isDbAdmin = profile && profile.role === 'Admin';
+
+            // 3. Deny access if they are neither
+            if (!isMasterAdmin && !isDbAdmin) {
                 alert("Security Alert: Only Administrators can access this page.");
                 window.location.href = 'index.html'; 
-            } else {
-                let loggedInEmail = data.session.user.email.split('@')[0];
-                document.getElementById('userNameDisplay').innerText = loggedInEmail.charAt(0).toUpperCase() + loggedInEmail.slice(1);
-                
-                // Show Admin Elements
-                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
+                return;
             }
+
+            // 4. If they pass, setup the UI
+            let loggedInEmail = currentUserEmail.split('@')[0];
+            document.getElementById('userNameDisplay').innerText = loggedInEmail.charAt(0).toUpperCase() + loggedInEmail.slice(1);
+            
+            // Show Admin Elements
+            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
         }
 
         window.logOut = async function() {
