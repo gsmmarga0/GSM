@@ -309,6 +309,10 @@
             <button class="close-btn" onclick="closeModal()">×</button>
         </div>
         <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="outDate">
+        </div>
+        <div class="form-group">
             <label>Description</label>
             <input type="text" id="outDesc" placeholder="What was this for?">
         </div>
@@ -714,25 +718,29 @@
     }
 
     // --- Cash Out Modal ---
-    window.openModal = () => document.getElementById('cashOutModal').style.display = 'flex';
+    window.openModal = () => {
+        document.getElementById('cashOutModal').style.display = 'flex';
+        document.getElementById('outDate').value = new Date().toISOString().split('T')[0];
+    };
+    
     window.closeModal = () => {
         document.getElementById('cashOutModal').style.display = 'none';
+        document.getElementById('outDate').value = '';
         document.getElementById('outDesc').value = '';
         document.getElementById('outAmount').value = '';
         document.getElementById('outCategory').value = 'General';
     };
 
     window.saveCashOut = async function() {
+        const date = document.getElementById('outDate').value;
         const desc = document.getElementById('outDesc').value.trim();
         const category = document.getElementById('outCategory').value;
         const amount = parseFloat(document.getElementById('outAmount').value) || 0;
-        
-        const currentDate = new Date().toISOString().split('T')[0];
 
-        if(!desc || amount <= 0) return alert("Please enter a valid description and amount.");
+        if(!date || !desc || amount <= 0) return alert("Please enter a valid date, description, and amount.");
 
         const entry = {
-            date: currentDate,
+            date: date,
             description: desc,
             category: category,
             amount: amount,
