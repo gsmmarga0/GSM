@@ -910,9 +910,9 @@
             else if (order.status === 'Pending') {
                 displayAmount = order.approxEstimate || 0;
                 displayAmountHtml = `<span style="font-weight:bold; color:#059669;">₹${displayAmount}</span>`;
-                if (isAdmin) {
-                    displayAmountHtml += `<span onclick="promptUpdateEstimate('${orderIdSafe}', 'Pending', ${displayAmount})">${pencilSVG}</span>`;
-                }
+                
+                displayAmountHtml += `<span onclick="promptUpdateEstimate('${orderIdSafe}', 'Pending', ${displayAmount})">${pencilSVG}</span>`;
+                
                 actionHtml = `<button class="btn-bill" onclick="openBillingModal('${orderIdSafe}', '${jobNoSafe}', '${customerNameSafe}', '${contactNoSafe}')">Repair Complete ✓</button>`;
             
             } else if (order.status === 'Repair Completed') {
