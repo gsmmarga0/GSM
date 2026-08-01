@@ -1123,6 +1123,30 @@
         await checkAuth();
         fetchCustomers();
     });
+    // ==========================================
+// AUTO-LOGOUT AFTER 30 MINUTES OF INACTIVITY
+// ==========================================
+const setupAutoLogout = function() {
+    let inactivityTimer;
+    const timeoutDuration = 30 * 60 * 1000; // 30 minutes in milliseconds
+
+    function resetTimer() {
+        clearTimeout(inactivityTimer);
+        // Calls your existing logOut() function when the timer finishes
+        inactivityTimer = setTimeout(logOut, timeoutDuration); 
+    }
+
+    // Reset the timer when the user interacts with the page
+    window.onload = resetTimer;
+    document.onmousemove = resetTimer;
+    document.onkeypress = resetTimer;
+    document.onclick = resetTimer;
+    document.onscroll = resetTimer;
+    document.ontouchstart = resetTimer; // For mobile devices
+};
+
+// Start the inactivity tracker
+setupAutoLogout();
 </script>
 </body>
 </html>
