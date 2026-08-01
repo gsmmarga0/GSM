@@ -81,7 +81,7 @@
         .card { background: white; border-radius: 12px; padding: 25px; display: flex; flex-direction: column; }
         .card-tall { min-height: 380px; }
 
-        /* Collection Cards (Top Section) */
+        /* Collection Cards */
         .card-upi { border: 1px solid var(--border-blue); box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.05); }
         .card-cash { border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
         
@@ -342,7 +342,6 @@
     
     const monthInput = document.getElementById('monthInput');
     let currentDate = new Date();
-    // Default to current month
     monthInput.value = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
 
     async function checkAuth() {
@@ -355,7 +354,6 @@
             document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
             document.getElementById('userAvatar').innerText = displayEmail.charAt(0).toUpperCase();
             
-            // Kick out non-admins and show admin tabs
             if (currentUserEmail.trim().toLowerCase() !== ADMIN_EMAIL.trim().toLowerCase()) {
                 alert("Access Denied: Administrators only.");
                 window.location.href = 'index.html';
@@ -385,7 +383,6 @@
         return d.toLocaleDateString('en-US', { month: 'long' }) + ', ' + d.getFullYear();
     }
 
-    // --- Month Navigation ---
     window.changeMonth = function(offset) {
         let current = new Date(monthInput.value + "-01");
         current.setMonth(current.getMonth() + offset);
@@ -393,18 +390,15 @@
         fetchData();
     }
 
-    // --- Main Fetch ---
     window.fetchData = async function() {
-        const selectedMonth = monthInput.value; // YYYY-MM
+        const selectedMonth = monthInput.value; 
         const startOfMonth = `${selectedMonth}-01`;
         
-        // Calculate end of month dynamically
         const dateObj = new Date(startOfMonth);
         const nextMonth = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 1);
         const endOfMonthDate = new Date(nextMonth - 1);
         const endOfMonth = endOfMonthDate.toISOString().split('T')[0];
 
-        // Update UI Labels
         const longFormat = formatMonthYearLong(selectedMonth);
         const shortFormat = formatMonthYearShort(selectedMonth);
         
@@ -413,10 +407,8 @@
         document.getElementById('ebitdaTitleText').innerText = `EBITDA — ${longFormat.toUpperCase()}`;
         document.getElementById('emptyStateMonth').innerText = longFormat;
 
-        // Reset profit state
         state = { owProfit: 0, otherIncome: 0, totalExpenses: 0 };
 
-        // Fetch all data in parallel
         await Promise.all([
             fetchUPICollection(startOfMonth, endOfMonth),
             fetchCashbook(startOfMonth, endOfMonth),
@@ -428,56 +420,78 @@
         updateTotalsUI();
     }
 
-    // Fetch UPI Collection
+    // --- ULTRA-FLEXIBLE UPI FETCH ---
     async function fetchUPICollection(start, end) {
         try {
-            const { data, error } = await supabaseClient
-                .from('upi_book')
-                .select('*')
-                .gte('date', start)
-                .lte('date', end);
-
+            // We fetch everything to bypass strict date column naming errors (date vs created_at)
+            const { data, error } = await supabaseClient.from('upi_book').select('*');
             if (error) throw error;
             
+            console.log("Found UPI Data from DB:", data); 
+
             let totalUpi = 0;
-            // Handle potentially different schemas (amount vs amount_received)
+            const startDate = new Date(start);
+            const endDate = new Date(end);
+            endDate.setHours(23, 59, 59);
+
             data.forEach(item => {
-                totalUpi += parseFloat(item.amount || item.amount_received || 0);
+                // Find whatever date column you actually used
+                const recordDateStr = item.date || item.created_at || item.timestamp;
+                if (!recordDateStr) return;
+                
+                const recordDate = new Date(recordDateStr);
+                if (recordDate >= startDate && recordDate <= endDate) {
+                    // Try every possible column name you might have used for amount
+                    totalUpi += parseFloat(item.amount || item.amount_received || item.price || item.total || item.credit || 0);
+                }
             });
             
             document.getElementById('upiCollectionDisplay').innerText = formatMoney(totalUpi);
         } catch (error) { 
-            console.error("Error fetching UPI Collection:", error.message); 
+            console.error("Error fetching UPI Collection. Check if your table is exactly named 'upi_book':", error.message); 
             document.getElementById('upiCollectionDisplay').innerText = "₹0.00";
         }
     }
 
-    // Fetch Cashbook Summary
+    // --- ULTRA-FLEXIBLE CASHBOOK FETCH ---
     async function fetchCashbook(start, end) {
         try {
-            const { data, error } = await supabaseClient
-                .from('cashbook')
-                .select('*')
-                .gte('date', start)
-                .lte('date', end);
-
+            const { data, error } = await supabaseClient.from('cashbook').select('*');
             if (error) throw error;
             
+            console.log("Found Cashbook Data from DB:", data);
+
             let cashIn = 0;
             let cashOut = 0;
             
+            const startDate = new Date(start);
+            const endDate = new Date(end);
+            endDate.setHours(23, 59, 59);
+            
             data.forEach(item => {
-                // Handle schema where cash_in and cash_out are separate columns
-                if (item.cash_in) cashIn += parseFloat(item.cash_in) || 0;
-                if (item.cash_out) cashOut += parseFloat(item.cash_out) || 0;
+                const recordDateStr = item.date || item.created_at || item.timestamp;
+                if (!recordDateStr) return;
                 
-                // Handle schema where there is an amount and a type/status column
-                if (item.amount) {
-                    const type = (item.type || item.status || '').toLowerCase();
-                    if (type === 'in' || type === 'credit') {
-                        cashIn += parseFloat(item.amount) || 0;
-                    } else if (type === 'out' || type === 'debit') {
-                        cashOut += parseFloat(item.amount) || 0;
+                const recordDate = new Date(recordDateStr);
+                if (recordDate >= startDate && recordDate <= endDate) {
+                    
+                    // Scenario 1: You have separate columns for IN and OUT
+                    const cIn = parseFloat(item.cash_in || item.credit || item.cashIn || 0);
+                    const cOut = parseFloat(item.cash_out || item.debit || item.cashOut || 0);
+                    
+                    if (cIn > 0) cashIn += cIn;
+                    if (cOut > 0) cashOut += cOut;
+                    
+                    // Scenario 2: You have an Amount column + a Type/Status column
+                    const amt = parseFloat(item.amount || item.price || item.total || item.value || 0);
+                    if (amt > 0) {
+                        const typeStr = String(item.type || item.transaction_type || item.status || item.entry_type || '').toLowerCase().trim();
+                        
+                        if (typeStr.includes('in') || typeStr.includes('credit') || typeStr.includes('receive')) {
+                            cashIn += amt;
+                        } else if (typeStr.includes('out') || typeStr.includes('debit') || typeStr.includes('paid') || typeStr.includes('pay') || typeStr.includes('expense')) {
+                            cashOut += amt;
+                        }
                     }
                 }
             });
@@ -491,14 +505,13 @@
             netDisplay.style.color = netCash >= 0 ? 'var(--c-green-dark)' : 'var(--c-red-dark)';
             
         } catch (error) { 
-            console.error("Error fetching Cashbook:", error.message);
+            console.error("Error fetching Cashbook. Check if your table is exactly named 'cashbook':", error.message);
             document.getElementById('cashInDisplay').innerText = "+ ₹0.00";
             document.getElementById('cashOutDisplay').innerText = "- ₹0.00";
             document.getElementById('cashNetDisplay').innerText = "₹0.00";
         }
     }
 
-    // Fetch Sales Report Profit
     async function fetchOWProfit(start, end) {
         try {
             const { data, error } = await supabaseClient
@@ -510,7 +523,6 @@
             if (error) throw error;
 
             let totalProfit = 0;
-
             data.forEach(item => {
                 const unitTotal = parseFloat(item.unit_price) || 0;
                 const retailTotal = parseFloat(item.retail_price) || 0;
@@ -522,7 +534,6 @@
         } catch (error) { console.error("Error fetching Sales Profit:", error.message); }
     }
 
-    // Fetch Other Income
     async function fetchOtherIncomeData(start, end) {
         try {
             const { data, error } = await supabaseClient
@@ -558,7 +569,6 @@
         } catch (error) { console.error("Error fetching Other Income:", error.message); }
     }
 
-    // Fetch Expenses
     async function fetchExpensesData(start, end) {
         try {
             const { data, error } = await supabaseClient
@@ -609,7 +619,6 @@
         } catch (error) { console.error("Error fetching Expenses:", error.message); }
     }
 
-    // Calculate and Update Final EBITDA UI
     function updateTotalsUI() {
         const totalIncome = state.owProfit + state.otherIncome;
         const ebitda = totalIncome - state.totalExpenses;
@@ -619,7 +628,6 @@
         
         document.getElementById('ebitdaCalcText').innerText = `${formatMoney(totalIncome)} income - ${formatMoney(state.totalExpenses)} expenses`;
 
-        // Color toggle for EBITDA depending on profit/loss
         const ebitdaValText = document.getElementById('ebitdaTotalDisplay');
         const ebitdaCard = document.getElementById('ebitdaCard');
         const ebitdaTitle = document.querySelector('.ebitda-title h2');
@@ -643,7 +651,6 @@
         }
     }
 
-    // --- Add / Delete Manual Income ---
     window.addOtherIncome = async function() {
         const label = document.getElementById('otherIncomeLabel').value.trim();
         const amount = parseFloat(document.getElementById('otherIncomeAmount').value);
@@ -679,7 +686,6 @@
         } catch (error) { alert("Failed to delete: " + error.message); }
     }
 
-    // Initialization
     document.addEventListener("DOMContentLoaded", async () => {
         await checkAuth();
         fetchData();
