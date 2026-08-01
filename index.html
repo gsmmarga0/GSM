@@ -227,7 +227,6 @@
                             <input type="text" id="custSearchInput" class="search-select-input" placeholder="🔍 Search existing customer by Name or Mobile..." oninput="filterCustomerSearch()" onfocus="openCustomerDropdown()">
                             <input type="hidden" id="selectedCustName">
                             <input type="hidden" id="selectedCustMobile">
-                            <!-- Dropdown list populated dynamically for speed -->
                             <ul class="search-select-list" id="customerDropdownList"></ul>
                         </div>
                     </div>
@@ -576,11 +575,9 @@
         const { data } = await supabaseClient.from('customers').select('*').order('name', { ascending: true });
         if (data) { 
             customersList = data; 
-            // We no longer pre-load elements into the DOM, keeping it fast.
         }
     }
 
-    // NEW DYNAMIC CUSTOMER RENDERER (SUPER FAST)
     window.renderCustomerDropdown = function(filterStr = '') {
         const list = document.getElementById('customerDropdownList');
         list.innerHTML = '';
@@ -592,7 +589,6 @@
             matches = customersList.filter(c => (c.name + ' ' + c.mobile).toLowerCase().includes(filterStr));
         }
         
-        // Render max 50 items to keep DOM blazing fast
         const topMatches = matches.slice(0, 50);
         
         if (topMatches.length === 0) {
@@ -668,7 +664,6 @@
         selectCustomer(name, mobile);
     }
 
-    // NEW DYNAMIC CREDIT CUSTOMER RENDERER
     window.renderCreditCustomerDropdown = function(filterStr = '') {
         const list = document.getElementById('creditCustomerDropdownList');
         list.innerHTML = '';
@@ -772,7 +767,7 @@
             if (currentTab === 'Deleted Orders') {
                 matchesTab = (order.is_deleted === true);
             } else {
-                if (order.is_deleted === true) return false; // Hide deleted from other tabs
+                if (order.is_deleted === true) return false; 
                 
                 if (currentTab === 'Goods Delivered') {
                     matchesTab = (order.status === 'Goods Delivered' || order.status === 'Delivered (Refused)');
@@ -991,11 +986,11 @@
                     </td>
                     <td><strong>${order.jobNo}</strong></td>
                     <td>
-                        ${order.customerName}<br>
-                        <div style="font-size: 0.95rem; color: #111827; font-weight: 600; margin-top: 3px;">${order.contactNo}</div>
+                        <div style="font-size: 1.05rem; font-weight: 800; color: #000;">${order.customerName}</div>
+                        <div style="font-size: 1.05rem; color: #111827; font-weight: 600; margin-top: 3px;">${order.contactNo}</div>
                     </td>
                     <td>
-                        ${order.problemDesc || '-'}
+                        <span style="font-size: 1rem; font-weight: 700; color: #111827;">${order.problemDesc || '-'}</span>
                         ${editIconHtml}
                         <br>
                         ${notesHtml}
@@ -1556,29 +1551,25 @@
     document.addEventListener("DOMContentLoaded", async () => { resetSidebarTimer(); await checkAuth(); fetchCustomers(); fetchOrders(); });
 
     // ==========================================
-// AUTO-LOGOUT AFTER 30 MINUTES OF INACTIVITY
-// ==========================================
-const setupAutoLogout = function() {
-    let inactivityTimer;
-    const timeoutDuration = 30 * 60 * 1000; // 30 minutes in milliseconds
+    // AUTO-LOGOUT AFTER 30 MINUTES OF INACTIVITY
+    // ==========================================
+    const setupAutoLogout = function() {
+        let inactivityTimer;
+        const timeoutDuration = 30 * 60 * 1000; // 30 minutes in milliseconds
 
-    function resetTimer() {
-        clearTimeout(inactivityTimer);
-        // Calls your existing logOut() function when the timer finishes
-        inactivityTimer = setTimeout(logOut, timeoutDuration); 
-    }
+        function resetTimer() {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(logOut, timeoutDuration); 
+        }
 
-    // Reset the timer when the user interacts with the page
-    window.onload = resetTimer;
-    document.onmousemove = resetTimer;
-    document.onkeypress = resetTimer;
-    document.onclick = resetTimer;
-    document.onscroll = resetTimer;
-    document.ontouchstart = resetTimer; // For mobile devices
-};
-
-// Start the inactivity tracker
-setupAutoLogout();
+        window.onload = resetTimer;
+        document.onmousemove = resetTimer;
+        document.onkeypress = resetTimer;
+        document.onclick = resetTimer;
+        document.onscroll = resetTimer;
+        document.ontouchstart = resetTimer; 
+    };
+    setupAutoLogout();
 </script>
 </body>
 </html>
