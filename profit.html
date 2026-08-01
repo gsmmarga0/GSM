@@ -155,7 +155,6 @@
 </head>
 <body>
 
-<!-- MATCHED SIDEBAR -->
 <div class="sidebar" id="sidebar" onmouseenter="clearSidebarTimer()" onmouseleave="resetSidebarTimer()">
     <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
     
@@ -181,7 +180,7 @@
             <line x1="21" y1="12" x2="9" y2="12"></line>
         </svg>
     </div>
-</div>
+</div>    
 
 <!-- Floating sidebar toggle button -->
 <div class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">⋮</div>
@@ -398,17 +397,22 @@
         currentUserEmail = sessionData.session.user.email;
         let displayEmail = currentUserEmail.split('@')[0];
         document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
-        document.getElementById('userAvatar').innerText = displayEmail.charAt(0).toUpperCase();
+        
+        if(document.getElementById('userAvatar')) {
+            document.getElementById('userAvatar').innerText = displayEmail.charAt(0).toUpperCase();
+        }
 
         const isMasterAdmin = currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase();
         
-        const { data: profile } = await supabaseClient
+        const { data: profile, error: profileError } = await supabaseClient
             .from('user_profiles')
             .select('role')
             .eq('email', currentUserEmail)
             .single();
+            
+        if (profileError) console.error("Profile check error:", profileError);
         
-        const isDbAdmin = profile && profile.role === 'Admin';
+        const isDbAdmin = profile && profile.role && profile.role.toLowerCase() === 'admin';
 
         // Profit Book is STRICTLY Admins only
         if (isMasterAdmin || isDbAdmin) {
