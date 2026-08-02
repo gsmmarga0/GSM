@@ -3,12 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GSM Solution - Login</title>
+    <title>GSM Solution - Home</title>
     <style>
-        body { font-family: sans-serif; background: #f4f5f7; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .login-card { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 350px; text-align: center; }
-        .logo { font-size: 1.5rem; font-weight: bold; margin-bottom: 20px; }
-        .logo-icon { background: black; color: white; padding: 5px 10px; border-radius: 4px; display: inline-block; margin-right: 5px; }
+        body { font-family: sans-serif; background: #f4f5f7; margin: 0; }
+
+        /* --- Navbar Styles --- */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 15px 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .navbar .logo { font-size: 1.5rem; font-weight: bold; margin: 0; }
+        .navbar .logo-icon { background: black; color: white; padding: 5px 10px; border-radius: 4px; display: inline-block; margin-right: 5px; }
+        .login-btn { padding: 10px 20px; background: black; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .login-btn:hover { background: #333; }
+
+        /* --- Homepage Hero Styles --- */
+        .hero {
+            text-align: center;
+            padding: 50px 20px;
+        }
+        .hero h1 { color: #111; margin-bottom: 10px; }
+        .hero p { color: #6b7280; margin-bottom: 30px; }
+        .hero img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            max-height: 500px; /* Keeps the image from getting too massive */
+        }
+
+        /* --- Modal (Popup) Styles --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none; /* Hidden by default */
+            justify-content: center; align-items: center;
+            z-index: 1000;
+        }
+        .login-card {
+            background: white; padding: 40px; border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            width: 100%; max-width: 350px; text-align: center;
+            position: relative;
+        }
+        .close-btn {
+            position: absolute; top: 15px; right: 15px;
+            font-size: 1.5rem; cursor: pointer; color: #9ca3af;
+            line-height: 1;
+        }
+        .close-btn:hover { color: black; }
+
+        /* --- Input Styles --- */
         .input-group { margin-bottom: 15px; text-align: left; }
         .input-group label { display: block; font-size: 0.85rem; color: #4b5563; margin-bottom: 5px; font-weight: bold; }
         .input-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
@@ -18,21 +67,42 @@
 </head>
 <body>
 
-    <div class="login-card">
+    <!-- Navigation Bar -->
+    <div class="navbar">
         <div class="logo"><span class="logo-icon">GSM</span> SOLUTION</div>
-        <p style="color: #6b7280; font-size: 0.9rem; margin-bottom: 25px;">Authorized Personnel Only</p>
+        <button class="login-btn" onclick="openModal()">Log In</button>
+    </div>
+
+    <!-- Homepage Content -->
+    <div class="hero">
+        <h1>Welcome to GSM Solution</h1>
+        <p>Explore our services and solutions.</p>
         
-        <div class="input-group">
-            <label>Email ID</label>
-            <input type="email" id="email" placeholder="admin@gsmsolution.com">
+        <!-- YOUR IMAGE GOES HERE -->
+        <img src="your-image-filename.jpg" alt="GSM Solution Homepage Image">
+    </div>
+
+    <!-- Login Modal (Popup) -->
+    <div class="modal-overlay" id="loginModal">
+        <div class="login-card">
+            <!-- Close button for the popup -->
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            
+            <div class="logo"><span class="logo-icon">GSM</span></div>
+            <p style="color: #6b7280; font-size: 0.9rem; margin-bottom: 25px;">Authorized Personnel Only</p>
+            
+            <div class="input-group">
+                <label>Email ID</label>
+                <input type="email" id="email" placeholder="admin@gsmsolution.com">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="******">
+            </div>
+            
+            <button class="btn" onclick="login()">Log In</button>
+            <div id="errorMsg" class="error-msg"></div>
         </div>
-        <div class="input-group">
-            <label>Password</label>
-            <input type="password" id="password" placeholder="******">
-        </div>
-        
-        <button class="btn" onclick="login()">Log In</button>
-        <div id="errorMsg" class="error-msg"></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -42,11 +112,30 @@
             'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I'
         );
 
-        // Check if already logged in
+        // --- Modal Functions ---
+        const modal = document.getElementById('loginModal');
+        
+        function openModal() { 
+            modal.style.display = 'flex'; 
+        }
+        
+        function closeModal() { 
+            modal.style.display = 'none'; 
+        }
+
+        // Close modal if the user clicks anywhere outside the white login card
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // --- Authentication Functions ---
         async function checkSession() {
             const { data } = await db.auth.getSession();
             if (data.session) {
-                window.location.href = 'index.html'; // Redirect to app if already logged in
+                // Changed from index.html to dashboard.html to prevent infinite loops
+                window.location.href = 'dashboard.html'; 
             }
         }
         checkSession();
@@ -55,9 +144,10 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const errorMsg = document.getElementById('errorMsg');
+            const loginBtn = document.querySelector('.login-card .btn');
             
             errorMsg.style.display = 'none';
-            document.querySelector('.btn').innerText = 'Verifying...';
+            loginBtn.innerText = 'Verifying...';
 
             const { data, error } = await db.auth.signInWithPassword({
                 email: email,
@@ -67,9 +157,9 @@
             if (error) {
                 errorMsg.innerText = error.message;
                 errorMsg.style.display = 'block';
-                document.querySelector('.btn').innerText = 'Log In';
+                loginBtn.innerText = 'Log In';
             } else {
-                window.location.href = 'index.html'; // Success! Send to dashboard
+                window.location.href = 'dashboard.html'; // Success! Redirect to your logged-in page
             }
         }
     </script>
