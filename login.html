@@ -78,8 +78,8 @@
         <h1>Welcome to GSM Solution</h1>
         <p>Explore our services and solutions.</p>
         
-        <!-- YOUR IMAGE GOES HERE -->
-        <img src="your-image-filename.jpg" alt="GSM Solution Homepage Image">
+        <!-- YOUR IMAGE IS ADDED HERE -->
+        <img src="Mobile_repair_workbench_with_sma…_202608021900.jpeg" alt="Mobile Repair Workbench">
     </div>
 
     <!-- Login Modal (Popup) -->
@@ -134,7 +134,7 @@
         async function checkSession() {
             const { data } = await db.auth.getSession();
             if (data.session) {
-                // Changed from index.html to dashboard.html to prevent infinite loops
+                // Redirects to dashboard if already logged in
                 window.location.href = 'dashboard.html'; 
             }
         }
