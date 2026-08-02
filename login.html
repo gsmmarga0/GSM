@@ -5,14 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GSM Solution - Home</title>
     <style>
-        body { font-family: sans-serif; background: #f4f5f7; margin: 0; }
+        body { 
+            font-family: sans-serif; 
+            margin: 0; 
+            padding: 0;
+            /* Prevents scrolling if the content is small */
+            overflow-x: hidden; 
+        }
+
+        /* --- Full Screen Background Image --- */
+        .fullscreen-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            z-index: -2; /* Keeps the image behind everything else */
+        }
+        
+        /* Optional dark overlay to make text more readable */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: -1;
+        }
 
         /* --- Navbar Styles --- */
         .navbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: white;
+            background: rgba(255, 255, 255, 0.95); /* Slightly transparent white */
             padding: 15px 30px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
@@ -24,17 +52,12 @@
         /* --- Homepage Hero Styles --- */
         .hero {
             text-align: center;
-            padding: 50px 20px;
+            padding: 15vh 20px;
+            color: white;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.7); /* Adds shadow so text is readable over the image */
         }
-        .hero h1 { color: #111; margin-bottom: 10px; }
-        .hero p { color: #6b7280; margin-bottom: 30px; }
-        .hero img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            max-height: 500px; /* Keeps the image from getting too massive */
-        }
+        .hero h1 { font-size: 3rem; margin-bottom: 10px; }
+        .hero p { font-size: 1.2rem; font-weight: 300; }
 
         /* --- Modal (Popup) Styles --- */
         .modal-overlay {
@@ -49,6 +72,8 @@
             box-shadow: 0 4px 20px rgba(0,0,0,0.2);
             width: 100%; max-width: 350px; text-align: center;
             position: relative;
+            color: black;
+            text-shadow: none; /* Removes shadow inside the login card */
         }
         .close-btn {
             position: absolute; top: 15px; right: 15px;
@@ -67,6 +92,12 @@
 </head>
 <body>
 
+    <!-- Full Screen Background Image -->
+    <img class="fullscreen-bg" src="Mobile_repair_workbench_with_sma…_202608021900.jpeg" alt="Mobile Repair Workbench">
+    
+    <!-- Dark overlay to make the welcome text more legible -->
+    <div class="overlay"></div>
+
     <!-- Navigation Bar -->
     <div class="navbar">
         <div class="logo"><span class="logo-icon">GSM</span> SOLUTION</div>
@@ -77,9 +108,6 @@
     <div class="hero">
         <h1>Welcome to GSM Solution</h1>
         <p>Explore our services and solutions.</p>
-        
-        <!-- YOUR IMAGE IS ADDED HERE -->
-        <img src="Mobile_repair_workbench_with_sma…_202608021900.jpeg" alt="Mobile Repair Workbench">
     </div>
 
     <!-- Login Modal (Popup) -->
@@ -134,8 +162,8 @@
         async function checkSession() {
             const { data } = await db.auth.getSession();
             if (data.session) {
-                // Redirects to dashboard if already logged in
-                window.location.href = 'dashboard.html'; 
+                // Redirects to index.html if already logged in
+                window.location.href = 'index.html'; 
             }
         }
         checkSession();
@@ -159,7 +187,7 @@
                 errorMsg.style.display = 'block';
                 loginBtn.innerText = 'Log In';
             } else {
-                window.location.href = 'dashboard.html'; // Success! Redirect to your logged-in page
+                window.location.href = 'index.html'; // Success! Redirect to index.html
             }
         }
     </script>
