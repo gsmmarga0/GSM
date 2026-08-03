@@ -307,7 +307,8 @@
             <div class="modal-content">
                 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px;">
-                    <button class="btn btn-primary admin-only" onclick="toggleCatalogForm()" style="font-size: 1rem; padding: 10px 20px; display: none;">+ Add / Edit Item ▼</button>
+                    <!-- CHANGED: Removed the 'admin-only' class and default inline style that kept it hidden -->
+                    <button class="btn btn-primary" onclick="toggleCatalogForm()" style="font-size: 1rem; padding: 10px 20px;">+ Add New Item ▼</button>
                     
                     <div style="position: relative;">
                         <input type="text" id="catalogSearchInput" placeholder="🔍 Search catalog..." oninput="filterCatalogTable()" style="padding: 10px 15px 10px 35px; border: 1px solid var(--border-color); border-radius: 6px; width: 300px; font-size: 0.95rem; outline: none;">
@@ -757,6 +758,7 @@
             const tbody = document.getElementById('catalogTableBody');
             tbody.innerHTML = '';
             catalogItems.forEach(item => {
+                // Edit and Delete remain protected by admin check
                 let adminActions = isAdmin 
                     ? `<button onclick="editCatalogItem(${item.id})" style="color:#2563eb; background:none; border:none; cursor:pointer; margin-right: 15px; font-size: 1.1rem;" title="Edit">✏️</button>
                        <button onclick="deleteCatalogItem(${item.id})" style="color:red; background:none; border:none; cursor:pointer; font-size: 1.1rem;" title="Delete">🗑️</button>`
