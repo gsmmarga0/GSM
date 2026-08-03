@@ -203,7 +203,7 @@
         <div class="stat-card blue">
             <div class="stat-title">Closing Balance <span>💳</span></div>
             <div class="stat-value" id="dailyClosing">₹0.00</div>
-            <div class="stat-sub">Available balance</div>
+            <div class="stat-sub" id="dailyClosingSub">Period net balance</div>
         </div>
     </div>
 
@@ -439,7 +439,6 @@
             const summarySection = document.getElementById('adminSummarySection');
             if (summarySection) summarySection.style.display = 'block';
         }
-        // No kick logic here, as Cashbook is a shared view.
     }
 
     window.logOut = async () => { await db.auth.signOut(); window.location.href = 'login.html'; }
@@ -461,6 +460,7 @@
         document.getElementById('btnDaily').classList.toggle('active', mode === 'Daily');
         document.getElementById('btnPeriod').classList.toggle('active', mode === 'Period');
         document.getElementById('modeLabel').innerText = mode;
+        document.getElementById('dailyClosingSub').innerText = mode === 'Daily' ? 'Daily net balance' : 'Period net balance';
         
         if(mode === 'Daily') {
             document.getElementById('dateInputs').innerHTML = '<input type="date" class="date-picker" id="ledgerDate">';
@@ -506,7 +506,6 @@
             let lifeIn = 0, lifeOut = 0;
             let lifeBilling = 0, lifeAccessories = 0, lifeAdvances = 0; 
             let lifeStore = 0, lifeManual = 0;
-            let runningBalance = 0;
             
             let targetDate, fromDate, toDate;
             let subtitleText = '';
@@ -525,27 +524,24 @@
             filteredEntries = [];
             let periodIn = 0, periodOut = 0;
             let periodInCount = 0, periodOutCount = 0;
+            let periodRunningBalance = 0; // Starts from 0 for the selected period
 
             allEntries.forEach(row => {
                 const rowDate = row.date || new Date(row.created_at).toISOString().split('T')[0];
                 const amt = parseFloat(row.amount) || 0;
 
-                // Lifetime totals & Sequential Running Balance
+                // Lifetime totals
                 if (row.type === 'in') {
                     lifeIn += amt;
-                    runningBalance += amt;
                     if(row.category === 'Billing' || row.category === 'Repair Sales') lifeBilling += amt;
                     if(row.category === 'Accessories') lifeAccessories += amt;
                     if(row.category === 'Advances') lifeAdvances += amt;
                 } else {
                     lifeOut += amt;
-                    runningBalance -= amt;
                     if(row.category === 'Store Purchases') lifeStore += amt;
                     else lifeManual += amt;
                 }
 
-                // Tag rows with their computed balance and pure date
-                row.calculatedBalance = runningBalance;
                 row.rowDate = rowDate;
 
                 // Check Visibility based on current mode
@@ -557,15 +553,20 @@
                 }
 
                 if (isVisible) {
-                    filteredEntries.unshift(row); // Puts newest at the top
-                    
                     if (row.type === 'in') {
                         periodIn += amt;
                         periodInCount++;
+                        periodRunningBalance += amt;
                     } else {
                         periodOut += amt;
                         periodOutCount++;
+                        periodRunningBalance -= amt;
                     }
+                    
+                    // Tag row with the period-specific running balance
+                    row.periodCalculatedBalance = periodRunningBalance;
+                    
+                    filteredEntries.unshift(row); // Puts newest at the top
                 }
             });
 
@@ -575,8 +576,9 @@
             document.getElementById('dailyCashOut').innerText = formatCurr(periodOut);
             document.getElementById('cashOutCount').innerText = `${periodOutCount} transactions`;
             
+            // Closing balance reflects the net of the specific period
             if(filteredEntries.length > 0) {
-                document.getElementById('dailyClosing').innerText = formatCurr(filteredEntries[0].calculatedBalance);
+                document.getElementById('dailyClosing').innerText = formatCurr(filteredEntries[0].periodCalculatedBalance);
             } else {
                 document.getElementById('dailyClosing').innerText = "₹0.00";
             }
@@ -584,13 +586,14 @@
             // Update Table Totals
             document.getElementById('totalCashInCol').innerText = formatCurr(periodIn);
             document.getElementById('totalCashOutCol').innerText = formatCurr(periodOut);
+            
             if(filteredEntries.length > 0) {
-                document.getElementById('totalBalanceCol').innerText = formatCurr(filteredEntries[0].calculatedBalance);
+                document.getElementById('totalBalanceCol').innerText = formatCurr(filteredEntries[0].periodCalculatedBalance);
             } else {
                 document.getElementById('totalBalanceCol').innerText = "₹0.00";
             }
 
-            // Lifetime Summary Update
+            // Lifetime Summary Update (Admin view below)
             if (isAdmin) {
                 document.getElementById('lifeTotalIn').innerText = formatCurr(lifeIn);
                 document.getElementById('lifeTotalOut').innerText = formatCurr(lifeOut);
@@ -642,7 +645,7 @@
                     <td><span class="pill ${pillClass}">${row.category}</span></td>
                     <td class="${row.type === 'in' ? 'text-green' : ''}">${row.type === 'in' ? formatCurr(row.amount) : '—'}</td>
                     <td class="${row.type === 'out' ? 'text-red' : ''}">${row.type === 'out' ? formatCurr(row.amount) : '—'}</td>
-                    <td style="font-weight:bold;">${formatCurr(row.calculatedBalance)}</td>
+                    <td style="font-weight:bold;">${formatCurr(row.periodCalculatedBalance)}</td>
                     <td class="admin-col ${isAdmin ? '' : 'admin-hidden'}" style="text-align:center;">${deleteBtn}</td>
                 </tr>
             `;
@@ -723,7 +726,7 @@
             "Category": row.category,
             "Cash In": row.type === 'in' ? parseFloat(row.amount) : 0,
             "Cash Out": row.type === 'out' ? parseFloat(row.amount) : 0,
-            "Running Balance": parseFloat(row.calculatedBalance)
+            "Running Balance": parseFloat(row.periodCalculatedBalance)
         }));
 
         // Convert to SheetJS Workbook
