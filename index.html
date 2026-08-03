@@ -155,7 +155,7 @@
             <line x1="21" y1="12" x2="9" y2="12"></line>
         </svg>
     </div>
-</div>    
+</div>  
 <div class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">⋮</div>
 
 <div class="main-content">
@@ -512,7 +512,6 @@
             document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
             isAdmin = true; 
         } 
-        // Note: Removed the kick logic (window.location.href) from here because this page is meant for everyone.
     }
     
     async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
@@ -1028,12 +1027,10 @@
         if (!confirm(`Are you sure you want to revert Job No: ${jobNo} back to '${targetStatus}'?\n\nThis will DELETE any final delivery records and remove the related Cash, UPI, and Credit entries from the ledgers.`)) return;
 
         try {
-            const searchString = `%${jobNo}%`;
-
             if (paymentMode === 'Cash') {
-                await supabaseClient.from('cashbook_entries').delete().ilike('description', searchString);
+                await supabaseClient.from('cashbook_entries').delete().eq('order_id', id);
             } else if (paymentMode === 'UPI') {
-                await supabaseClient.from('upi_entries').delete().ilike('description', searchString);
+                await supabaseClient.from('upi_entries').delete().eq('order_id', id);
             } else if (paymentMode === 'Credit') {
                 const { data: custData } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', mobile).single();
                 if (custData) {
@@ -1043,8 +1040,10 @@
                 }
                 await supabaseClient.from('customer_credits').delete().eq('job_no', jobNo);
             } else {
-                await supabaseClient.from('cashbook_entries').delete().ilike('description', searchString);
-                await supabaseClient.from('upi_entries').delete().ilike('description', searchString);
+                // Split
+                await supabaseClient.from('cashbook_entries').delete().eq('order_id', id);
+                await supabaseClient.from('upi_entries').delete().eq('order_id', id);
+                
                 const { data: credits } = await supabaseClient.from('customer_credits').select('*').eq('job_no', jobNo);
                 if (credits && credits.length > 0) {
                     for (let c of credits) {
@@ -1162,13 +1161,15 @@
                 await supabaseClient.from('customer_credits').delete().eq('job_no', editPaymentJobNo);
             }
 
-            await supabaseClient.from('cashbook_entries').delete().ilike('description', `%${editPaymentJobNo}%`);
-            await supabaseClient.from('upi_entries').delete().ilike('description', `%${editPaymentJobNo}%`);
+            // FIXED: Using exact order_id to prevent ghost entries in cashbook
+            await supabaseClient.from('cashbook_entries').delete().eq('order_id', editPaymentOrderId);
+            await supabaseClient.from('upi_entries').delete().eq('order_id', editPaymentOrderId);
 
             if (editPaymentAmount > 0) {
                 if (newMode === 'Cash') {
                     const { error: cashError } = await supabaseClient.from('cashbook_entries').insert([{
-                        date: ledgerDate, description: `Repair Job No: ${editPaymentJobNo}`, category: 'Repair Sales', amount: editPaymentAmount, type: 'in', created_by: currentUserEmail
+                        date: ledgerDate, description: `Repair Job No: ${editPaymentJobNo}`, category: 'Repair Sales', amount: editPaymentAmount, type: 'in', created_by: currentUserEmail,
+                        order_id: editPaymentOrderId // FIXED: Inserting with order_id
                     }]);
                     if (cashError) throw cashError;
                 } 
@@ -1176,7 +1177,8 @@
                     let upiDesc = `Repair Job No: ${editPaymentJobNo}`;
                     if (upiNote) upiDesc += ` - UPI Acc: ${upiNote}`;
                     const { error: upiError } = await supabaseClient.from('upi_entries').insert([{
-                        date: ledgerDate, time: gdTime, description: upiDesc, category: 'Repair Sales', upi_amount: editPaymentAmount, card_amount: 0, created_by: currentUserEmail
+                        date: ledgerDate, time: gdTime, description: upiDesc, category: 'Repair Sales', upi_amount: editPaymentAmount, card_amount: 0, created_by: currentUserEmail,
+                        order_id: editPaymentOrderId
                     }]);
                     if (upiError) throw upiError;
                 } 
@@ -1373,7 +1375,8 @@
             if (finalAmount > 0) {
                 if (cashAmt > 0) {
                     const { error: cashError } = await supabaseClient.from('cashbook_entries').insert([{
-                        date: ledgerDate, description: `Repair Job No: ${deliveryJobNo}`, category: 'Repair Sales', amount: cashAmt, type: 'in', created_by: currentUserEmail
+                        date: ledgerDate, description: `Repair Job No: ${deliveryJobNo}`, category: 'Repair Sales', amount: cashAmt, type: 'in', created_by: currentUserEmail,
+                        order_id: deliveryOrderId // FIXED: We link the exact order ID here!
                     }]);
                     if (cashError) throw cashError;
                 } 
@@ -1381,7 +1384,8 @@
                     let upiDesc = `Repair Job No: ${deliveryJobNo}`;
                     if (upiNote) { upiDesc += ` - UPI Acc: ${upiNote}`; }
                     const { error: upiError } = await supabaseClient.from('upi_entries').insert([{
-                        date: ledgerDate, time: gdTime, description: upiDesc, category: 'Repair Sales', upi_amount: upiAmt, card_amount: 0, created_by: currentUserEmail
+                        date: ledgerDate, time: gdTime, description: upiDesc, category: 'Repair Sales', upi_amount: upiAmt, card_amount: 0, created_by: currentUserEmail,
+                        order_id: deliveryOrderId
                     }]);
                     if (upiError) throw upiError;
                 }
@@ -1431,8 +1435,9 @@
                 await supabaseClient.from('customer_credits').delete().eq('job_no', jobNo);
             }
 
-            await supabaseClient.from('cashbook_entries').delete().ilike('description', `%${jobNo}%`);
-            await supabaseClient.from('upi_entries').delete().ilike('description', `%${jobNo}%`);
+            // FIXED: Automatically wiping Cashbook entries safely with exact order_id
+            await supabaseClient.from('cashbook_entries').delete().eq('order_id', id);
+            await supabaseClient.from('upi_entries').delete().eq('order_id', id);
 
             // Mark as Deleted rather than wiping it completely
             const { error } = await supabaseClient.from('repairOrders').update({ is_deleted: true }).eq('id', id);
