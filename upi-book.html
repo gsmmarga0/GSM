@@ -159,7 +159,7 @@
             <line x1="21" y1="12" x2="9" y2="12"></line>
         </svg>
     </div>
-</div>    
+</div>  
 <div class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">⋮</div>
 
 <div class="main-content">
@@ -328,6 +328,14 @@
     const rowsPerPage = 50; 
     let currentModalType = 'in'; // 'in' or 'out'
 
+    // --- Helper function for Local Date ---
+    function getLocalDateString(d = new Date()) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
     // Sidebar Hover Timers
     let sidebarTimer;
     window.resetSidebarTimer = function() {
@@ -359,7 +367,7 @@
     const today = new Date();
     document.getElementById('topNavDate').innerText = today.toLocaleDateString('en-GB', dateOptions) + " | GSM SOLUTION";
     
-    const todayString = today.toISOString().split('T')[0];
+    const todayString = getLocalDateString(today);
     document.getElementById('filterFromDate').value = todayString;
     document.getElementById('filterToDate').value = todayString;
 
@@ -416,7 +424,7 @@
         document.getElementById('modalOverlay').style.display = 'flex';
         
         const now = new Date();
-        document.getElementById('modalDate').value = now.toISOString().split('T')[0];
+        document.getElementById('modalDate').value = getLocalDateString(now);
         // Ensure local time is used correctly for HTML time input
         const localTimeStr = now.toTimeString().substring(0, 5); 
         document.getElementById('modalTime').value = localTimeStr;
