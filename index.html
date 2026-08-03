@@ -460,6 +460,15 @@
     let currentPage = 1;
     const rowsPerPage = 10;
 
+    // Helper function to safely get today's date in YYYY-MM-DD format using local time (IST)
+    function getLocalDateString() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
     let sidebarTimer;
     window.resetSidebarTimer = function() {
         clearTimeout(sidebarTimer);
@@ -1027,11 +1036,11 @@
         if (!confirm(`Are you sure you want to revert Job No: ${jobNo} back to '${targetStatus}'?\n\nThis will DELETE any final delivery records and remove the related Cash, UPI, and Credit entries from the ledgers.`)) return;
 
         try {
-            if (paymentMode === 'Cash') {
-                await supabaseClient.from('cashbook_entries').delete().eq('order_id', id);
-            } else if (paymentMode === 'UPI') {
-                await supabaseClient.from('upi_entries').delete().eq('order_id', id);
-            } else if (paymentMode === 'Credit') {
+            // Hybrid check: deletes by order_id OR jobNo description for legacy entries
+            await supabaseClient.from('cashbook_entries').delete().or(`order_id.eq.${id},description.ilike.%${jobNo}%`);
+            await supabaseClient.from('upi_entries').delete().or(`order_id.eq.${id},description.ilike.%${jobNo}%`);
+
+            if (paymentMode === 'Credit') {
                 const { data: custData } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', mobile).single();
                 if (custData) {
                     let newBal = (parseFloat(custData.credit_balance) || 0) - amount;
@@ -1039,11 +1048,7 @@
                     await supabaseClient.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
                 }
                 await supabaseClient.from('customer_credits').delete().eq('job_no', jobNo);
-            } else {
-                // Split
-                await supabaseClient.from('cashbook_entries').delete().eq('order_id', id);
-                await supabaseClient.from('upi_entries').delete().eq('order_id', id);
-                
+            } else if (paymentMode === 'Split') {
                 const { data: credits } = await supabaseClient.from('customer_credits').select('*').eq('job_no', jobNo);
                 if (credits && credits.length > 0) {
                     for (let c of credits) {
@@ -1140,7 +1145,7 @@
     window.saveNewPaymentMode = async function() {
         const newMode = document.getElementById('newPaymentMode').value;
         const upiNote = document.getElementById('editPaymentUpiNote').value.trim();
-        const ledgerDate = new Date().toISOString().split('T')[0];
+        const ledgerDate = getLocalDateString();
         const gdTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
         if(!confirm(`Are you sure you want to change the payment mode for ${editPaymentJobNo} to ${newMode}? This will rewrite the accounting books.`)) return;
@@ -1161,15 +1166,15 @@
                 await supabaseClient.from('customer_credits').delete().eq('job_no', editPaymentJobNo);
             }
 
-            // FIXED: Using exact order_id to prevent ghost entries in cashbook
-            await supabaseClient.from('cashbook_entries').delete().eq('order_id', editPaymentOrderId);
-            await supabaseClient.from('upi_entries').delete().eq('order_id', editPaymentOrderId);
+            // Hybrid deletes to clear legacy and new records
+            await supabaseClient.from('cashbook_entries').delete().or(`order_id.eq.${editPaymentOrderId},description.ilike.%${editPaymentJobNo}%`);
+            await supabaseClient.from('upi_entries').delete().or(`order_id.eq.${editPaymentOrderId},description.ilike.%${editPaymentJobNo}%`);
 
             if (editPaymentAmount > 0) {
                 if (newMode === 'Cash') {
                     const { error: cashError } = await supabaseClient.from('cashbook_entries').insert([{
                         date: ledgerDate, description: `Repair Job No: ${editPaymentJobNo}`, category: 'Repair Sales', amount: editPaymentAmount, type: 'in', created_by: currentUserEmail,
-                        order_id: editPaymentOrderId // FIXED: Inserting with order_id
+                        order_id: editPaymentOrderId
                     }]);
                     if (cashError) throw cashError;
                 } 
@@ -1226,7 +1231,7 @@
         const notes = document.getElementById('billRepairNotes').value.trim();
         
         const rcTimestamp = new Date().toISOString();
-        const rcDate = new Date().toISOString().split('T')[0];
+        const rcDate = getLocalDateString();
         const rcTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
         try {
@@ -1252,7 +1257,7 @@
         const notes = document.getElementById('billRepairNotes').value.trim();
         
         const rcTimestamp = new Date().toISOString();
-        const rcDate = new Date().toISOString().split('T')[0];
+        const rcDate = getLocalDateString();
         const rcTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
         try {
@@ -1354,10 +1359,10 @@
         } else if (selectedPaymentMethod === 'Credit') { creditAmt = finalAmount; }
 
         const gdTimestamp = new Date().toISOString();
-        const gdDate = new Date().toISOString().split('T')[0];
+        const gdDate = getLocalDateString();
         const gdTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
         
-        const ledgerDate = new Date().toISOString().split('T')[0];
+        const ledgerDate = getLocalDateString();
 
         const newStatus = deliveryCurrentStatus === 'Repair Refusal' ? 'Delivered (Refused)' : 'Goods Delivered';
 
@@ -1376,7 +1381,7 @@
                 if (cashAmt > 0) {
                     const { error: cashError } = await supabaseClient.from('cashbook_entries').insert([{
                         date: ledgerDate, description: `Repair Job No: ${deliveryJobNo}`, category: 'Repair Sales', amount: cashAmt, type: 'in', created_by: currentUserEmail,
-                        order_id: deliveryOrderId // FIXED: We link the exact order ID here!
+                        order_id: deliveryOrderId
                     }]);
                     if (cashError) throw cashError;
                 } 
@@ -1435,9 +1440,9 @@
                 await supabaseClient.from('customer_credits').delete().eq('job_no', jobNo);
             }
 
-            // FIXED: Automatically wiping Cashbook entries safely with exact order_id
-            await supabaseClient.from('cashbook_entries').delete().eq('order_id', id);
-            await supabaseClient.from('upi_entries').delete().eq('order_id', id);
+            // Hybrid deletes to clear legacy and new records
+            await supabaseClient.from('cashbook_entries').delete().or(`order_id.eq.${id},description.ilike.%${jobNo}%`);
+            await supabaseClient.from('upi_entries').delete().or(`order_id.eq.${id},description.ilike.%${jobNo}%`);
 
             // Mark as Deleted rather than wiping it completely
             const { error } = await supabaseClient.from('repairOrders').update({ is_deleted: true }).eq('id', id);
@@ -1506,7 +1511,7 @@
         let problemDesc = document.getElementById('problemDesc').value.trim();
         let devicePassword = document.getElementById('devicePassword').value.trim();
         let approxEstimate = parseFloat(document.getElementById('approxEstimate').value) || 0;
-        let currentDate = new Date().toISOString().split('T')[0];
+        let currentDate = getLocalDateString();
         let currentTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
         const { data: maxData } = await supabaseClient.from('repairOrders').select('jobNo').ilike('jobNo', 'GSM%').order('created_at', { ascending: false }).limit(100);
