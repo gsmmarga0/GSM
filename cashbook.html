@@ -381,6 +381,14 @@
     let currentPage = 1;
     const rowsPerPage = 10;
 
+    // --- Helper function for Local Date ---
+    function getLocalDateString(d = new Date()) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
     // --- Sidebar Logic ---
     let sidebarTimer;
     window.resetSidebarTimer = function() {
@@ -464,14 +472,14 @@
         
         if(mode === 'Daily') {
             document.getElementById('dateInputs').innerHTML = '<input type="date" class="date-picker" id="ledgerDate">';
-            document.getElementById('ledgerDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('ledgerDate').value = getLocalDateString();
             document.getElementById('ledgerDate').addEventListener('change', () => fetchCashbook(false));
         } else {
             document.getElementById('dateInputs').innerHTML = `
                 <input type="date" class="date-picker" id="fromDate">
                 <input type="date" class="date-picker" id="toDate">
             `;
-            const today = new Date().toISOString().split('T')[0];
+            const today = getLocalDateString();
             document.getElementById('fromDate').value = today;
             document.getElementById('toDate').value = today;
             document.getElementById('fromDate').addEventListener('change', () => fetchCashbook(false));
@@ -511,7 +519,7 @@
             let subtitleText = '';
             
             if (currentMode === 'Daily') {
-                targetDate = document.getElementById('ledgerDate').value || new Date().toISOString().split('T')[0];
+                targetDate = document.getElementById('ledgerDate').value || getLocalDateString();
                 subtitleText = `Business day: ${targetDate}`;
             } else {
                 fromDate = document.getElementById('fromDate').value;
@@ -527,7 +535,7 @@
             let periodRunningBalance = 0; // Starts from 0 for the selected period
 
             allEntries.forEach(row => {
-                const rowDate = row.date || new Date(row.created_at).toISOString().split('T')[0];
+                const rowDate = row.date || getLocalDateString(new Date(row.created_at));
                 const amt = parseFloat(row.amount) || 0;
 
                 // Lifetime totals
@@ -741,7 +749,7 @@
     // --- Cash Out Modal ---
     window.openModal = () => {
         document.getElementById('cashOutModal').style.display = 'flex';
-        document.getElementById('outDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('outDate').value = getLocalDateString();
     };
     
     window.closeModal = () => {
@@ -797,7 +805,7 @@
         await checkAuth(); 
         resetSidebarTimer();
         
-        document.getElementById('ledgerDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('ledgerDate').value = getLocalDateString();
         document.getElementById('ledgerDate').addEventListener('change', () => fetchCashbook(false));
         
         fetchCashbook(true);
