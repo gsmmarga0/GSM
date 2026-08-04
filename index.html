@@ -79,7 +79,7 @@
         .form-group label { font-size: 0.85rem; color: #4b5563; margin-bottom: 8px; font-weight: 500;}
         .form-group label span { color: #ef4444; }
         .form-group input, .form-group select { padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; background: #fdfdfd; font-family: inherit;}
-        input[readonly] { background-color: #f3f4f6 !important; color: #6b7280; font-weight: bold; cursor: not-allowed; }
+        input[readonly] { background-color: #f3f4f6 !important; color: #6b7280; font-weight: bold; cursor: not-allowed; border-color: #d1d5db; }
 
         .search-select-container { position: relative; width: 100%; }
         .search-select-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem; outline: none; box-sizing: border-box; background: white url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%239ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>') no-repeat right 10px center; padding-right: 35px; }
@@ -129,6 +129,23 @@
         
         .edit-pen { cursor: pointer; display: inline-block; width: 14px; height: 14px; margin-left: 6px; vertical-align: middle; color: #9ca3af; transition: 0.2s; }
         .edit-pen:hover { color: #2563eb; }
+
+        /* Dynamic Bulk Device Row Styles */
+        .device-entry-row {
+            display: grid;
+            grid-template-columns: 3fr 1fr 1fr auto;
+            gap: 15px;
+            align-items: center;
+            background: #fff;
+            padding: 15px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .device-entry-row .form-group { margin-bottom: 0; }
+        .device-entry-row .form-group label { margin-bottom: 4px; font-size: 0.75rem; text-transform: uppercase; color: #6b7280; }
+        .device-entry-row .form-group input { padding: 8px 12px; }
     </style>
 </head>
 <body>
@@ -155,7 +172,7 @@
             <line x1="21" y1="12" x2="9" y2="12"></line>
         </svg>
     </div>
-</div>  
+</div>    
 <div class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">⋮</div>
 
 <div class="main-content">
@@ -243,30 +260,32 @@
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label id="jobNoLabel">Job Number</label>
+                <div class="form-group col-span-2" style="grid-column: 1 / -1; margin-bottom: 10px;">
+                    <label id="jobNoLabel" style="font-size: 0.95rem;">Job Number Information</label>
                     <input type="text" id="jobNo" readonly placeholder="Auto-Generated on Save">
-                    <p style="font-size: 0.7rem; color: #6b7280; margin-top: 4px; margin-bottom: 0;">System safely handles duplicates if multiple devices save.</p>
-                </div>
-                
-                <div class="form-group">
-                    <label>Device Password</label>
-                    <input type="text" id="devicePassword" placeholder="e.g. 1234 or Pattern">
+                    <p style="font-size: 0.7rem; color: #6b7280; margin-top: 4px; margin-bottom: 0;">Unique IDs will be securely auto-generated upon saving.</p>
                 </div>
 
-                <div class="form-group">
-                    <label>Approx Estimate (₹)</label>
-                    <input type="number" id="approxEstimate" placeholder="0.00" step="0.01">
+                <div class="form-group col-span-2" style="grid-column: 1 / -1; display: flex; flex-direction: row; justify-content: space-between; align-items: center; background: #f9fafb; padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <label style="margin: 0; font-size: 0.95rem; font-weight: bold; color: #111827;">Device Entry Details</label>
+                    <label style="margin: 0; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: bold; color: #2563eb;">
+                        <input type="checkbox" id="bulkEntryCheckbox" onchange="toggleBulkMode()" style="width: 16px; height: 16px; margin: 0; cursor: pointer;"> Enable Bulk Entries (Max 10)
+                    </label>
                 </div>
 
-                <div class="form-group" style="grid-column: 1 / -1;">
-                    <label>Model & Problem Description</label>
-                    <input type="text" id="problemDesc" placeholder="e.g. iPhone 13 - Screen Replacement">
+                <!-- Dynamic Container for Device Rows -->
+                <div id="deviceEntriesContainer" style="grid-column: 1 / -1;">
+                    <!-- Rows injected here by JavaScript -->
+                </div>
+
+                <div style="grid-column: 1 / -1; display: none; text-align: center; margin-bottom: 10px;" id="addDeviceBtnContainer">
+                    <button type="button" class="btn" style="background: #eff6ff; color: #2563eb; border: 1px dashed #bfdbfe; width: 100%; padding: 12px; font-weight: bold;" onclick="addDeviceRow()">+ Add Another Device</button>
                 </div>
             </div>
-            <div style="display: flex; gap: 10px;">
-                <button class="btn btn-primary" onclick="saveOrder()">Save Order</button>
-                <button class="btn" onclick="toggleForm()">Cancel</button>
+            
+            <div style="display: flex; gap: 10px; border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 10px;">
+                <button class="btn btn-primary" style="padding: 10px 25px; font-size: 1rem;" onclick="saveOrder()">Save Order</button>
+                <button class="btn" style="padding: 10px 25px; font-size: 1rem;" onclick="toggleForm()">Cancel</button>
             </div>
         </div>
 
@@ -460,7 +479,6 @@
     let currentPage = 1;
     const rowsPerPage = 10;
 
-    // Helper function to safely get today's date in YYYY-MM-DD format using local time (IST)
     function getLocalDateString() {
         const now = new Date();
         const year = now.getFullYear();
@@ -502,19 +520,13 @@
             return;
         }
 
-        const currentUserEmail = sessionData.session.user.email;
-
+        currentUserEmail = sessionData.session.user.email;
         let displayEmail = currentUserEmail.split('@')[0];
         document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
 
         const isMasterAdmin = currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase();
         
-        const { data: profile } = await supabaseClient
-            .from('user_profiles')
-            .select('role')
-            .eq('email', currentUserEmail)
-            .single();
-        
+        const { data: profile } = await supabaseClient.from('user_profiles').select('role').eq('email', currentUserEmail).single();
         const isDbAdmin = profile && profile.role === 'Admin';
 
         if (isMasterAdmin || isDbAdmin) {
@@ -751,6 +763,93 @@
         }
     }
 
+    // ==========================================
+    // BULK ENTRY LOGIC
+    // ==========================================
+    window.toggleBulkMode = function() {
+        const isBulk = document.getElementById('bulkEntryCheckbox').checked;
+        const btnContainer = document.getElementById('addDeviceBtnContainer');
+        const entriesContainer = document.getElementById('deviceEntriesContainer');
+        
+        if (isBulk) {
+            btnContainer.style.display = 'block';
+            // Show delete buttons for existing rows if there are multiple, or just allow them moving forward
+            const rows = entriesContainer.querySelectorAll('.device-entry-row');
+            rows.forEach(r => {
+                const delBtn = r.querySelector('.delete-row-btn');
+                if(delBtn) delBtn.style.visibility = 'visible';
+            });
+        } else {
+            btnContainer.style.display = 'none';
+            // Strip down to only 1 row
+            const rows = entriesContainer.querySelectorAll('.device-entry-row');
+            for (let i = 1; i < rows.length; i++) {
+                rows[i].remove();
+            }
+            // Hide delete button on the first/only row
+            const firstRow = entriesContainer.querySelector('.device-entry-row');
+            if(firstRow) {
+                const delBtn = firstRow.querySelector('.delete-row-btn');
+                if(delBtn) delBtn.style.visibility = 'hidden';
+            }
+        }
+        fetchNextJobNoPreview();
+    }
+
+    window.addDeviceRow = function(isInitial = false) {
+        const container = document.getElementById('deviceEntriesContainer');
+        const rows = container.querySelectorAll('.device-entry-row');
+        
+        if (!isInitial && rows.length >= 10) {
+            return alert("Maximum 10 devices allowed per bulk entry.");
+        }
+
+        const row = document.createElement('div');
+        row.className = 'device-entry-row';
+        row.innerHTML = `
+            <div class="form-group">
+                <label>Model & Problem <span>*</span></label>
+                <input type="text" class="dev-model" placeholder="e.g. iPhone 13 - Screen">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="text" class="dev-pass" placeholder="1234">
+            </div>
+            <div class="form-group">
+                <label>Estimate (₹)</label>
+                <input type="number" class="dev-est" placeholder="0" step="0.01">
+            </div>
+            <button type="button" class="btn-icon delete-row-btn" style="color:#ef4444; height: 38px; margin-bottom: 2px;" onclick="removeDeviceRow(this)" title="Remove Device">🗑️</button>
+        `;
+        container.appendChild(row);
+
+        // If it's the very first row and we are not in bulk mode, hide the delete button
+        if (container.querySelectorAll('.device-entry-row').length === 1 && !document.getElementById('bulkEntryCheckbox').checked) {
+            row.querySelector('.delete-row-btn').style.visibility = 'hidden';
+        } else if (container.querySelectorAll('.device-entry-row').length === 1 && document.getElementById('bulkEntryCheckbox').checked) {
+             // even if bulk mode is checked, you probably shouldn't delete the last row
+             row.querySelector('.delete-row-btn').style.visibility = 'hidden';
+        } else {
+            // Un-hide the first row's delete button if there's more than 1 row
+            const firstRowBtn = container.querySelector('.device-entry-row .delete-row-btn');
+            if(firstRowBtn) firstRowBtn.style.visibility = 'visible';
+        }
+    }
+
+    window.removeDeviceRow = function(btn) {
+        const container = document.getElementById('deviceEntriesContainer');
+        const rows = container.querySelectorAll('.device-entry-row');
+        if (rows.length > 1) {
+            btn.closest('.device-entry-row').remove();
+        }
+        
+        // if only 1 left, hide its delete button
+        const remainingRows = container.querySelectorAll('.device-entry-row');
+        if(remainingRows.length === 1) {
+            remainingRows[0].querySelector('.delete-row-btn').style.visibility = 'hidden';
+        }
+    }
+
     window.switchTab = function(tabName) {
         currentTab = tabName;
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -784,6 +883,42 @@
     window.applyFilters = function() {
         const input = document.getElementById("searchInput").value.toLowerCase();
         
+        if (input.trim() !== '') {
+            const allMatches = allOrdersData.filter(order => {
+                const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc} ${order.devicePassword}`.toLowerCase();
+                return combinedString.includes(input);
+            });
+
+            if (allMatches.length > 0) {
+                const matchesInCurrentTab = allMatches.some(order => {
+                    return currentTab === 'Goods Delivered' 
+                        ? (order.status === 'Goods Delivered' || order.status === 'Delivered (Refused)') 
+                        : (order.status || 'Pending') === currentTab;
+                });
+
+                if (!matchesInCurrentTab) {
+                    let newTab = allMatches[0].status;
+                    if (newTab === 'Delivered (Refused)') newTab = 'Goods Delivered';
+                    
+                    if (newTab && newTab !== currentTab) {
+                        currentTab = newTab;
+                        
+                        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                        const tabId = 'tab-' + newTab.replace(' ', '-');
+                        const element = document.getElementById(tabId);
+                        if(element) element.classList.add('active');
+                        
+                        const desc = document.getElementById('tabDescription');
+                        const thEstimate = document.getElementById('thEstimate');
+                        if(newTab === 'Pending') { desc.innerText = "Showing all pending service orders awaiting repair."; thEstimate.innerText = "Approx Est. (₹)"; } 
+                        else if (newTab === 'Repair Completed') { desc.innerText = "Showing all items where repairs have successfully concluded."; thEstimate.innerText = "Balance Amount (₹)"; } 
+                        else if (newTab === 'Goods Delivered') { desc.innerText = "Showing history of completed & returned items."; thEstimate.innerText = "Total Amount (₹)"; } 
+                        else if (newTab === 'Repair Refusal') { desc.innerText = "Showing orders marked as refused or cancelled."; thEstimate.innerText = "Inspection Charges (₹)"; }
+                    }
+                }
+            }
+        }
+
         filteredOrdersData = allOrdersData.filter(order => {
             const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc} ${order.devicePassword}`.toLowerCase();
             const matchesSearch = combinedString.includes(input);
@@ -1036,11 +1171,13 @@
         if (!confirm(`Are you sure you want to revert Job No: ${jobNo} back to '${targetStatus}'?\n\nThis will DELETE any final delivery records and remove the related Cash, UPI, and Credit entries from the ledgers.`)) return;
 
         try {
-            // Hybrid check: deletes by order_id OR jobNo description for legacy entries
-            await supabaseClient.from('cashbook_entries').delete().or(`order_id.eq.${id},description.ilike.%${jobNo}%`);
-            await supabaseClient.from('upi_entries').delete().or(`order_id.eq.${id},description.ilike.%${jobNo}%`);
+            const searchString = `%${jobNo}%`;
 
-            if (paymentMode === 'Credit') {
+            if (paymentMode === 'Cash') {
+                await supabaseClient.from('cashbook_entries').delete().ilike('description', searchString);
+            } else if (paymentMode === 'UPI') {
+                await supabaseClient.from('upi_entries').delete().ilike('description', searchString);
+            } else if (paymentMode === 'Credit') {
                 const { data: custData } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', mobile).single();
                 if (custData) {
                     let newBal = (parseFloat(custData.credit_balance) || 0) - amount;
@@ -1049,6 +1186,25 @@
                 }
                 await supabaseClient.from('customer_credits').delete().eq('job_no', jobNo);
             } else if (paymentMode === 'Split') {
+                await supabaseClient.from('cashbook_entries').delete().ilike('description', searchString);
+                await supabaseClient.from('upi_entries').delete().ilike('description', searchString);
+                const { data: credits } = await supabaseClient.from('customer_credits').select('*').eq('job_no', jobNo);
+                if (credits && credits.length > 0) {
+                    for (let c of credits) {
+                        if (c.type === 'Given') {
+                            const { data: custData } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', c.mobile).single();
+                            if (custData) {
+                                let newBal = (parseFloat(custData.credit_balance) || 0) - parseFloat(c.amount);
+                                if (newBal < 0) newBal = 0;
+                                await supabaseClient.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
+                            }
+                        }
+                    }
+                    await supabaseClient.from('customer_credits').delete().eq('job_no', jobNo);
+                }
+            } else {
+                await supabaseClient.from('cashbook_entries').delete().ilike('description', searchString);
+                await supabaseClient.from('upi_entries').delete().ilike('description', searchString);
                 const { data: credits } = await supabaseClient.from('customer_credits').select('*').eq('job_no', jobNo);
                 if (credits && credits.length > 0) {
                     for (let c of credits) {
@@ -1123,7 +1279,7 @@
         document.getElementById('editPaymentSubtitle').innerText = `Job No: ${jobNo} | Amount: ₹${amount}`;
         
         let initMode = currentMethod;
-        if(initMode === 'Split') initMode = 'Cash';
+        if(initMode === 'Split') initMode = 'Cash'; 
         
         const modeSelect = document.getElementById('newPaymentMode');
         if (modeSelect) modeSelect.value = initMode || 'Cash';
@@ -1166,7 +1322,6 @@
                 await supabaseClient.from('customer_credits').delete().eq('job_no', editPaymentJobNo);
             }
 
-            // Hybrid deletes to clear legacy and new records
             await supabaseClient.from('cashbook_entries').delete().or(`order_id.eq.${editPaymentOrderId},description.ilike.%${editPaymentJobNo}%`);
             await supabaseClient.from('upi_entries').delete().or(`order_id.eq.${editPaymentOrderId},description.ilike.%${editPaymentJobNo}%`);
 
@@ -1213,7 +1368,6 @@
             alert("Error updating payment mode: " + err.message);
         }
     }
-
 
     window.openBillingModal = function(id, jobNo, customer, mobile) {
         billingOrderId = id; billingJobNo = jobNo; billingCustomerName = customer; billingCustomerMobile = mobile;
@@ -1424,7 +1578,6 @@
         if (!confirm(`Are you sure you want to delete Job No: ${jobNo}? It will be moved to the Deleted Orders tab for audit purposes, and related financial records will be wiped.`)) return;
         
         try {
-            // Rollback Ledgers
             const { data: credits } = await supabaseClient.from('customer_credits').select('*').eq('job_no', jobNo);
             if (credits && credits.length > 0) {
                 for (let c of credits) {
@@ -1440,11 +1593,9 @@
                 await supabaseClient.from('customer_credits').delete().eq('job_no', jobNo);
             }
 
-            // Hybrid deletes to clear legacy and new records
             await supabaseClient.from('cashbook_entries').delete().or(`order_id.eq.${id},description.ilike.%${jobNo}%`);
             await supabaseClient.from('upi_entries').delete().or(`order_id.eq.${id},description.ilike.%${jobNo}%`);
 
-            // Mark as Deleted rather than wiping it completely
             const { error } = await supabaseClient.from('repairOrders').update({ is_deleted: true }).eq('id', id);
             if (error) throw error;
             
@@ -1468,9 +1619,13 @@
                     if (match) { const num = parseInt(match[1], 10); if (num > currentMax) currentMax = num; }
                 });
             }
-            label.innerHTML = `Job Number <span style="color:#2563eb; font-weight:bold; font-size:0.8rem;">(Next Available: GSM${String(currentMax + 1).padStart(2, '0')})</span>`;
+            let nextJobStr = `GSM${String(currentMax + 1).padStart(2, '0')}`;
+            if(document.getElementById('bulkEntryCheckbox').checked) {
+                nextJobStr += ` (and onwards)`;
+            }
+            label.innerHTML = `Job Number <span style="color:#2563eb; font-weight:bold; font-size:0.8rem;">(Auto-Generated from ${nextJobStr})</span>`;
         } catch(e) {
-            label.innerHTML = `Job Number <span style="color:#ef4444; font-weight:normal; font-size:0.75rem;">(Error loading preview)</span>`;
+            label.innerHTML = `Job Number <span style="color:#ef4444; font-weight:normal; font-size:0.75rem;">(Auto-Generated)</span>`;
         }
     }
 
@@ -1478,15 +1633,104 @@
         const form = document.getElementById('orderFormCard');
         if (form.style.display === 'block') { 
             form.style.display = 'none'; 
+            document.getElementById('bulkEntryCheckbox').checked = false;
+            toggleBulkMode(); // Resets to 1 row
         } else { 
             form.style.display = 'block'; 
+            
+            // Ensure at least 1 row exists
+            const container = document.getElementById('deviceEntriesContainer');
+            if (container.querySelectorAll('.device-entry-row').length === 0) {
+                addDeviceRow(true);
+            }
+            
             await fetchNextJobNoPreview();
             if(isNewCustomerMode) document.getElementById('newCustName').focus(); else document.getElementById('custSearchInput').focus(); 
         }
     }
 
     // ==========================================
-    // SMART ALGORITHM: RETRY SAVE ON JOB ID CLASH
+    // BULK ENTRY LOGIC
+    // ==========================================
+    window.toggleBulkMode = function() {
+        const isBulk = document.getElementById('bulkEntryCheckbox').checked;
+        const btnContainer = document.getElementById('addDeviceBtnContainer');
+        const entriesContainer = document.getElementById('deviceEntriesContainer');
+        
+        if (isBulk) {
+            btnContainer.style.display = 'block';
+            const rows = entriesContainer.querySelectorAll('.device-entry-row');
+            rows.forEach(r => {
+                const delBtn = r.querySelector('.delete-row-btn');
+                if(delBtn) delBtn.style.visibility = 'visible';
+            });
+        } else {
+            btnContainer.style.display = 'none';
+            const rows = entriesContainer.querySelectorAll('.device-entry-row');
+            for (let i = 1; i < rows.length; i++) {
+                rows[i].remove();
+            }
+            const firstRow = entriesContainer.querySelector('.device-entry-row');
+            if(firstRow) {
+                const delBtn = firstRow.querySelector('.delete-row-btn');
+                if(delBtn) delBtn.style.visibility = 'hidden';
+            }
+        }
+        fetchNextJobNoPreview();
+    }
+
+    window.addDeviceRow = function(isInitial = false) {
+        const container = document.getElementById('deviceEntriesContainer');
+        const rows = container.querySelectorAll('.device-entry-row');
+        
+        if (!isInitial && rows.length >= 10) {
+            return alert("Maximum 10 devices allowed per bulk entry.");
+        }
+
+        const row = document.createElement('div');
+        row.className = 'device-entry-row';
+        row.innerHTML = `
+            <div class="form-group">
+                <label>Model & Problem <span>*</span></label>
+                <input type="text" class="dev-model" placeholder="e.g. iPhone 13 - Screen">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="text" class="dev-pass" placeholder="1234">
+            </div>
+            <div class="form-group">
+                <label>Estimate (₹)</label>
+                <input type="number" class="dev-est" placeholder="0" step="0.01">
+            </div>
+            <button type="button" class="btn-icon delete-row-btn" style="color:#ef4444; height: 38px; margin-bottom: 2px;" onclick="removeDeviceRow(this)" title="Remove Device">🗑️</button>
+        `;
+        container.appendChild(row);
+
+        if (container.querySelectorAll('.device-entry-row').length === 1 && !document.getElementById('bulkEntryCheckbox').checked) {
+            row.querySelector('.delete-row-btn').style.visibility = 'hidden';
+        } else if (container.querySelectorAll('.device-entry-row').length === 1 && document.getElementById('bulkEntryCheckbox').checked) {
+             row.querySelector('.delete-row-btn').style.visibility = 'hidden';
+        } else {
+            const firstRowBtn = container.querySelector('.device-entry-row .delete-row-btn');
+            if(firstRowBtn) firstRowBtn.style.visibility = 'visible';
+        }
+    }
+
+    window.removeDeviceRow = function(btn) {
+        const container = document.getElementById('deviceEntriesContainer');
+        const rows = container.querySelectorAll('.device-entry-row');
+        if (rows.length > 1) {
+            btn.closest('.device-entry-row').remove();
+        }
+        
+        const remainingRows = container.querySelectorAll('.device-entry-row');
+        if(remainingRows.length === 1) {
+            remainingRows[0].querySelector('.delete-row-btn').style.visibility = 'hidden';
+        }
+    }
+
+    // ==========================================
+    // SMART ALGORITHM: RETRY SAVE ON JOB ID CLASH (BULK SUPPORTED)
     // ==========================================
     window.saveOrder = async function() {
         let custName = ''; let contactNo = '';
@@ -1508,9 +1752,21 @@
             if(!custName || !contactNo) return alert("Please select a customer from the dropdown search.");
         }
 
-        let problemDesc = document.getElementById('problemDesc').value.trim();
-        let devicePassword = document.getElementById('devicePassword').value.trim();
-        let approxEstimate = parseFloat(document.getElementById('approxEstimate').value) || 0;
+        // Gather all device rows
+        const rows = document.querySelectorAll('.device-entry-row');
+        const devices = [];
+        for (let row of rows) {
+            const model = row.querySelector('.dev-model').value.trim();
+            const pass = row.querySelector('.dev-pass').value.trim();
+            const est = parseFloat(row.querySelector('.dev-est').value) || 0;
+            
+            if (model) {
+                devices.push({ problemDesc: model, devicePassword: pass, approxEstimate: est });
+            }
+        }
+
+        if (devices.length === 0) return alert("Please enter at least one device with a Model & Problem description.");
+
         let currentDate = getLocalDateString();
         let currentTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
@@ -1524,35 +1780,55 @@
         }
         
         let attemptNum = currentMax + 1;
-        let saved = false;
-
-        const orderData = { 
-            customerName: custName, contactNo: contactNo, problemDesc: problemDesc, 
-            devicePassword: devicePassword, approxEstimate: approxEstimate, date: currentDate, 
-            time: currentTime, status: "Pending", createdBy: currentUserEmail.split('@')[0],
-            is_deleted: false
-        };
 
         try {
-            while (!saved) {
-                orderData.jobNo = `GSM${String(attemptNum).padStart(2, '0')}`;
-                
-                const { error: orderError } = await supabaseClient.from('repairOrders').insert([orderData]);
-                
-                if (orderError) {
-                    if (orderError.code === '23505' || orderError.message.toLowerCase().includes('unique constraint')) {
-                        attemptNum++; 
+            for (let dev of devices) {
+                let saved = false;
+                while (!saved) {
+                    const jobNoVal = `GSM${String(attemptNum).padStart(2, '0')}`;
+                    const orderData = { 
+                        customerName: custName, 
+                        contactNo: contactNo, 
+                        jobNo: jobNoVal, 
+                        problemDesc: dev.problemDesc, 
+                        devicePassword: dev.devicePassword, 
+                        approxEstimate: dev.approxEstimate, 
+                        date: currentDate, 
+                        time: currentTime, 
+                        status: "Pending", 
+                        createdBy: currentUserEmail.split('@')[0],
+                        is_deleted: false
+                    };
+
+                    const { error: orderError } = await supabaseClient.from('repairOrders').insert([orderData]);
+                    
+                    if (orderError) {
+                        if (orderError.code === '23505' || orderError.message.toLowerCase().includes('unique constraint')) {
+                            attemptNum++; // Clash, try next number safely
+                        } else {
+                            alert(`Error saving device ${dev.problemDesc}: ` + orderError.message);
+                            break; 
+                        }
                     } else {
-                        throw orderError;
+                        saved = true;
+                        attemptNum++; 
                     }
-                } else {
-                    saved = true;
                 }
             }
 
-            document.getElementById('custSearchInput').value = ''; document.getElementById('selectedCustName').value = ''; document.getElementById('selectedCustMobile').value = ''; document.getElementById('newCustName').value = ''; document.getElementById('newCustMobile').value = ''; document.getElementById('problemDesc').value = ''; document.getElementById('devicePassword').value = ''; document.getElementById('approxEstimate').value = '';
-            toggleForm(); switchTab('Pending'); fetchOrders();
-        } catch (error) { alert("Error saving order: " + error.message); }
+            document.getElementById('custSearchInput').value = ''; 
+            document.getElementById('selectedCustName').value = ''; 
+            document.getElementById('selectedCustMobile').value = ''; 
+            document.getElementById('newCustName').value = ''; 
+            document.getElementById('newCustMobile').value = ''; 
+            
+            // Clean up rows
+            document.getElementById('bulkEntryCheckbox').checked = false;
+            
+            toggleForm(); 
+            switchTab('Pending'); 
+            fetchOrders();
+        } catch (error) { alert("Error saving orders: " + error.message); }
     };
 
     window.openEditModal = function(id, jobNo, currentProblem, currentPassword) {
@@ -1569,14 +1845,24 @@
         } catch (err) { alert("Error updating order: " + err.message); }
     }
 
-    document.addEventListener("DOMContentLoaded", async () => { resetSidebarTimer(); await checkAuth(); fetchCustomers(); fetchOrders(); });
+    document.addEventListener("DOMContentLoaded", async () => { 
+        resetSidebarTimer(); 
+        await checkAuth(); 
+        fetchCustomers(); 
+        fetchOrders(); 
+        
+        // Initialize the first device row on load
+        if (document.getElementById('deviceEntriesContainer').children.length === 0) {
+            addDeviceRow(true);
+        }
+    });
 
     // ==========================================
     // AUTO-LOGOUT AFTER 30 MINUTES OF INACTIVITY
     // ==========================================
     const setupAutoLogout = function() {
         let inactivityTimer;
-        const timeoutDuration = 30 * 60 * 1000; // 30 minutes in milliseconds
+        const timeoutDuration = 30 * 60 * 1000; 
 
         function resetTimer() {
             clearTimeout(inactivityTimer);
