@@ -1436,6 +1436,9 @@
     window.closeBillingModal = function() { document.getElementById('modalBilling').style.display = 'none'; }
 
     window.confirmBilling = async function() {
+        const btn = document.querySelector('#modalBilling .btn-confirm');
+        if (btn.disabled) return; // Prevent double click
+
         const estimateAmount = parseFloat(document.getElementById('billEstimateAmount').value) || 0;
         const vendorName = document.getElementById('billVendorName').value;
         const vendorCost = parseFloat(document.getElementById('billVendorCost').value) || 0;
@@ -1444,6 +1447,9 @@
         const rcTimestamp = new Date().toISOString();
         const rcDate = getLocalDateString();
         const rcTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+        btn.disabled = true;
+        btn.innerText = "Processing...";
 
         try {
             const { error: updateError } = await supabaseClient.from('repairOrders').update({ 
@@ -1462,9 +1468,98 @@
             closeBillingModal();
             await fetchOrders(); 
             switchTab('Repair Completed');
-        } catch (err) { alert("Error completing repair: " + err.message); }
+        } catch (err) { 
+            alert("Error completing repair: " + err.message); 
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Confirm & Move";
+        }
     }
 
+    window.confirmDelivery = async function() {
+        const btn = document.querySelector('#modalDelivery .btn-confirm');
+        if (btn.disabled) return; // Prevent double click
+        
+        let finalAmount = parseFloat(document.getElementById('deliveryAmount').value) || 0;
+        let cashAmt = 0; let upiAmt = 0; let creditAmt = 0;
+        let upiNote = document.getElementById('upiReferenceNote').value.trim();
+        
+        if (selectedPaymentMethod === 'Split') {
+            cashAmt = parseFloat(document.getElementById('splitCash').value) || 0;
+            creditAmt = parseFloat(document.getElementById('splitCredit').value) || 0;
+            upiAmt = finalAmount - cashAmt - creditAmt; 
+            if (upiAmt < 0) upiAmt = 0;
+        } else if (selectedPaymentMethod === 'Cash') { cashAmt = finalAmount;
+        } else if (selectedPaymentMethod === 'UPI') { upiAmt = finalAmount;
+        } else if (selectedPaymentMethod === 'Credit') { creditAmt = finalAmount; }
+
+        const gdTimestamp = new Date().toISOString();
+        const gdDate = getLocalDateString();
+        const gdTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+        
+        const ledgerDate = getLocalDateString();
+        const newStatus = deliveryCurrentStatus === 'Repair Refusal' ? 'Delivered (Refused)' : 'Goods Delivered';
+
+        btn.disabled = true;
+        btn.innerText = "Processing...";
+
+        try {
+            const { error: updateError } = await supabaseClient.from('repairOrders').update({ 
+                status: newStatus, 
+                finalAmount: finalAmount, 
+                paymentMethod: selectedPaymentMethod,
+                gd_date: gdDate,
+                gd_time: gdTime,
+                gd_timestamp: gdTimestamp
+            }).eq('id', deliveryOrderId);
+            if (updateError) throw updateError;
+            
+            if (finalAmount > 0) {
+                if (cashAmt > 0) {
+                    const { error: cashError } = await supabaseClient.from('cashbook_entries').insert([{
+                        date: ledgerDate, description: `Repair Job No: ${deliveryJobNo}`, category: 'Repair Sales', amount: cashAmt, type: 'in', created_by: currentUserEmail,
+                        order_id: deliveryOrderId
+                    }]);
+                    if (cashError) throw cashError;
+                } 
+                if (upiAmt > 0) {
+                    let upiDesc = `Repair Job No: ${deliveryJobNo}`;
+                    if (upiNote) { upiDesc += ` - UPI Acc: ${upiNote}`; }
+                    const { error: upiError } = await supabaseClient.from('upi_entries').insert([{
+                        date: ledgerDate, time: gdTime, description: upiDesc, category: 'Repair Sales', upi_amount: upiAmt, card_amount: 0, created_by: currentUserEmail,
+                        order_id: deliveryOrderId
+                    }]);
+                    if (upiError) throw upiError;
+                }
+                if (creditAmt > 0) {
+                    let creditCustName = document.getElementById('selectedCreditCustName').value;
+                    let creditCustMobile = document.getElementById('selectedCreditCustMobile').value;
+                    if (!creditCustName) {
+                        throw new Error("Please specify the customer name for the Credit (Udhar) tracking.");
+                    }
+                    
+                    const { error: creditError } = await supabaseClient.from('customer_credits').insert([{
+                        customer_name: creditCustName, mobile: creditCustMobile, amount: creditAmt, job_no: deliveryJobNo, date: ledgerDate, type: 'Given', created_by: currentUserEmail
+                    }]);
+                    if (creditError) throw creditError;
+
+                    const { data: custData } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', creditCustMobile).single();
+                    if (custData) {
+                        const currentBal = parseFloat(custData.credit_balance) || 0;
+                        await supabaseClient.from('customers').update({ credit_balance: currentBal + creditAmt }).eq('id', custData.id);
+                    }
+                }
+            }
+            closeDeliveryModal();
+            await fetchOrders(); 
+            switchTab('Goods Delivered'); 
+        } catch (err) { 
+            alert("Error updating order: " + err.message); 
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Complete Delivery";
+        }
+    }
     window.markRepairNP = async function() {
         if(!confirm("Are you sure you want to mark this device as Repair Not Possible (NP)?")) return;
         const notes = document.getElementById('billRepairNotes').value.trim();
