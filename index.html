@@ -32,7 +32,9 @@
         .search-bar-global:focus { border-color: #22c55e; }
 
         .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; border: 1px solid var(--border-color); background: white; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; background: #f9fafb; color: #9ca3af; }
         .btn-primary { background: black; color: white; border: none; }
+        .btn-primary:hover { opacity: 0.8; }
         .btn-bill { background: #10b981; color: white; border: none; font-weight: bold; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s;}
         .btn-bill:hover { background: #059669; opacity: 0.9;}
         .btn-np { background: #ef4444; color: white; border: none; font-weight: bold; padding: 10px 20px; border-radius: 6px; cursor: pointer; transition: 0.2s;}
@@ -106,7 +108,7 @@
         .billing-row { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
         .billing-row label { font-weight: bold; color: #374151; font-size: 0.9rem;}
         .billing-row input, .billing-row select { text-align: right; width: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-weight: bold; outline: none;}
-        .billing-row select { font-weight: normal; }
+        .billing-row select { font-weight: normal; text-align: left;}
 
         .segmented-control { display: inline-flex; border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; margin-top: 10px; margin-bottom: 15px; width: 100%; box-sizing: border-box; }
         .seg-btn { flex: 1; padding: 12px 10px; border: none; background: white; cursor: pointer; font-weight: 600; color: #374151; transition: background 0.2s, color 0.2s; border-right: 1px solid #d1d5db; font-size: 0.9rem; text-align: center;}
@@ -143,7 +145,7 @@
     <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
     <a href="index.html" class="nav-item active">📋 Order Details</a>
     <a href="customers.html" class="nav-item">👥 Customers</a>
-    <a href="vendors.html" class="nav-item">🚚 Vendors</a>
+    <a href="vendors.html" class="nav-item admin-only" style="display: none;">🚚 Vendors</a>
     <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
     <a href="upi-book.html" class="nav-item">📖 UPI Book</a>
     <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
@@ -287,17 +289,18 @@
                         <th>Customer</th>
                         <th>Model / Problem</th>
                         <th>Password</th>
-                        <th id="thVendor">Part Vendor (Cost)</th>
+                        <th id="thVendor" style="display: none;">Part Vendor (Cost)</th>
                         <th id="thEstimate">Approx Est. (₹)</th>
                         <th style="text-align: center;">Action</th>
                     </tr>
                 </thead>
                 <tbody id="ordersTableBody"></tbody>
             </table>
+            
             <div class="pagination">
-                <button class="btn" onclick="prevPage()">Previous</button>
+                <button class="btn" id="btnPrevPage" onclick="prevPage()">Previous</button>
                 <span id="pageInfo" style="font-size:0.9rem; font-weight:bold;">Page 1</span>
-                <button class="btn" onclick="nextPage()">Next</button>
+                <button class="btn" id="btnNextPage" onclick="nextPage()">Next</button>
             </div>
         </div>
     </div>
@@ -534,7 +537,10 @@
         const isDbAdmin = profile && profile.role === 'Admin';
 
         if (isMasterAdmin || isDbAdmin) {
-            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
+            document.querySelectorAll('.admin-only').forEach(el => {
+                if (el.tagName === 'TH') el.style.display = 'table-cell';
+                else el.style.display = 'flex';
+            });
             isAdmin = true; 
         } 
     }
@@ -871,23 +877,18 @@
         if(tabName === 'Pending') {
             desc.innerText = "Showing all pending service orders awaiting repair.";
             thEstimate.innerText = "Approx Est. (₹)";
-            thVendor.innerText = "Part Vendor (Cost)";
         } else if (tabName === 'Repair Completed') {
             desc.innerText = "Showing all items where repairs have successfully concluded.";
             thEstimate.innerText = "Balance Amount (₹)";
-            thVendor.innerText = "Part Vendor (Cost)";
         } else if (tabName === 'Goods Delivered') {
             desc.innerText = "Showing history of completed & returned items.";
             thEstimate.innerText = "Total Amount (₹)";
-            thVendor.innerText = "Part Vendor (Cost)";
         } else if (tabName === 'Repair Refusal') {
             desc.innerText = "Showing orders marked as refused or cancelled.";
             thEstimate.innerText = "Inspection Charges (₹)";
-            thVendor.innerText = "Part Vendor (Cost)";
         } else if (tabName === 'Deleted Orders') {
             desc.innerText = "Showing permanently archived records for auditing (Admin only).";
             thEstimate.innerText = "Amount (₹)";
-            thVendor.innerText = "Part Vendor (Cost)";
         }
 
         applyFilters();
@@ -915,7 +916,7 @@
                     
                     if (newTab && newTab !== currentTab) {
                         switchTab(newTab);
-                        return; // Switch tab calls applyFilters again
+                        return; 
                     }
                 }
             }
@@ -1030,13 +1031,47 @@
         }
     }
 
+    window.prevPage = function() {
+        if (currentPage > 1) {
+            currentPage--;
+            renderOrdersTable();
+        }
+    }
+
+    window.nextPage = function() {
+        const maxPage = Math.ceil(filteredOrdersData.length / rowsPerPage) || 1;
+        if (currentPage < maxPage) {
+            currentPage++;
+            renderOrdersTable();
+        }
+    }
+
     function renderOrdersTable() {
         const tbody = document.getElementById('ordersTableBody');
         tbody.innerHTML = '';
+        
+        const pageInfo = document.getElementById('pageInfo');
+        const btnPrev = document.getElementById('btnPrevPage');
+        const btnNext = document.getElementById('btnNextPage');
+        const thVendor = document.getElementById('thVendor');
+        
+        const maxPage = Math.ceil(filteredOrdersData.length / rowsPerPage) || 1;
+        
+        if (currentPage > maxPage) currentPage = maxPage;
+        if (currentPage < 1) currentPage = 1;
+
+        if (isAdmin) {
+            thVendor.style.display = 'table-cell';
+        } else {
+            thVendor.style.display = 'none';
+        }
 
         if(filteredOrdersData.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: gray;">No orders found in this tab.</td></tr>`;
-            document.getElementById('pageInfo').innerText = `Page 1 of 1`;
+            const colSpan = isAdmin ? 8 : 7;
+            tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align: center; color: gray;">No orders found in this tab.</td></tr>`;
+            pageInfo.innerText = `Page 1 of 1`;
+            if(btnPrev) btnPrev.disabled = true;
+            if(btnNext) btnNext.disabled = true;
             return;
         }
 
@@ -1059,7 +1094,6 @@
             let actionHtml = '';
             let displayAmount = 0;
             let displayAmountHtml = '';
-            let vendorHtml = '-';
             let rowStyle = '';
             
             let notesHtml = '';
@@ -1067,11 +1101,16 @@
                 notesHtml = `<div style="font-size: 0.75rem; color: #4b5563; margin-top: 6px; background: #f3f4f6; padding: 5px 8px; border-radius: 4px; display: inline-block;"><strong>Notes:</strong> ${notesSafe}</div>`;
             }
 
-            if (order.status !== 'Pending' && order.vendor_name) {
-                vendorHtml = `
-                    <div style="font-weight: 600; color: #111827;">${order.vendor_name}</div>
-                    <div style="font-size: 0.75rem; color: #ef4444; font-weight: bold;">Cost: ₹${vendorCost}</div>
-                `;
+            let vendorTdHtml = '';
+            if (isAdmin) {
+                let vendorHtml = '-';
+                if (order.status !== 'Pending' && order.vendor_name) {
+                    vendorHtml = `
+                        <div style="font-weight: 600; color: #111827;">${vendorNameSafe}</div>
+                        <div style="font-size: 0.75rem; color: #ef4444; font-weight: bold;">Cost: ₹${vendorCost}</div>
+                    `;
+                }
+                vendorTdHtml = `<td>${vendorHtml}</td>`;
             }
 
             if (currentTab === 'Deleted Orders') {
@@ -1166,7 +1205,7 @@
                         ${notesHtml}
                     </td>
                     <td style="color:#ef4444; font-weight:bold; letter-spacing:1px;">${order.devicePassword || '-'}</td>
-                    <td>${vendorHtml}</td>
+                    ${vendorTdHtml}
                     <td>${displayAmountHtml}</td>
                     <td style="text-align: center; white-space: nowrap;">
                         ${actionHtml}
@@ -1174,7 +1213,9 @@
                 </tr>`;
         });
 
-        document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(filteredOrdersData.length / rowsPerPage) || 1}`;
+        pageInfo.innerText = `Page ${currentPage} of ${maxPage}`;
+        if(btnPrev) btnPrev.disabled = (currentPage === 1);
+        if(btnNext) btnNext.disabled = (currentPage === maxPage);
     }
 
     window.revertToRepairCompleted = async function(id, jobNo, paymentMode, amount, mobile, targetStatus) {
