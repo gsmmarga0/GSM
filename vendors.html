@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendors - GSM SOLUTIONS</title>
+    <style>
+        :root { --bg-color: #f4f5f7; --sidebar-width: 250px; --border-color: #e5e7eb; }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; }
+        
+        .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; z-index: 40; }
+        .logo-area { display: flex; align-items: center; padding: 0 20px 20px 20px; font-weight: bold; font-size: 1.2rem; }
+        .logo-icon { background: black; color: white; padding: 5px 10px; border-radius: 4px; margin-right: 10px; font-size: 0.9rem; }
+        .nav-item { padding: 12px 20px; color: #4b5563 !important; text-decoration: none; display: flex; align-items: center; font-size: 0.95rem; cursor: pointer; }
+        .nav-item.active { background: black !important; color: white !important; border-radius: 0 20px 20px 0; margin-right: 20px; }
+        .nav-item:hover:not(.active) { background: #f3f4f6; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .header { background: white; padding: 15px 30px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { margin: 0; font-size: 1.5rem; }
+        .header p { margin: 5px 0 0 0; color: #6b7280; font-size: 0.9rem; }
+
+        .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; border: 1px solid var(--border-color); background: white; transition: 0.2s;}
+        .btn-primary { background: black; color: white; border: none; }
+        .btn-primary:hover { opacity: 0.8; }
+
+        .layout-grid { display: grid; grid-template-columns: 300px 1fr; gap: 20px; padding: 20px 30px; height: calc(100vh - 90px); box-sizing: border-box; }
+        
+        .card { background: white; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden;}
+        .card-header { padding: 15px 20px; border-bottom: 1px solid var(--border-color); background: #f9fafb; font-weight: bold; display: flex; justify-content: space-between; align-items: center;}
+        
+        .vendor-list { overflow-y: auto; flex: 1; margin: 0; padding: 0; list-style: none; }
+        .vendor-list li { padding: 15px 20px; border-bottom: 1px solid #f3f4f6; cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: 0.2s; }
+        .vendor-list li:hover { background: #f9fafb; }
+        .vendor-list li.active { background: #eff6ff; border-left: 4px solid #2563eb; padding-left: 16px; }
+        .v-name { font-weight: bold; color: #111827; }
+        .v-phone { font-size: 0.8rem; color: #6b7280; }
+
+        .ledger-wrapper { flex: 1; overflow-y: auto; background: white; }
+        table { width: 100%; border-collapse: collapse; }
+        th { position: sticky; top: 0; background: #f9fafb; padding: 12px 20px; text-align: left; font-size: 0.85rem; color: #6b7280; border-bottom: 1px solid var(--border-color); }
+        td { padding: 12px 20px; border-bottom: 1px solid #f3f4f6; font-size: 0.9rem; color: #374151; }
+        .text-red { color: #ef4444; font-weight: bold; }
+        .text-green { color: #10b981; font-weight: bold; }
+
+        .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 20px; border-bottom: 1px solid var(--border-color); background: #f9fafb;}
+        .stat-box { background: white; border: 1px solid var(--border-color); border-radius: 6px; padding: 15px; }
+        .stat-box span { display: block; font-size: 0.8rem; color: #6b7280; margin-bottom: 5px; text-transform: uppercase; font-weight: bold;}
+        .stat-box strong { font-size: 1.4rem; color: #111827; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(2px);}
+        .modal { background: white; padding: 25px; border-radius: 8px; width: 350px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .modal h2 { margin: 0 0 15px 0; font-size: 1.2rem; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 0.85rem; margin-bottom: 5px; color: #4b5563; font-weight: bold;}
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; outline: none; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;}
+        
+        .empty-state { flex: 1; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 0.95rem; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
+    <a href="index.html" class="nav-item">📋 Order Details</a>
+    <a href="customers.html" class="nav-item">👥 Customers</a>
+    <a href="vendors.html" class="nav-item active">🚚 Vendors</a>
+    <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
+    <a href="upi-book.html" class="nav-item">📖 UPI Book</a>
+    <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
+    <div style="flex-grow: 1;"></div> 
+    <div class="nav-item" onclick="logOut()" style="font-weight: bold; cursor: pointer; border-top: 1px solid var(--border-color); padding-top: 15px;">⬅️ Logout</div>
+</div>
+
+<div class="main-content">
+    <div class="header">
+        <div>
+            <h1>Vendor Management</h1>
+            <p>Track part purchases and vendor payments</p>
+        </div>
+        <button class="btn btn-primary" onclick="openVendorModal()">+ Add New Vendor</button>
+    </div>
+
+    <div class="layout-grid">
+        <div class="card">
+            <div class="card-header">
+                Vendor List
+                <input type="text" id="searchVendor" placeholder="Search..." style="padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; width: 120px; outline: none;" onkeyup="renderVendors()">
+            </div>
+            <ul class="vendor-list" id="vendorListUL"></ul>
+        </div>
+
+        <div class="card">
+            <div class="card-header" style="background: white; border-bottom: none;">
+                <span id="ledgerTitle" style="font-size: 1.2rem;">Select a vendor</span>
+                <button class="btn" id="btnEditVendor" style="display:none; padding: 4px 10px; font-size:0.8rem;" onclick="openEditVendorModal()">✏️ Edit Vendor</button>
+            </div>
+            
+            <div class="stats-row" id="ledgerStats" style="display: none;">
+                <div class="stat-box">
+                    <span>Total Purchases (We Owe)</span>
+                    <strong class="text-red" id="statPurchases">₹0.00</strong>
+                </div>
+                <div class="stat-box">
+                    <span>Total Payments (We Paid)</span>
+                    <strong class="text-green" id="statPayments">₹0.00</strong>
+                </div>
+                <div class="stat-box" style="background: #eff6ff; border-color: #bfdbfe;">
+                    <span style="color: #2563eb;">Net Balance Payable</span>
+                    <strong style="color: #1e3a8a;" id="statBalance">₹0.00</strong>
+                </div>
+            </div>
+
+            <div class="ledger-wrapper" id="ledgerWrapper">
+                <div class="empty-state">Select a vendor from the list to view their ledger.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add/Edit Vendor -->
+<div class="modal-overlay" id="vendorModal">
+    <div class="modal">
+        <h2 id="modalTitle">Add New Vendor</h2>
+        <input type="hidden" id="vOldName">
+        <input type="hidden" id="vId">
+        <div class="form-group">
+            <label>Vendor Name / Shop Name</label>
+            <input type="text" id="vName" placeholder="e.g. Mobile Parts Wholesale">
+        </div>
+        <div class="form-group">
+            <label>Contact Number (Optional)</label>
+            <input type="text" id="vPhone" placeholder="10-digit mobile">
+        </div>
+        <div class="modal-actions">
+            <button class="btn" onclick="closeVendorModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveVendor()">Save Vendor</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
+    
+    let vendors = [];
+    let activeVendor = null;
+
+    async function checkAuth() {
+        const { data } = await supabaseClient.auth.getSession();
+        if (!data.session) window.location.href = 'login.html';
+    }
+    async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
+
+    async function fetchVendors() {
+        const { data } = await supabaseClient.from('vendors').select('*').order('name', { ascending: true });
+        vendors = data || [];
+        renderVendors();
+    }
+
+    function renderVendors() {
+        const search = document.getElementById('searchVendor').value.toLowerCase();
+        const ul = document.getElementById('vendorListUL');
+        ul.innerHTML = '';
+
+        vendors.filter(v => v.name.toLowerCase().includes(search)).forEach(v => {
+            const li = document.createElement('li');
+            if (activeVendor && activeVendor.id === v.id) li.className = 'active';
+            li.innerHTML = `<span class="v-name">${v.name}</span><span class="v-phone">${v.phone || 'No phone'}</span>`;
+            li.onclick = () => selectVendor(v);
+            ul.appendChild(li);
+        });
+    }
+
+    async function selectVendor(v) {
+        activeVendor = v;
+        renderVendors();
+        document.getElementById('ledgerTitle').innerText = v.name;
+        document.getElementById('btnEditVendor').style.display = 'block';
+        document.getElementById('ledgerStats').style.display = 'grid';
+        
+        const wrapper = document.getElementById('ledgerWrapper');
+        wrapper.innerHTML = '<div class="empty-state">Loading ledger...</div>';
+
+        try {
+            // 1. Fetch Purchases (from repairOrders where vendor_name matches and cost > 0)
+            const { data: purchases } = await supabaseClient.from('repairOrders')
+                .select('jobNo, date, vendor_cost, problemDesc')
+                .eq('vendor_name', v.name)
+                .gt('vendor_cost', 0)
+                .in('status', ['Repair Completed', 'Goods Delivered', 'Delivered (Refused)']);
+
+            // 2. Fetch Payments (from Cashbook)
+            const { data: cashPayments } = await supabaseClient.from('cashbook_entries')
+                .select('date, amount, description')
+                .eq('category', 'Vendor Payment')
+                .eq('vendor_name', v.name)
+                .eq('type', 'out');
+
+            // 3. Fetch Payments (from UPI)
+            const { data: upiPayments } = await supabaseClient.from('upi_entries')
+                .select('date, upi_payment, description')
+                .eq('category', 'Vendor Payment')
+                .eq('vendor_name', v.name)
+                .gt('upi_payment', 0);
+
+            // Combine and sort
+            let ledger = [];
+            let totalPurchased = 0;
+            let totalPaid = 0;
+
+            if (purchases) {
+                purchases.forEach(p => {
+                    totalPurchased += parseFloat(p.vendor_cost);
+                    ledger.push({ date: p.date, ref: `Job: ${p.jobNo} - ${p.problemDesc}`, type: 'Purchase', amount: parseFloat(p.vendor_cost) });
+                });
+            }
+            if (cashPayments) {
+                cashPayments.forEach(p => {
+                    totalPaid += parseFloat(p.amount);
+                    ledger.push({ date: p.date, ref: `Cash: ${p.description}`, type: 'Payment', amount: parseFloat(p.amount) });
+                });
+            }
+            if (upiPayments) {
+                upiPayments.forEach(p => {
+                    totalPaid += parseFloat(p.upi_payment);
+                    ledger.push({ date: p.date, ref: `UPI: ${p.description}`, type: 'Payment', amount: parseFloat(p.upi_payment) });
+                });
+            }
+
+            ledger.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            // Update Stats
+            document.getElementById('statPurchases').innerText = `₹${totalPurchased.toFixed(2)}`;
+            document.getElementById('statPayments').innerText = `₹${totalPaid.toFixed(2)}`;
+            document.getElementById('statBalance').innerText = `₹${(totalPurchased - totalPaid).toFixed(2)}`;
+
+            // Render Table
+            if (ledger.length === 0) {
+                wrapper.innerHTML = '<div class="empty-state">No transactions found for this vendor.</div>';
+                return;
+            }
+
+            let html = `<table><thead><tr><th>Date</th><th>Reference</th><th>Type</th><th style="text-align:right;">Amount (₹)</th></tr></thead><tbody>`;
+            ledger.forEach(item => {
+                const colorClass = item.type === 'Purchase' ? 'text-red' : 'text-green';
+                const sign = item.type === 'Purchase' ? '+' : '-';
+                html += `<tr>
+                    <td>${item.date}</td>
+                    <td>${item.ref}</td>
+                    <td><span style="background:#f3f4f6; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:bold;">${item.type}</span></td>
+                    <td style="text-align:right;" class="${colorClass}">${sign}${item.amount.toFixed(2)}</td>
+                </tr>`;
+            });
+            html += `</tbody></table>`;
+            wrapper.innerHTML = html;
+
+        } catch (e) {
+            wrapper.innerHTML = '<div class="empty-state">Error loading data.</div>';
+            console.error(e);
+        }
+    }
+
+    function openVendorModal() {
+        document.getElementById('modalTitle').innerText = 'Add New Vendor';
+        document.getElementById('vId').value = '';
+        document.getElementById('vOldName').value = '';
+        document.getElementById('vName').value = '';
+        document.getElementById('vPhone').value = '';
+        document.getElementById('vendorModal').style.display = 'flex';
+    }
+
+    function openEditVendorModal() {
+        if (!activeVendor) return;
+        document.getElementById('modalTitle').innerText = 'Edit Vendor';
+        document.getElementById('vId').value = activeVendor.id;
+        document.getElementById('vOldName').value = activeVendor.name;
+        document.getElementById('vName').value = activeVendor.name;
+        document.getElementById('vPhone').value = activeVendor.phone || '';
+        document.getElementById('vendorModal').style.display = 'flex';
+    }
+
+    function closeVendorModal() { document.getElementById('vendorModal').style.display = 'none'; }
+
+    async function saveVendor() {
+        const id = document.getElementById('vId').value;
+        const oldName = document.getElementById('vOldName').value;
+        const newName = document.getElementById('vName').value.trim();
+        const phone = document.getElementById('vPhone').value.trim();
+
+        if (!newName) return alert("Vendor name is required.");
+
+        try {
+            if (id) {
+                // Editing existing vendor
+                const { error } = await supabaseClient.from('vendors').update({ name: newName, phone: phone }).eq('id', id);
+                if (error) throw error;
+                
+                // Cascading update to historically linked records if name changed
+                if (oldName !== newName) {
+                    await supabaseClient.from('repairOrders').update({ vendor_name: newName }).eq('vendor_name', oldName);
+                    await supabaseClient.from('cashbook_entries').update({ vendor_name: newName }).eq('vendor_name', oldName).eq('category', 'Vendor Payment');
+                    await supabaseClient.from('upi_entries').update({ vendor_name: newName }).eq('vendor_name', oldName).eq('category', 'Vendor Payment');
+                }
+            } else {
+                // Adding new
+                const { error } = await supabaseClient.from('vendors').insert([{ name: newName, phone: phone }]);
+                if (error) throw error;
+            }
+            closeVendorModal();
+            fetchVendors();
+            if(id && activeVendor) selectVendor({id, name: newName, phone});
+        } catch (e) {
+            alert("Error saving vendor: " + e.message);
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        checkAuth();
+        fetchVendors();
+    });
+</script>
+</body>
+</html>
