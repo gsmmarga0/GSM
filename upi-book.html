@@ -7,7 +7,7 @@
     <link rel="icon" href="data:,">
     <style>
         :root { 
-            --bg-color: #f4f5f7; --border-color: #e5e7eb; --sidebar-width: 250px;
+            --bg-color: #f9fafb; --border-color: #e5e7eb; --sidebar-width: 250px;
             --c-blue: #2563eb; --c-purple: #9333ea; --c-green: #10b981; --c-red: #ef4444;
             --c-green-bg: #f0fdf4; --c-green-border: #bbf7d0;
             --c-red-bg: #fef2f2; --c-red-border: #fecaca;
@@ -26,18 +26,27 @@
         .sidebar-collapsed-btn { left: 0 !important; }
 
         .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg-color); z-index: 10; padding: 20px 30px;}
-        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
-        .header-title h1 { margin: 0; font-size: 1.5rem; }
-        .header-title p { margin: 5px 0 0 0; color: #6b7280; font-size: 0.9rem; }
         
-        .filter-group { display: flex; align-items: center; gap: 12px; font-size: 0.85rem;}
-        .filter-item input { padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; background: white;}
-        .btn-fetch, .btn-export { background: white; border: 1px solid var(--border-color); padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;}
-        .btn-fetch:hover, .btn-export:hover { background: #f9fafb; }
-        .btn-add-in { background: var(--c-green); color: white; border: none; padding: 9px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;}
-        .btn-add-in:hover { opacity: 0.9; }
-        .btn-add-out { background: var(--c-red); color: white; border: none; padding: 9px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;}
-        .btn-add-out:hover { opacity: 0.9; }
+        /* Fixed Header UI matching Screenshot */
+        .header-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .header-controls h1 { margin: 0; font-size: 1.5rem; color: #111827; }
+        .header-controls p { margin: 4px 0 0 0; font-size: 0.85rem; color: #6b7280; }
+        
+        .action-bar { display: flex; gap: 12px; align-items: center; }
+        .toggle-group { display: flex; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; height: 38px; background: white; box-sizing: border-box;}
+        .toggle-btn { padding: 0 16px; border: none; background: white; cursor: pointer; font-size: 0.9rem; font-weight: 500; color: #111827; transition: 0.2s; margin: 0; }
+        .toggle-btn.active { background: black; color: white; }
+        
+        .date-picker { padding: 0 12px; height: 38px; border: 1px solid var(--border-color); border-radius: 6px; background: white; font-size: 0.9rem; outline: none; box-sizing: border-box; color: #111827; font-family: inherit;}
+        
+        .btn { padding: 0 16px; height: 38px; border-radius: 6px; cursor: pointer; font-weight: 600; border: 1px solid var(--border-color); background: white; font-size: 0.9rem; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; box-sizing: border-box; color: #111827;}
+        .btn:hover:not(:disabled) { background: #f3f4f6; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        
+        .btn-green { background: var(--c-green); color: white; border: none; }
+        .btn-green:hover:not(:disabled) { background: #059669; }
+        .btn-red { background: var(--c-red); color: white; border: none; }
+        .btn-red:hover:not(:disabled) { background: #dc2626; }
 
         .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
         .stat-card { background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; }
@@ -51,23 +60,23 @@
         th { padding: 15px 20px; font-size: 0.85rem; background: #f9fafb; position: sticky; top: 0; box-shadow: 0 1px 0 var(--border-color); }
         td { padding: 15px 20px; font-size: 0.85rem; border-bottom: 1px solid #f3f4f6; }
         .group-header td { background: #f9fafb; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
-        .table-footer td { background: #111827; color: white; font-weight: bold; position: sticky; bottom: 0; }
 
-        /* Breakdown Grids */
         .breakdown-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px; }
         .breakdown-header { padding: 15px 20px; font-weight: bold; border-bottom: 1px solid var(--border-color); }
         .breakdown-wrapper { max-height: 300px; overflow-y: auto; background: white;}
 
-        /* Modal Styles */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(2px);}
         .modal { background: white; width: 420px; border-radius: 12px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);}
         .form-group { margin-bottom: 16px; }
         .form-row { display: flex; gap: 15px; }
-        .form-group label { display: block; font-size: 0.85rem; margin-bottom: 6px; font-weight: 600; }
-        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; outline: none; }
-        .modal-btn-submit { width: 100%; padding: 12px; color: white; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 10px;}
-        .btn-red { background: var(--c-red); }
-        .btn-green { background: var(--c-green); }
+        .form-group label { display: block; font-size: 0.85rem; margin-bottom: 6px; font-weight: 600; color: #374151;}
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; outline: none; transition: 0.2s; font-family: inherit;}
+        .form-group input:focus, .form-group select:focus { border-color: black; box-shadow: 0 0 0 2px rgba(0,0,0,0.05); }
+        
+        .modal-btn-submit { width: 100%; padding: 12px; color: white; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 10px; font-size: 1rem; transition: 0.2s;}
+        .modal-btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-modal-red { background: var(--c-red); }
+        .btn-modal-green { background: var(--c-green); }
     </style>
 </head>
 <body>
@@ -76,7 +85,7 @@
     <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
     <a href="index.html" class="nav-item">📋 Order Details</a>
     <a href="customers.html" class="nav-item">👥 Customers</a>
-    <a href="vendors.html" class="nav-item">🚚 Vendors</a>
+    <a href="vendors.html" class="nav-item admin-only" style="display: none;">🚚 Vendors</a>
     <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
     <a href="upi-book.html" class="nav-item active">📖 UPI Book</a>
     <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
@@ -99,17 +108,22 @@
 <div class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">⋮</div>
 
 <div class="main-content">
-    <div class="header-top">
-        <div class="header-title">
+    <div class="header-controls">
+        <div>
             <h1>UPI Book</h1>
-            <p>Master ledger for digital transactions</p>
+            <p>Master ledger for digital transactions - <span id="modeLabel">Daily</span></p>
         </div>
-        <div class="filter-group">
-            <input type="date" id="filterFromDate">
-            <input type="date" id="filterToDate">
-            <button class="btn-fetch" onclick="fetchLedgerData()">Fetch</button>
-            <button class="btn-add-in" onclick="openModal('in')">+ Add Received</button>
-            <button class="btn-add-out" onclick="openModal('out')">- UPI Payment</button>
+        <div class="action-bar">
+            <div class="toggle-group">
+                <button class="toggle-btn active" id="btnDaily" onclick="setMode('Daily')">Daily</button>
+                <button class="toggle-btn" id="btnPeriod" onclick="setMode('Period')">Period</button>
+            </div>
+            <div id="dateInputs" style="display: flex; gap: 8px;">
+                <input type="date" class="date-picker" id="ledgerDate">
+            </div>
+            <button class="btn" onclick="fetchLedgerData()">↻ Refresh</button>
+            <button class="btn btn-green" onclick="openModal('in')">+ Add Received</button>
+            <button class="btn btn-red" onclick="openModal('out')">- UPI Payment</button>
         </div>
     </div>
 
@@ -132,7 +146,6 @@
         </div>
     </div>
 
-    <!-- UPDATED BREAKDOWN GRID -->
     <div class="breakdown-grid">
         <div class="table-card" style="margin-bottom: 0;">
             <div class="breakdown-header" style="background: var(--c-green-bg); color: var(--c-green); border-bottom-color: var(--c-green-border);">UPI & Card In Breakdown</div>
@@ -155,7 +168,7 @@
     <div class="modal">
         <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
             <span id="modalTitle" style="font-size:1.2rem; font-weight:bold;">Add Transaction</span>
-            <span onclick="closeModal()" style="cursor:pointer; font-size:1.5rem; color:#9ca3af;">&times;</span>
+            <span onclick="closeModal()" style="cursor:pointer; font-size:1.5rem; color:#9ca3af; line-height: 1;">&times;</span>
         </div>
         <form id="transactionForm" onsubmit="saveTransaction(event)">
             <div class="form-row">
@@ -207,6 +220,7 @@
     
     const ADMIN_EMAIL = 'faizan@gsmsolution.com'; 
     let currentUserEmail = '';
+    let currentMode = 'Daily';
     let allUpiData = [];
     let currentModalType = 'in'; 
 
@@ -217,25 +231,17 @@
     window.resetSidebarTimer = function() {
         clearTimeout(sidebarTimer);
         sidebarTimer = setTimeout(() => {
-            const sb = document.getElementById('sidebar');
-            const btn = document.getElementById('sidebarToggle');
-            if(sb && btn) {
-                sb.classList.add('collapsed');
-                btn.classList.add('sidebar-collapsed-btn');
-            }
+            document.getElementById('sidebar').classList.add('collapsed');
+            document.getElementById('sidebarToggle').classList.add('sidebar-collapsed-btn');
         }, 5000);
     }
     window.clearSidebarTimer = function() { clearTimeout(sidebarTimer); }
 
     window.toggleSidebar = function() {
-        const sb = document.getElementById('sidebar');
-        const btn = document.getElementById('sidebarToggle');
-        if(sb && btn) {
-            sb.classList.toggle('collapsed');
-            btn.classList.toggle('sidebar-collapsed-btn');
-            if(!sb.classList.contains('collapsed')) resetSidebarTimer();
-            else clearSidebarTimer();
-        }
+        document.getElementById('sidebar').classList.toggle('collapsed');
+        document.getElementById('sidebarToggle').classList.toggle('sidebar-collapsed-btn');
+        if(!document.getElementById('sidebar').classList.contains('collapsed')) resetSidebarTimer();
+        else clearSidebarTimer();
     }
 
     async function checkAuth() { 
@@ -297,13 +303,13 @@
             document.getElementById('inAmountFields').style.display = 'none';
             document.getElementById('outAmountFields').style.display = 'block';
             document.getElementById('modalCat').value = 'Vendor Payment'; 
-            btn.innerText = 'Save Payment'; btn.className = 'modal-btn-submit btn-red';
+            btn.innerText = 'Save Payment'; btn.className = 'modal-btn-submit btn-modal-red';
         } else {
             title.innerText = 'Add Received (In)';
             document.getElementById('inAmountFields').style.display = 'block';
             document.getElementById('outAmountFields').style.display = 'none';
             document.getElementById('modalCat').value = 'Repair Sales'; 
-            btn.innerText = 'Save Collection'; btn.className = 'modal-btn-submit btn-green';
+            btn.innerText = 'Save Collection'; btn.className = 'modal-btn-submit btn-modal-green';
         }
         toggleVendorSelect();
     }
@@ -312,6 +318,10 @@
 
     window.saveTransaction = async function(e) {
         e.preventDefault();
+        
+        const btn = document.getElementById('submitBtn');
+        if (btn.disabled) return; // Stop double clicks
+
         const date = document.getElementById('modalDate').value;
         const time = document.getElementById('modalTime').value + ':00'; 
         const desc = document.getElementById('modalDesc').value;
@@ -330,21 +340,61 @@
             if (cat === 'Vendor Payment' && !vendorName) return alert("Please select a Vendor.");
         }
 
+        // Disable button visually
+        btn.disabled = true;
+        const originalText = btn.innerText;
+        btn.innerText = "Processing...";
+
         try {
             await supabaseClient.from('upi_entries').insert([{
                 date: date, time: time, description: desc, category: cat,
                 upi_amount: upiIn, card_amount: cardIn, upi_payment: upiOut, created_by: currentUserEmail,
                 vendor_name: cat === 'Vendor Payment' ? vendorName : null
             }]);
-            closeModal(); fetchLedgerData();
-        } catch (error) { alert("Error: " + error.message); }
+            closeModal(); 
+            fetchLedgerData();
+        } catch (error) { 
+            alert("Error: " + error.message); 
+        } finally {
+            // Restore button
+            btn.disabled = false;
+            btn.innerText = originalText;
+        }
     }
 
     const formatMoney = (amount) => '₹' + parseFloat(amount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
+    window.setMode = (mode) => {
+        currentMode = mode;
+        document.getElementById('btnDaily').classList.toggle('active', mode === 'Daily');
+        document.getElementById('btnPeriod').classList.toggle('active', mode === 'Period');
+        document.getElementById('modeLabel').innerText = mode;
+        
+        if(mode === 'Daily') {
+            document.getElementById('dateInputs').innerHTML = '<input type="date" class="date-picker" id="ledgerDate">';
+            document.getElementById('ledgerDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('ledgerDate').addEventListener('change', () => fetchLedgerData());
+        } else {
+            document.getElementById('dateInputs').innerHTML = `<input type="date" class="date-picker" id="filterFromDate"> <input type="date" class="date-picker" id="filterToDate">`;
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('filterFromDate').value = today;
+            document.getElementById('filterToDate').value = today;
+            document.getElementById('filterFromDate').addEventListener('change', () => fetchLedgerData());
+            document.getElementById('filterToDate').addEventListener('change', () => fetchLedgerData());
+        }
+        fetchLedgerData();
+    };
+
     window.fetchLedgerData = async function() {
-        const fromDate = document.getElementById('filterFromDate').value;
-        const toDate = document.getElementById('filterToDate').value;
+        let fromDate, toDate;
+
+        if (currentMode === 'Daily') {
+            fromDate = document.getElementById('ledgerDate').value;
+            toDate = fromDate;
+        } else {
+            fromDate = document.getElementById('filterFromDate').value;
+            toDate = document.getElementById('filterToDate').value;
+        }
 
         const { data } = await supabaseClient.from('upi_entries').select('*')
             .gte('date', fromDate).lte('date', toDate).order('date').order('time');
@@ -407,10 +457,7 @@
         checkAuth(); 
         resetSidebarTimer(); 
         fetchVendorsForModal();
-        const today = getLocalDateString();
-        document.getElementById('filterFromDate').value = today;
-        document.getElementById('filterToDate').value = today;
-        fetchLedgerData();
+        setMode('Daily');
     });
 
     // ==========================================
