@@ -6,14 +6,18 @@
     <title>Vendors - GSM SOLUTIONS</title>
     <style>
         :root { --bg-color: #f4f5f7; --sidebar-width: 250px; --border-color: #e5e7eb; }
-        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; position: relative;}
         
-        .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; z-index: 40; }
+        /* Sidebar Styling */
+        .sidebar { width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; transition: width 0.4s ease; overflow: hidden; white-space: nowrap; z-index: 40; }
+        .sidebar.collapsed { width: 0; padding-left: 0; padding-right: 0; border-right: none; }
         .logo-area { display: flex; align-items: center; padding: 0 20px 20px 20px; font-weight: bold; font-size: 1.2rem; }
         .logo-icon { background: black; color: white; padding: 5px 10px; border-radius: 4px; margin-right: 10px; font-size: 0.9rem; }
         .nav-item { padding: 12px 20px; color: #4b5563 !important; text-decoration: none; display: flex; align-items: center; font-size: 0.95rem; cursor: pointer; }
         .nav-item.active { background: black !important; color: white !important; border-radius: 0 20px 20px 0; margin-right: 20px; }
         .nav-item:hover:not(.active) { background: #f3f4f6; }
+        .sidebar-toggle-btn { position: absolute; left: var(--sidebar-width); top: 50%; transform: translateY(-50%); background: black; color: white; width: 20px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; border-radius: 0 8px 8px 0; transition: left 0.4s ease; font-weight: bold; box-shadow: 2px 0 5px rgba(0,0,0,0.2);}
+        .sidebar-collapsed-btn { left: 0 !important; }
 
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .header { background: white; padding: 15px 30px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
@@ -61,17 +65,33 @@
 </head>
 <body>
 
-<div class="sidebar">
+<div class="sidebar" id="sidebar" onmouseenter="clearSidebarTimer()" onmouseleave="resetSidebarTimer()">
     <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
     <a href="index.html" class="nav-item">📋 Order Details</a>
     <a href="customers.html" class="nav-item">👥 Customers</a>
-    <a href="vendors.html" class="nav-item active">🚚 Vendors</a>
     <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
     <a href="upi-book.html" class="nav-item">📖 UPI Book</a>
     <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
+    
+    <!-- Admin Only Links (Hidden by default) -->
+    <a href="vendors.html" class="nav-item active admin-only" style="display: none;">🚚 Vendors</a>
+    <a href="sales-report.html" class="nav-item admin-only" style="display: none;">📊 Sales Report</a>
+    <a href="expenses.html" class="nav-item admin-only" style="display: none;">💸 Expenses</a>
+    <a href="profit.html" class="nav-item admin-only" style="display: none;">📈 Profit Book</a>
+    <a href="users.html" class="nav-item admin-only" style="display: none; color: #2563eb; font-weight:bold;">👥 Manage Users</a>
     <div style="flex-grow: 1;"></div> 
-    <div class="nav-item" onclick="logOut()" style="font-weight: bold; cursor: pointer; border-top: 1px solid var(--border-color); padding-top: 15px;">⬅️ Logout</div>
+    
+    <!-- Profile & Logout Bottom section -->
+    <div class="nav-item" onclick="logOut()" style="color: black !important; font-weight: bold; cursor: pointer; border-top: 1px solid var(--border-color); padding-top: 15px; margin: 10px 20px; display: flex; justify-content: space-between; align-items: center;">
+        <span id="userNameDisplay">User</span> 
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+    </div>
 </div>
+<div class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">⋮</div>
 
 <div class="main-content">
     <div class="header">
@@ -144,13 +164,51 @@
 <script>
     const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
     
+    const ADMIN_EMAIL = 'faizan@gsmsolution.com';
     let vendors = [];
     let activeVendor = null;
 
-    async function checkAuth() {
-        const { data } = await supabaseClient.auth.getSession();
-        if (!data.session) window.location.href = 'login.html';
+    // Sidebar Logic
+    let sidebarTimer;
+    window.resetSidebarTimer = function() {
+        clearTimeout(sidebarTimer);
+        sidebarTimer = setTimeout(() => { 
+            document.getElementById('sidebar').classList.add('collapsed'); 
+            document.getElementById('sidebarToggle').classList.add('sidebar-collapsed-btn'); 
+        }, 5000);
     }
+    window.clearSidebarTimer = function() { clearTimeout(sidebarTimer); }
+    window.toggleSidebar = function() {
+        document.getElementById('sidebar').classList.toggle('collapsed'); 
+        document.getElementById('sidebarToggle').classList.toggle('sidebar-collapsed-btn');
+        if(!document.getElementById('sidebar').classList.contains('collapsed')) resetSidebarTimer(); else clearSidebarTimer();
+    }
+
+    async function checkAuth() {
+        const { data: sessionData } = await supabaseClient.auth.getSession();
+        
+        if (!sessionData.session) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        const currentUserEmail = sessionData.session.user.email;
+        let displayEmail = currentUserEmail.split('@')[0];
+        document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
+
+        const isMasterAdmin = currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase();
+        
+        const { data: profile } = await supabaseClient.from('user_profiles').select('role').eq('email', currentUserEmail).single();
+        const isDbAdmin = profile && profile.role === 'Admin';
+
+        if (isMasterAdmin || isDbAdmin) {
+            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
+        } else {
+            // Kick regular users out of the admin-only Vendor page
+            window.location.href = 'index.html';
+        }
+    }
+    
     async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
 
     async function fetchVendors() {
@@ -318,8 +376,28 @@
 
     document.addEventListener("DOMContentLoaded", () => {
         checkAuth();
+        resetSidebarTimer();
         fetchVendors();
     });
+
+    // ==========================================
+    // AUTO-LOGOUT AFTER 30 MINUTES OF INACTIVITY
+    // ==========================================
+    const setupAutoLogout = function() {
+        let inactivityTimer;
+        const timeoutDuration = 30 * 60 * 1000; 
+        function resetTimer() {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(logOut, timeoutDuration); 
+        }
+        window.onload = resetTimer;
+        document.onmousemove = resetTimer;
+        document.onkeypress = resetTimer;
+        document.onclick = resetTimer;
+        document.onscroll = resetTimer;
+        document.ontouchstart = resetTimer; 
+    };
+    setupAutoLogout();
 </script>
 </body>
 </html>
