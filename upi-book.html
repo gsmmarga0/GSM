@@ -84,11 +84,11 @@
         .stat-card-out .subtitle { color: var(--c-red); }
 
         /* Table Styles */
-        .table-card { background: white; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; margin-bottom: 50px; flex: 1;}
+        .table-card { background: white; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; margin-bottom: 25px; flex: none;}
         .table-header-title { padding: 15px 20px; font-size: 0.9rem; font-weight: bold; color: #374151; border-bottom: 1px solid var(--border-color); display: flex; gap: 10px; align-items: center; background: white; z-index: 20;}
         .table-header-title span { font-weight: normal; color: #6b7280; font-size: 0.8rem; }
         
-        .table-scroll-container { flex: 1; overflow-y: auto; max-height: calc(100vh - 380px); }
+        .table-scroll-container { max-height: 400px; overflow-y: auto; }
         
         table { width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; }
         th { padding: 15px 20px; font-size: 0.85rem; color: #6b7280; font-weight: 600; background: #f9fafb; position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 0 var(--border-color); }
@@ -115,6 +115,14 @@
         .badge-payment { background: var(--c-red-light); color: var(--c-red); }
         
         .no-data { text-align: center; padding: 40px !important; color: #9ca3af; font-size: 0.9rem; }
+
+        /* NEW: Breakdown Grids (Mirrors Cashbook) */
+        .breakdown-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px; }
+        .breakdown-header { padding: 15px 20px; font-weight: bold; font-size: 0.9rem; border-bottom: 1px solid var(--border-color); }
+        .breakdown-header.green { background: var(--c-green-light); color: var(--c-green); border-bottom-color: #bbf7d0;}
+        .breakdown-header.red { background: var(--c-red-light); color: var(--c-red); border-bottom-color: #fecaca;}
+        .breakdown-wrapper { max-height: 300px; overflow-y: auto; background: white;}
+        .breakdown-wrapper td { padding: 12px 20px; }
 
         /* Modal Styles */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
@@ -183,7 +191,7 @@
             
             <div class="divider"></div>
             
-            <!-- NEW ADD BUTTONS -->
+            <!-- ADD BUTTONS -->
             <button class="btn-add-in" onclick="openModal('in')">+ Add Received</button>
             <button class="btn-add-out" onclick="openModal('out')">- UPI Payment</button>
         </div>
@@ -244,6 +252,31 @@
             <button class="btn" onclick="prevPage()">Previous</button>
             <span id="pageInfo" style="font-size:0.9rem; font-weight:bold;">Page 1</span>
             <button class="btn" onclick="nextPage()">Next</button>
+        </div>
+    </div>
+
+    <!-- NEW: Breakdown Grids -->
+    <div class="breakdown-grid">
+        <!-- UPI IN BREAKDOWN -->
+        <div class="table-card" style="margin-bottom: 0;">
+            <div class="breakdown-header green">UPI & Card In Breakdown</div>
+            <div class="breakdown-wrapper">
+                <table><tbody id="upiInBreakdownBody"></tbody></table>
+            </div>
+            <div style="padding: 15px 20px; text-align: right; font-weight: bold; font-size: 0.85rem; background: var(--c-green-light); border-top: 1px solid #bbf7d0;">
+                Total Received <span style="margin-left: 15px; color: var(--c-green); font-size: 1.1rem;" id="bdTotalUpiIn">₹0.00</span>
+            </div>
+        </div>
+        
+        <!-- UPI OUT BREAKDOWN -->
+        <div class="table-card" style="margin-bottom: 0;">
+            <div class="breakdown-header red">UPI Out Breakdown</div>
+            <div class="breakdown-wrapper">
+                <table><tbody id="upiOutBreakdownBody"></tbody></table>
+            </div>
+            <div style="padding: 15px 20px; text-align: right; font-weight: bold; font-size: 0.85rem; background: var(--c-red-light); border-top: 1px solid #fecaca;">
+                Total Payments <span style="margin-left: 15px; color: var(--c-red); font-size: 1.1rem;" id="bdTotalUpiOut">₹0.00</span>
+            </div>
         </div>
     </div>
 </div>
@@ -335,6 +368,12 @@
         const day = String(d.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
     }
+    
+    function formatDateObj(dateStr) {
+        if(!dateStr) return '';
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+    }
 
     // Sidebar Hover Timers
     let sidebarTimer;
@@ -400,7 +439,6 @@
             isAdmin = true;
             document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
         }
-        // NO KICK LOGIC because UPI Book is a shared page.
     }
 
     async function logOut() {
@@ -425,7 +463,6 @@
         
         const now = new Date();
         document.getElementById('modalDate').value = getLocalDateString(now);
-        // Ensure local time is used correctly for HTML time input
         const localTimeStr = now.toTimeString().substring(0, 5); 
         document.getElementById('modalTime').value = localTimeStr;
 
@@ -437,7 +474,7 @@
             title.innerText = 'Add UPI Payment (Out)';
             document.getElementById('inAmountFields').style.display = 'none';
             document.getElementById('outAmountFields').style.display = 'block';
-            catSelect.value = 'Vendor Payment'; // Default for out
+            catSelect.value = 'Vendor Payment'; 
             
             btn.innerText = 'Save Payment';
             btn.className = 'modal-btn-submit btn-red';
@@ -445,7 +482,7 @@
             title.innerText = 'Add Received (In)';
             document.getElementById('inAmountFields').style.display = 'block';
             document.getElementById('outAmountFields').style.display = 'none';
-            catSelect.value = 'Repair Sales'; // Default for in
+            catSelect.value = 'Repair Sales'; 
             
             btn.innerText = 'Save Collection';
             btn.className = 'modal-btn-submit btn-green';
@@ -461,7 +498,7 @@
         e.preventDefault();
         
         const date = document.getElementById('modalDate').value;
-        const time = document.getElementById('modalTime').value + ':00'; // Append seconds for SQL TIME type
+        const time = document.getElementById('modalTime').value + ':00'; 
         const description = document.getElementById('modalDesc').value;
         const category = document.getElementById('modalCat').value;
         
@@ -493,7 +530,7 @@
             if (error) throw error;
             
             closeModal();
-            fetchLedgerData(); // Refresh table automatically
+            fetchLedgerData(); 
         } catch (error) {
             alert("Failed to save transaction: " + error.message);
         }
@@ -530,17 +567,52 @@
 
     function calculateStats(data) {
         let totals = { upiIn: 0, upiCount: 0, cardIn: 0, cardCount: 0, upiOut: 0, outCount: 0 };
+        
+        let inHtml = '';
+        let outHtml = '';
 
         data.forEach(item => {
             const upiAmt = parseFloat(item.upi_amount) || 0;
             const cardAmt = parseFloat(item.card_amount) || 0;
             const outAmt = parseFloat(item.upi_payment) || 0;
+            const shortDate = formatDateObj(item.date);
 
-            if (upiAmt > 0) { totals.upiIn += upiAmt; totals.upiCount += 1; }
-            if (cardAmt > 0) { totals.cardIn += cardAmt; totals.cardCount += 1; }
-            if (outAmt > 0) { totals.upiOut += outAmt; totals.outCount += 1; }
+            // Accumulate Totals & Build Breakdown Rows
+            if (upiAmt > 0 || cardAmt > 0) { 
+                if (upiAmt > 0) { totals.upiIn += upiAmt; totals.upiCount += 1; }
+                if (cardAmt > 0) { totals.cardIn += cardAmt; totals.cardCount += 1; }
+                
+                let displayHtml = '';
+                if(upiAmt > 0 && cardAmt > 0) {
+                    displayHtml = `<span style="color:var(--c-blue)">UPI: ${formatMoney(upiAmt)}</span><br><span style="font-size:0.75rem; color:var(--c-purple)">Card: ${formatMoney(cardAmt)}</span>`;
+                } else if(upiAmt > 0) {
+                    displayHtml = `<span style="color:var(--c-blue)">${formatMoney(upiAmt)}</span>`;
+                } else {
+                    displayHtml = `<span style="color:var(--c-purple)">${formatMoney(cardAmt)} (Card)</span>`;
+                }
+
+                inHtml += `
+                    <tr>
+                        <td style="width: 25%; color: #6b7280; border-bottom:1px solid #f3f4f6;">${shortDate}</td>
+                        <td style="width: 50%; border-bottom:1px solid #f3f4f6;">${item.description}</td>
+                        <td style="width: 25%; text-align: right; font-weight:bold; border-bottom:1px solid #f3f4f6;">${displayHtml}</td>
+                    </tr>
+                `;
+            }
+            
+            if (outAmt > 0) { 
+                totals.upiOut += outAmt; totals.outCount += 1; 
+                outHtml += `
+                    <tr>
+                        <td style="width: 25%; color: #6b7280; border-bottom:1px solid #f3f4f6;">${shortDate}</td>
+                        <td style="width: 50%; border-bottom:1px solid #f3f4f6;">${item.description}</td>
+                        <td style="width: 25%; text-align: right; font-weight:bold; color:var(--c-red); border-bottom:1px solid #f3f4f6;">${formatMoney(outAmt)}</td>
+                    </tr>
+                `;
+            }
         });
 
+        // Top Cards Update
         const netBalance = (totals.upiIn + totals.cardIn) - totals.upiOut;
 
         document.getElementById('statTotalUPI').innerText = formatMoney(totals.upiIn);
@@ -555,6 +627,18 @@
         const netDisplay = document.getElementById('statNetBalance');
         netDisplay.innerText = formatMoney(netBalance);
         netDisplay.style.color = netBalance >= 0 ? 'var(--c-green)' : 'var(--c-red)';
+
+        // Breakdowns Update
+        document.getElementById('upiInBreakdownBody').innerHTML = inHtml || '<tr><td colspan="3" class="no-data">No UPI/Card In entries</td></tr>';
+        document.getElementById('upiOutBreakdownBody').innerHTML = outHtml || '<tr><td colspan="3" class="no-data">No UPI Out entries</td></tr>';
+        
+        let bdInTotalHTML = formatMoney(totals.upiIn + totals.cardIn);
+        if(totals.cardIn > 0 && totals.upiIn > 0) {
+            bdInTotalHTML += ` <span style="font-size:0.75rem; font-weight:normal; color:#6b7280; margin-left:8px;">(UPI: ${formatMoney(totals.upiIn)} | Card: ${formatMoney(totals.cardIn)})</span>`;
+        }
+        
+        document.getElementById('bdTotalUpiIn').innerHTML = bdInTotalHTML;
+        document.getElementById('bdTotalUpiOut').innerText = formatMoney(totals.upiOut);
     }
 
     window.prevPage = function() {
