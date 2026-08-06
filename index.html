@@ -106,6 +106,7 @@
         .billing-row { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
         .billing-row label { font-weight: bold; color: #374151; font-size: 0.9rem;}
         .billing-row input, .billing-row select { text-align: right; width: 140px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-weight: bold; outline: none;}
+        .billing-row select { font-weight: normal; }
 
         .segmented-control { display: inline-flex; border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; margin-top: 10px; margin-bottom: 15px; width: 100%; box-sizing: border-box; }
         .seg-btn { flex: 1; padding: 12px 10px; border: none; background: white; cursor: pointer; font-weight: 600; color: #374151; transition: background 0.2s, color 0.2s; border-right: 1px solid #d1d5db; font-size: 0.9rem; text-align: center;}
@@ -130,19 +131,7 @@
         .edit-pen { cursor: pointer; display: inline-block; width: 14px; height: 14px; margin-left: 6px; vertical-align: middle; color: #9ca3af; transition: 0.2s; }
         .edit-pen:hover { color: #2563eb; }
 
-        /* Dynamic Bulk Device Row Styles */
-        .device-entry-row {
-            display: grid;
-            grid-template-columns: 3fr 1fr 1fr auto;
-            gap: 15px;
-            align-items: center;
-            background: #fff;
-            padding: 15px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            margin-bottom: 12px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        }
+        .device-entry-row { display: grid; grid-template-columns: 3fr 1fr 1fr auto; gap: 15px; align-items: center; background: #fff; padding: 15px; border: 1px solid #d1d5db; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         .device-entry-row .form-group { margin-bottom: 0; }
         .device-entry-row .form-group label { margin-bottom: 4px; font-size: 0.75rem; text-transform: uppercase; color: #6b7280; }
         .device-entry-row .form-group input { padding: 8px 12px; }
@@ -154,6 +143,7 @@
     <div class="logo-area"><div class="logo-icon">GSM</div>SOLUTIONS</div>
     <a href="index.html" class="nav-item active">📋 Order Details</a>
     <a href="customers.html" class="nav-item">👥 Customers</a>
+    <a href="vendors.html" class="nav-item">🚚 Vendors</a>
     <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
     <a href="upi-book.html" class="nav-item">📖 UPI Book</a>
     <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
@@ -273,7 +263,6 @@
                     </label>
                 </div>
 
-                <!-- Dynamic Container for Device Rows -->
                 <div id="deviceEntriesContainer" style="grid-column: 1 / -1;">
                     <!-- Rows injected here by JavaScript -->
                 </div>
@@ -298,6 +287,7 @@
                         <th>Customer</th>
                         <th>Model / Problem</th>
                         <th>Password</th>
+                        <th id="thVendor">Part Vendor (Cost)</th>
                         <th id="thEstimate">Approx Est. (₹)</th>
                         <th style="text-align: center;">Action</th>
                     </tr>
@@ -323,6 +313,19 @@
             <div class="billing-row">
                 <label style="color: #6b7280;">Estimated Amount (₹)</label>
                 <input type="number" id="billEstimateAmount" placeholder="0">
+            </div>
+            
+            <div class="billing-row" style="margin-top: 10px;">
+                <label style="color: #6b7280;">Spare Part Vendor</label>
+                <select id="billVendorName">
+                    <option value="">-- No Parts Used --</option>
+                    <!-- populated dynamically -->
+                </select>
+            </div>
+
+            <div class="billing-row">
+                <label style="color: #6b7280;">Part Cost (₹)</label>
+                <input type="number" id="billVendorCost" placeholder="0">
             </div>
             
             <div style="margin-top: 15px;">
@@ -461,6 +464,7 @@
     let allOrdersData = [];
     let filteredOrdersData = [];
     let customersList = [];
+    let vendorsList = [];
     let isNewCustomerMode = false;
     
     let currentTab = 'Pending';
@@ -611,8 +615,21 @@
 
     async function fetchCustomers() {
         const { data } = await supabaseClient.from('customers').select('*').order('name', { ascending: true });
+        if (data) { customersList = data; }
+    }
+    
+    async function fetchVendors() {
+        const { data } = await supabaseClient.from('vendors').select('*').order('name', { ascending: true });
         if (data) { 
-            customersList = data; 
+            vendorsList = data; 
+            const select = document.getElementById('billVendorName');
+            select.innerHTML = '<option value="">-- No Parts Used --</option>';
+            vendorsList.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v.name;
+                opt.textContent = v.name;
+                select.appendChild(opt);
+            });
         }
     }
 
@@ -763,9 +780,6 @@
         }
     }
 
-    // ==========================================
-    // BULK ENTRY LOGIC
-    // ==========================================
     window.toggleBulkMode = function() {
         const isBulk = document.getElementById('bulkEntryCheckbox').checked;
         const btnContainer = document.getElementById('addDeviceBtnContainer');
@@ -773,7 +787,6 @@
         
         if (isBulk) {
             btnContainer.style.display = 'block';
-            // Show delete buttons for existing rows if there are multiple, or just allow them moving forward
             const rows = entriesContainer.querySelectorAll('.device-entry-row');
             rows.forEach(r => {
                 const delBtn = r.querySelector('.delete-row-btn');
@@ -781,12 +794,10 @@
             });
         } else {
             btnContainer.style.display = 'none';
-            // Strip down to only 1 row
             const rows = entriesContainer.querySelectorAll('.device-entry-row');
             for (let i = 1; i < rows.length; i++) {
                 rows[i].remove();
             }
-            // Hide delete button on the first/only row
             const firstRow = entriesContainer.querySelector('.device-entry-row');
             if(firstRow) {
                 const delBtn = firstRow.querySelector('.delete-row-btn');
@@ -823,14 +834,11 @@
         `;
         container.appendChild(row);
 
-        // If it's the very first row and we are not in bulk mode, hide the delete button
         if (container.querySelectorAll('.device-entry-row').length === 1 && !document.getElementById('bulkEntryCheckbox').checked) {
             row.querySelector('.delete-row-btn').style.visibility = 'hidden';
         } else if (container.querySelectorAll('.device-entry-row').length === 1 && document.getElementById('bulkEntryCheckbox').checked) {
-             // even if bulk mode is checked, you probably shouldn't delete the last row
              row.querySelector('.delete-row-btn').style.visibility = 'hidden';
         } else {
-            // Un-hide the first row's delete button if there's more than 1 row
             const firstRowBtn = container.querySelector('.device-entry-row .delete-row-btn');
             if(firstRowBtn) firstRowBtn.style.visibility = 'visible';
         }
@@ -843,7 +851,6 @@
             btn.closest('.device-entry-row').remove();
         }
         
-        // if only 1 left, hide its delete button
         const remainingRows = container.querySelectorAll('.device-entry-row');
         if(remainingRows.length === 1) {
             remainingRows[0].querySelector('.delete-row-btn').style.visibility = 'hidden';
@@ -859,22 +866,28 @@
         
         const desc = document.getElementById('tabDescription');
         const thEstimate = document.getElementById('thEstimate');
+        const thVendor = document.getElementById('thVendor');
 
         if(tabName === 'Pending') {
             desc.innerText = "Showing all pending service orders awaiting repair.";
             thEstimate.innerText = "Approx Est. (₹)";
+            thVendor.innerText = "Part Vendor (Cost)";
         } else if (tabName === 'Repair Completed') {
             desc.innerText = "Showing all items where repairs have successfully concluded.";
             thEstimate.innerText = "Balance Amount (₹)";
+            thVendor.innerText = "Part Vendor (Cost)";
         } else if (tabName === 'Goods Delivered') {
             desc.innerText = "Showing history of completed & returned items.";
             thEstimate.innerText = "Total Amount (₹)";
+            thVendor.innerText = "Part Vendor (Cost)";
         } else if (tabName === 'Repair Refusal') {
             desc.innerText = "Showing orders marked as refused or cancelled.";
             thEstimate.innerText = "Inspection Charges (₹)";
+            thVendor.innerText = "Part Vendor (Cost)";
         } else if (tabName === 'Deleted Orders') {
             desc.innerText = "Showing permanently archived records for auditing (Admin only).";
             thEstimate.innerText = "Amount (₹)";
+            thVendor.innerText = "Part Vendor (Cost)";
         }
 
         applyFilters();
@@ -885,7 +898,7 @@
         
         if (input.trim() !== '') {
             const allMatches = allOrdersData.filter(order => {
-                const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc} ${order.devicePassword}`.toLowerCase();
+                const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc} ${order.devicePassword} ${order.vendor_name || ''}`.toLowerCase();
                 return combinedString.includes(input);
             });
 
@@ -901,26 +914,15 @@
                     if (newTab === 'Delivered (Refused)') newTab = 'Goods Delivered';
                     
                     if (newTab && newTab !== currentTab) {
-                        currentTab = newTab;
-                        
-                        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-                        const tabId = 'tab-' + newTab.replace(' ', '-');
-                        const element = document.getElementById(tabId);
-                        if(element) element.classList.add('active');
-                        
-                        const desc = document.getElementById('tabDescription');
-                        const thEstimate = document.getElementById('thEstimate');
-                        if(newTab === 'Pending') { desc.innerText = "Showing all pending service orders awaiting repair."; thEstimate.innerText = "Approx Est. (₹)"; } 
-                        else if (newTab === 'Repair Completed') { desc.innerText = "Showing all items where repairs have successfully concluded."; thEstimate.innerText = "Balance Amount (₹)"; } 
-                        else if (newTab === 'Goods Delivered') { desc.innerText = "Showing history of completed & returned items."; thEstimate.innerText = "Total Amount (₹)"; } 
-                        else if (newTab === 'Repair Refusal') { desc.innerText = "Showing orders marked as refused or cancelled."; thEstimate.innerText = "Inspection Charges (₹)"; }
+                        switchTab(newTab);
+                        return; // Switch tab calls applyFilters again
                     }
                 }
             }
         }
 
         filteredOrdersData = allOrdersData.filter(order => {
-            const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc} ${order.devicePassword}`.toLowerCase();
+            const combinedString = `${order.customerName} ${order.jobNo} ${order.contactNo} ${order.problemDesc} ${order.devicePassword} ${order.vendor_name || ''}`.toLowerCase();
             const matchesSearch = combinedString.includes(input);
             
             let matchesTab = false;
@@ -1033,7 +1035,7 @@
         tbody.innerHTML = '';
 
         if(filteredOrdersData.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: gray;">No orders found in this tab.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: gray;">No orders found in this tab.</td></tr>`;
             document.getElementById('pageInfo').innerText = `Page 1 of 1`;
             return;
         }
@@ -1051,15 +1053,25 @@
             const jobNoSafe = escapeStr(order.jobNo);
             const orderIdSafe = escapeStr(order.id);
             const notesSafe = escapeStr(order.repairNotes);
+            const vendorNameSafe = escapeStr(order.vendor_name || '');
+            const vendorCost = order.vendor_cost || 0;
             
             let actionHtml = '';
             let displayAmount = 0;
             let displayAmountHtml = '';
+            let vendorHtml = '-';
             let rowStyle = '';
             
             let notesHtml = '';
             if (order.repairNotes) {
                 notesHtml = `<div style="font-size: 0.75rem; color: #4b5563; margin-top: 6px; background: #f3f4f6; padding: 5px 8px; border-radius: 4px; display: inline-block;"><strong>Notes:</strong> ${notesSafe}</div>`;
+            }
+
+            if (order.status !== 'Pending' && order.vendor_name) {
+                vendorHtml = `
+                    <div style="font-weight: 600; color: #111827;">${order.vendor_name}</div>
+                    <div style="font-size: 0.75rem; color: #ef4444; font-weight: bold;">Cost: ₹${vendorCost}</div>
+                `;
             }
 
             if (currentTab === 'Deleted Orders') {
@@ -1071,9 +1083,7 @@
             else if (order.status === 'Pending') {
                 displayAmount = order.approxEstimate || 0;
                 displayAmountHtml = `<span style="font-weight:bold; color:#059669;">₹${displayAmount}</span>`;
-                
                 displayAmountHtml += `<span onclick="promptUpdateEstimate('${orderIdSafe}', 'Pending', ${displayAmount})">${pencilSVG}</span>`;
-                
                 actionHtml = `<button class="btn-bill" onclick="openBillingModal('${orderIdSafe}', '${jobNoSafe}', '${customerNameSafe}', '${contactNoSafe}')">Repair Complete ✓</button>`;
             
             } else if (order.status === 'Repair Completed') {
@@ -1106,7 +1116,6 @@
                 
                 actionHtml = `<div style="display:flex; flex-direction:column; gap:8px; align-items:center;">`;
                 actionHtml += `<span class="status-badge" style="background:#fca5a5; color:#7f1d1d;">Returned (Refused)</span>`;
-                
                 actionHtml += `<button class="btn" style="font-size: 0.7rem; padding: 4px 8px; color: #d97706; border-color: #fde68a; background: #fffbeb;" onclick="revertToRepairCompleted('${orderIdSafe}', '${jobNoSafe}', '${order.paymentMethod}', ${displayAmount}, '${contactNoSafe}', 'Repair Refusal')">⏪ Revert Status</button>`;
                 actionHtml += `</div>`;
                 rowStyle = 'background-color: #fef2f2;';
@@ -1157,6 +1166,7 @@
                         ${notesHtml}
                     </td>
                     <td style="color:#ef4444; font-weight:bold; letter-spacing:1px;">${order.devicePassword || '-'}</td>
+                    <td>${vendorHtml}</td>
                     <td>${displayAmountHtml}</td>
                     <td style="text-align: center; white-space: nowrap;">
                         ${actionHtml}
@@ -1241,7 +1251,7 @@
     }
 
     window.revertToPending = async function(id, jobNo) {
-        if (!confirm(`Are you sure you want to revert Job No: ${jobNo} back to 'Pending'?\n\nThis will remove its completion/refusal status.`)) return;
+        if (!confirm(`Are you sure you want to revert Job No: ${jobNo} back to 'Pending'?\n\nThis will remove its completion/refusal status and vendor records.`)) return;
 
         try {
             const { error } = await supabaseClient.from('repairOrders').update({
@@ -1249,7 +1259,9 @@
                 rc_date: null,
                 rc_time: null,
                 rc_timestamp: null,
-                repairNotes: null
+                repairNotes: null,
+                vendor_name: null,
+                vendor_cost: 0
             }).eq('id', id);
 
             if (error) throw error;
@@ -1373,6 +1385,8 @@
         billingOrderId = id; billingJobNo = jobNo; billingCustomerName = customer; billingCustomerMobile = mobile;
         document.getElementById('billingSubtitle').innerText = `Job No: ${jobNo} | Customer: ${customer}`;
         document.getElementById('billEstimateAmount').value = '';
+        document.getElementById('billVendorName').value = '';
+        document.getElementById('billVendorCost').value = '';
         document.getElementById('billRepairNotes').value = '';
         document.getElementById('modalBilling').style.display = 'flex';
         document.getElementById('billEstimateAmount').focus();
@@ -1382,6 +1396,8 @@
 
     window.confirmBilling = async function() {
         const estimateAmount = parseFloat(document.getElementById('billEstimateAmount').value) || 0;
+        const vendorName = document.getElementById('billVendorName').value;
+        const vendorCost = parseFloat(document.getElementById('billVendorCost').value) || 0;
         const notes = document.getElementById('billRepairNotes').value.trim();
         
         const rcTimestamp = new Date().toISOString();
@@ -1392,6 +1408,8 @@
             const { error: updateError } = await supabaseClient.from('repairOrders').update({ 
                 status: 'Repair Completed', 
                 estimateAmount: estimateAmount, 
+                vendor_name: vendorName || null,
+                vendor_cost: vendorCost,
                 repairNotes: notes,
                 rc_date: rcDate,
                 rc_time: rcTime,
@@ -1418,6 +1436,8 @@
             const { error: updateError } = await supabaseClient.from('repairOrders').update({ 
                 status: 'Repair Refusal', 
                 repairNotes: notes,
+                vendor_name: null,
+                vendor_cost: 0,
                 rc_date: rcDate,
                 rc_time: rcTime,
                 rc_timestamp: rcTimestamp
@@ -1571,9 +1591,6 @@
         } catch (err) { alert("Error updating order: " + err.message); }
     }
 
-    // ==========================================
-    // SOFT DELETE ORDER LOGIC
-    // ==========================================
     window.deleteOrder = async function(id, jobNo, status) {
         if (!confirm(`Are you sure you want to delete Job No: ${jobNo}? It will be moved to the Deleted Orders tab for audit purposes, and related financial records will be wiped.`)) return;
         
@@ -1604,9 +1621,6 @@
         } catch (err) { alert("Error deleting order: " + err.message); }
     }
 
-    window.prevPage = function() { if (currentPage > 1) { currentPage--; renderOrdersTable(); } }
-    window.nextPage = function() { const maxPage = Math.ceil(filteredOrdersData.length / rowsPerPage); if (currentPage < maxPage) { currentPage++; renderOrdersTable(); } }
-
     window.fetchNextJobNoPreview = async function() {
         const label = document.getElementById('jobNoLabel');
         label.innerHTML = `Job Number <span style="color:#6b7280; font-weight:normal; font-size:0.75rem;">(Next: Loading...)</span>`;
@@ -1634,11 +1648,10 @@
         if (form.style.display === 'block') { 
             form.style.display = 'none'; 
             document.getElementById('bulkEntryCheckbox').checked = false;
-            toggleBulkMode(); // Resets to 1 row
+            toggleBulkMode(); 
         } else { 
             form.style.display = 'block'; 
             
-            // Ensure at least 1 row exists
             const container = document.getElementById('deviceEntriesContainer');
             if (container.querySelectorAll('.device-entry-row').length === 0) {
                 addDeviceRow(true);
@@ -1649,89 +1662,6 @@
         }
     }
 
-    // ==========================================
-    // BULK ENTRY LOGIC
-    // ==========================================
-    window.toggleBulkMode = function() {
-        const isBulk = document.getElementById('bulkEntryCheckbox').checked;
-        const btnContainer = document.getElementById('addDeviceBtnContainer');
-        const entriesContainer = document.getElementById('deviceEntriesContainer');
-        
-        if (isBulk) {
-            btnContainer.style.display = 'block';
-            const rows = entriesContainer.querySelectorAll('.device-entry-row');
-            rows.forEach(r => {
-                const delBtn = r.querySelector('.delete-row-btn');
-                if(delBtn) delBtn.style.visibility = 'visible';
-            });
-        } else {
-            btnContainer.style.display = 'none';
-            const rows = entriesContainer.querySelectorAll('.device-entry-row');
-            for (let i = 1; i < rows.length; i++) {
-                rows[i].remove();
-            }
-            const firstRow = entriesContainer.querySelector('.device-entry-row');
-            if(firstRow) {
-                const delBtn = firstRow.querySelector('.delete-row-btn');
-                if(delBtn) delBtn.style.visibility = 'hidden';
-            }
-        }
-        fetchNextJobNoPreview();
-    }
-
-    window.addDeviceRow = function(isInitial = false) {
-        const container = document.getElementById('deviceEntriesContainer');
-        const rows = container.querySelectorAll('.device-entry-row');
-        
-        if (!isInitial && rows.length >= 10) {
-            return alert("Maximum 10 devices allowed per bulk entry.");
-        }
-
-        const row = document.createElement('div');
-        row.className = 'device-entry-row';
-        row.innerHTML = `
-            <div class="form-group">
-                <label>Model & Problem <span>*</span></label>
-                <input type="text" class="dev-model" placeholder="e.g. iPhone 13 - Screen">
-            </div>
-            <div class="form-group">
-                <label>Password</label>
-                <input type="text" class="dev-pass" placeholder="1234">
-            </div>
-            <div class="form-group">
-                <label>Estimate (₹)</label>
-                <input type="number" class="dev-est" placeholder="0" step="0.01">
-            </div>
-            <button type="button" class="btn-icon delete-row-btn" style="color:#ef4444; height: 38px; margin-bottom: 2px;" onclick="removeDeviceRow(this)" title="Remove Device">🗑️</button>
-        `;
-        container.appendChild(row);
-
-        if (container.querySelectorAll('.device-entry-row').length === 1 && !document.getElementById('bulkEntryCheckbox').checked) {
-            row.querySelector('.delete-row-btn').style.visibility = 'hidden';
-        } else if (container.querySelectorAll('.device-entry-row').length === 1 && document.getElementById('bulkEntryCheckbox').checked) {
-             row.querySelector('.delete-row-btn').style.visibility = 'hidden';
-        } else {
-            const firstRowBtn = container.querySelector('.device-entry-row .delete-row-btn');
-            if(firstRowBtn) firstRowBtn.style.visibility = 'visible';
-        }
-    }
-
-    window.removeDeviceRow = function(btn) {
-        const container = document.getElementById('deviceEntriesContainer');
-        const rows = container.querySelectorAll('.device-entry-row');
-        if (rows.length > 1) {
-            btn.closest('.device-entry-row').remove();
-        }
-        
-        const remainingRows = container.querySelectorAll('.device-entry-row');
-        if(remainingRows.length === 1) {
-            remainingRows[0].querySelector('.delete-row-btn').style.visibility = 'hidden';
-        }
-    }
-
-    // ==========================================
-    // SMART ALGORITHM: RETRY SAVE ON JOB ID CLASH (BULK SUPPORTED)
-    // ==========================================
     window.saveOrder = async function() {
         let custName = ''; let contactNo = '';
         if (isNewCustomerMode) {
@@ -1752,7 +1682,6 @@
             if(!custName || !contactNo) return alert("Please select a customer from the dropdown search.");
         }
 
-        // Gather all device rows
         const rows = document.querySelectorAll('.device-entry-row');
         const devices = [];
         for (let row of rows) {
@@ -1804,7 +1733,7 @@
                     
                     if (orderError) {
                         if (orderError.code === '23505' || orderError.message.toLowerCase().includes('unique constraint')) {
-                            attemptNum++; // Clash, try next number safely
+                            attemptNum++; 
                         } else {
                             alert(`Error saving device ${dev.problemDesc}: ` + orderError.message);
                             break; 
@@ -1822,7 +1751,6 @@
             document.getElementById('newCustName').value = ''; 
             document.getElementById('newCustMobile').value = ''; 
             
-            // Clean up rows
             document.getElementById('bulkEntryCheckbox').checked = false;
             
             toggleForm(); 
@@ -1849,17 +1777,14 @@
         resetSidebarTimer(); 
         await checkAuth(); 
         fetchCustomers(); 
+        fetchVendors();
         fetchOrders(); 
         
-        // Initialize the first device row on load
         if (document.getElementById('deviceEntriesContainer').children.length === 0) {
             addDeviceRow(true);
         }
     });
 
-    // ==========================================
-    // AUTO-LOGOUT AFTER 30 MINUTES OF INACTIVITY
-    // ==========================================
     const setupAutoLogout = function() {
         let inactivityTimer;
         const timeoutDuration = 30 * 60 * 1000; 
