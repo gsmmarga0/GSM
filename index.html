@@ -297,7 +297,7 @@
                         <th>Customer</th>
                         <th>Model / Problem</th>
                         <th>Password</th>
-                        <th id="thVendor" style="display: none;">Part Vendor (Cost)</th>
+                        <th id="thVendor" class="admin-only" style="display: none;">Part Vendor (Cost)</th>
                         <th id="thEstimate">Approx Est. (₹)</th>
                         <th style="text-align: center;">Action</th>
                     </tr>
@@ -546,11 +546,12 @@
         const isDbAdmin = profile && profile.role === 'Admin';
 
         if (isMasterAdmin || isDbAdmin) {
+            isAdmin = true; 
             document.querySelectorAll('.admin-only').forEach(el => {
                 if (el.tagName === 'TH') el.style.display = 'table-cell';
+                else if (el.classList.contains('billing-row')) el.style.display = 'flex';
                 else el.style.display = 'flex';
             });
-            isAdmin = true; 
         } 
     }
     
@@ -1045,7 +1046,6 @@
         }
     }
 
-    // --- REWRITTEN PAGINATION LOGIC ---
     window.prevPage = function() {
         if (currentPage > 1) {
             currentPage--;
@@ -1072,7 +1072,6 @@
         
         const maxPage = Math.ceil(filteredOrdersData.length / rowsPerPage) || 1;
         
-        // Safety bounds
         if (currentPage > maxPage) currentPage = maxPage;
         if (currentPage < 1) currentPage = 1;
 
@@ -1110,7 +1109,6 @@
             let actionHtml = '';
             let displayAmount = 0;
             let displayAmountHtml = '';
-            let vendorHtml = '-';
             let rowStyle = '';
             
             let notesHtml = '';
@@ -1127,7 +1125,7 @@
                         <div style="font-size: 0.75rem; color: #ef4444; font-weight: bold;">Cost: ₹${vendorCost}</div>
                     `;
                 }
-                vendorTdHtml = `<td>${vendorHtml}</td>`;
+                vendorTdHtml = `<td class="admin-only">${vendorHtml}</td>`;
             }
 
             if (currentTab === 'Deleted Orders') {
@@ -1230,12 +1228,10 @@
                 </tr>`;
         });
 
-        // Setup UI for Page info & Button states
         pageInfo.innerText = `Page ${currentPage} of ${maxPage}`;
         if(btnPrev) btnPrev.disabled = (currentPage === 1);
         if(btnNext) btnNext.disabled = (currentPage === maxPage);
     }
-    // --- END REWRITTEN PAGINATION LOGIC ---
 
     window.revertToRepairCompleted = async function(id, jobNo, paymentMode, amount, mobile, targetStatus) {
         if (!confirm(`Are you sure you want to revert Job No: ${jobNo} back to '${targetStatus}'?\n\nThis will DELETE any final delivery records and remove the related Cash, UPI, and Credit entries from the ledgers.`)) return;
@@ -1879,4 +1875,3 @@
 </script>
 </body>
 </html>
-what about part cost which is showing in tabs ? i can still see it as normal user
