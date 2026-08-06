@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GSM Solution - Cashbook</title>
+    <title>GSM Solution - UPI Book</title>
     <link rel="icon" href="data:,">
     <style>
         :root { 
-            --bg-color: #f9fafb; --border-color: #e5e7eb; 
-            --c-green-bg: #f0fdf4; --c-green-text: #16a34a; --c-green-border: #bbf7d0;
-            --c-red-bg: #fef2f2; --c-red-text: #dc2626; --c-red-border: #fecaca;
-            --c-blue-bg: #eff6ff; --c-blue-text: #2563eb; --c-blue-border: #bfdbfe;
-            --sidebar-width: 250px;
+            --bg-color: #f4f5f7; --border-color: #e5e7eb; --sidebar-width: 250px;
+            --c-blue: #2563eb; --c-purple: #9333ea; --c-green: #10b981; --c-red: #ef4444;
+            --c-green-bg: #f0fdf4; --c-green-border: #bbf7d0;
+            --c-red-bg: #fef2f2; --c-red-border: #fecaca;
         }
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; position: relative; }
         
@@ -27,62 +26,48 @@
         .sidebar-collapsed-btn { left: 0 !important; }
 
         .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg-color); z-index: 10; padding: 20px 30px;}
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .header-title h1 { margin: 0; font-size: 1.5rem; }
+        .header-title p { margin: 5px 0 0 0; color: #6b7280; font-size: 0.9rem; }
         
-        /* Fixed Header & UI matching screenshot */
-        .header-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .header-controls h1 { margin: 0; font-size: 1.5rem; color: #111827; }
-        .header-controls p { margin: 4px 0 0 0; font-size: 0.85rem; color: #6b7280; }
-        
-        .action-bar { display: flex; gap: 12px; align-items: center; }
-        .toggle-group { display: flex; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; height: 38px; background: white; box-sizing: border-box;}
-        .toggle-btn { padding: 0 16px; border: none; background: white; cursor: pointer; font-size: 0.9rem; font-weight: 500; color: #111827; transition: 0.2s; margin: 0; }
-        .toggle-btn.active { background: black; color: white; }
-        
-        .date-picker { padding: 0 12px; height: 38px; border: 1px solid var(--border-color); border-radius: 6px; background: white; font-size: 0.9rem; outline: none; box-sizing: border-box; color: #111827; font-family: inherit;}
-        
-        .btn { padding: 0 16px; height: 38px; border-radius: 6px; cursor: pointer; font-weight: 600; border: 1px solid var(--border-color); background: white; font-size: 0.9rem; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; box-sizing: border-box; color: #111827;}
-        .btn:hover:not(:disabled) { background: #f3f4f6; }
-        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .btn-black { background: black; color: white; border: none; }
-        .btn-black:hover:not(:disabled) { background: #374151; }
-        
-        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px; }
-        .stat-card { padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); background: white;}
-        .stat-card.green { background: var(--c-green-bg); border-color: var(--c-green-border); }
-        .stat-card.red { background: var(--c-red-bg); border-color: var(--c-red-border); }
-        .stat-card.blue { background: var(--c-blue-bg); border-color: var(--c-blue-border); }
-        .stat-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; display: flex; justify-content: space-between;}
-        .stat-value { font-size: 1.8rem; font-weight: bold; margin: 0; color: #111827; }
-        
-        .card-container { background: white; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 20px; overflow: hidden;}
-        .card-header { padding: 15px 20px; font-weight: bold; font-size: 0.95rem; border-bottom: 1px solid var(--border-color); background: #f9fafb; display: flex; flex-direction: column;}
-        .ledger-wrapper { max-height: 550px; overflow-y: auto; position: relative; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        th, td { padding: 12px 20px; text-align: left; border-bottom: 1px solid var(--border-color); }
-        th { color: #6b7280; font-weight: 600; position: sticky; top: 0; background: #f9fafb; z-index: 2; box-shadow: 0 1px 0 var(--border-color); }
-        .table-totals td { position: sticky; bottom: 0; background: #f9fafb; font-weight: bold; z-index: 2; border-top: 2px solid var(--border-color); }
-        
-        .pill { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; display: inline-block;}
-        .pill-general { background: #f3f4f6; color: #374151; }
+        .filter-group { display: flex; align-items: center; gap: 12px; font-size: 0.85rem;}
+        .filter-item input { padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; background: white;}
+        .btn-fetch, .btn-export { background: white; border: 1px solid var(--border-color); padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;}
+        .btn-fetch:hover, .btn-export:hover { background: #f9fafb; }
+        .btn-add-in { background: var(--c-green); color: white; border: none; padding: 9px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;}
+        .btn-add-in:hover { opacity: 0.9; }
+        .btn-add-out { background: var(--c-red); color: white; border: none; padding: 9px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;}
+        .btn-add-out:hover { opacity: 0.9; }
 
-        .text-green { color: var(--c-green-text); font-weight: 600; }
-        .text-red { color: var(--c-red-text); font-weight: 600; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; }
+        .stat-card h3 { margin: 0 0 10px 0; font-size: 0.85rem; color: #4b5563; }
+        .stat-card .amount { font-size: 1.8rem; font-weight: bold; }
 
-        .breakdown-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-        .breakdown-header { padding: 15px 20px; font-weight: bold; font-size: 0.9rem; border-bottom: 1px solid var(--border-color); }
+        .table-card { background: white; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; margin-bottom: 25px;}
+        .table-header-title { padding: 15px 20px; font-weight: bold; border-bottom: 1px solid var(--border-color); background: white;}
+        .table-scroll-container { max-height: 400px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { padding: 15px 20px; font-size: 0.85rem; background: #f9fafb; position: sticky; top: 0; box-shadow: 0 1px 0 var(--border-color); }
+        td { padding: 15px 20px; font-size: 0.85rem; border-bottom: 1px solid #f3f4f6; }
+        .group-header td { background: #f9fafb; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
+        .table-footer td { background: #111827; color: white; font-weight: bold; position: sticky; bottom: 0; }
+
+        /* Breakdown Grids */
+        .breakdown-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px; }
+        .breakdown-header { padding: 15px 20px; font-weight: bold; border-bottom: 1px solid var(--border-color); }
         .breakdown-wrapper { max-height: 300px; overflow-y: auto; background: white;}
 
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(2px);}
-        .modal-box { background: white; padding: 25px; border-radius: 12px; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        .modal-header { font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; color: #111827;}
-        .close-btn { cursor: pointer; font-size: 1.5rem; border: none; background: transparent; color: #9ca3af; line-height: 1; transition: 0.2s;}
-        .close-btn:hover { color: #111827; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; font-size: 0.85rem; color: #374151; margin-bottom: 5px; font-weight: 600;}
-        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; outline: none; transition: 0.2s;}
-        .form-group input:focus, .form-group select:focus { border-color: black; box-shadow: 0 0 0 2px rgba(0,0,0,0.05); }
-        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;}
-        .modal-actions .btn-black { padding: 0 20px; border-radius: 8px; }
+        /* Modal Styles */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(2px);}
+        .modal { background: white; width: 420px; border-radius: 12px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);}
+        .form-group { margin-bottom: 16px; }
+        .form-row { display: flex; gap: 15px; }
+        .form-group label { display: block; font-size: 0.85rem; margin-bottom: 6px; font-weight: 600; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; outline: none; }
+        .modal-btn-submit { width: 100%; padding: 12px; color: white; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 10px;}
+        .btn-red { background: var(--c-red); }
+        .btn-green { background: var(--c-green); }
     </style>
 </head>
 <body>
@@ -93,8 +78,8 @@
     <a href="customers.html" class="nav-item">👥 Customers</a>
     <a href="vendors.html" class="nav-item">🚚 Vendors</a>
     <a href="accessories.html" class="nav-item">🛍️ Accessories</a>
-    <a href="upi-book.html" class="nav-item">📖 UPI Book</a>
-    <a href="cashbook.html" class="nav-item active">💵 Cashbook</a>
+    <a href="upi-book.html" class="nav-item active">📖 UPI Book</a>
+    <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
     
     <a href="sales-report.html" class="nav-item admin-only" style="display: none;">📊 Sales Report</a>
     <a href="expenses.html" class="nav-item admin-only" style="display: none;">💸 Expenses</a>
@@ -114,166 +99,159 @@
 <div class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">⋮</div>
 
 <div class="main-content">
-    <div class="header-controls">
-        <div>
-            <h1>Cashbook</h1>
-            <p>Cash transactions only - <span id="modeLabel">Daily</span></p>
+    <div class="header-top">
+        <div class="header-title">
+            <h1>UPI Book</h1>
+            <p>Master ledger for digital transactions</p>
         </div>
-        <div class="action-bar">
-            <div class="toggle-group">
-                <button class="toggle-btn active" id="btnDaily" onclick="setMode('Daily')">Daily</button>
-                <button class="toggle-btn" id="btnPeriod" onclick="setMode('Period')">Period</button>
-            </div>
-            <div id="dateInputs" style="display: flex; gap: 8px;">
-                <input type="date" class="date-picker" id="ledgerDate">
-            </div>
-            <button class="btn" onclick="fetchCashbook(true)">↻ Refresh</button>
-            <button class="btn btn-black" onclick="openModal()">+ Cash Out</button>
+        <div class="filter-group">
+            <input type="date" id="filterFromDate">
+            <input type="date" id="filterToDate">
+            <button class="btn-fetch" onclick="fetchLedgerData()">Fetch</button>
+            <button class="btn-add-in" onclick="openModal('in')">+ Add Received</button>
+            <button class="btn-add-out" onclick="openModal('out')">- UPI Payment</button>
         </div>
     </div>
 
     <div class="stats-grid">
-        <div class="stat-card green">
-            <div class="stat-title" style="color: var(--c-green-text);">Cash In <span>↗</span></div>
-            <div class="stat-value" style="color: var(--c-green-text);" id="dailyCashIn">₹0.00</div>
-        </div>
-        <div class="stat-card red">
-            <div class="stat-title" style="color: var(--c-red-text);">Cash Out <span>↘</span></div>
-            <div class="stat-value" style="color: var(--c-red-text);" id="dailyCashOut">₹0.00</div>
-        </div>
-        <div class="stat-card blue">
-            <div class="stat-title" style="color: var(--c-blue-text);">Closing Balance <span>💳</span></div>
-            <div class="stat-value" style="color: var(--c-blue-text);" id="dailyClosing">₹0.00</div>
-        </div>
+        <div class="stat-card"><h3 style="color:var(--c-blue);">Total UPI In</h3><div class="amount" id="statTotalUPI">₹0.00</div></div>
+        <div class="stat-card"><h3 style="color:var(--c-purple);">Total Card In</h3><div class="amount" id="statTotalCard">₹0.00</div></div>
+        <div class="stat-card"><h3 style="color:var(--c-red);">Total UPI Out</h3><div class="amount" id="statTotalOut">₹0.00</div></div>
+        <div class="stat-card"><h3>Net Digital Balance</h3><div class="amount" id="statNetBalance">₹0.00</div></div>
     </div>
 
-    <div class="card-container">
-        <div class="card-header">Ledger<span id="ledgerSubtitle" style="font-weight: normal; font-size: 0.8rem; color: #6b7280; margin-top: 2px;">Business day</span></div>
-        <div class="ledger-wrapper">
+    <div class="table-card">
+        <div class="table-header-title">Digital Transactions</div>
+        <div class="table-scroll-container">
             <table>
                 <thead>
-                    <tr>
-                        <th>Date & Time</th>
-                        <th>Description</th>
-                        <th>Category / Details</th>
-                        <th style="text-align: right;">Cash In (₹)</th>
-                        <th style="text-align: right;">Cash Out (₹)</th>
-                        <th style="text-align: right;">Balance (₹)</th>
-                    </tr>
+                    <tr><th>Date & Time</th><th>Description</th><th>Category / Details</th><th style="text-align: right;">UPI In (₹)</th><th style="text-align: right;">Card In (₹)</th><th style="text-align: right;">UPI Out (₹)</th></tr>
                 </thead>
-                <tbody id="ledgerBody"></tbody>
-                <tfoot class="table-totals">
-                    <tr>
-                        <td colspan="3" style="text-align: right; font-size: 0.75rem;">TOTALS</td>
-                        <td class="text-green" style="text-align: right;" id="totalCashInCol">₹0.00</td>
-                        <td class="text-red" style="text-align: right;" id="totalCashOutCol">₹0.00</td>
-                        <td style="color: #2563eb; text-align: right;" id="totalBalanceCol">₹0.00</td>
-                    </tr>
-                </tfoot>
+                <tbody id="dataTableBody"></tbody>
             </table>
         </div>
     </div>
 
+    <!-- UPDATED BREAKDOWN GRID -->
     <div class="breakdown-grid">
-        <div class="card-container" style="margin-bottom: 0;">
-            <div class="breakdown-header" style="background: var(--c-green-bg); color: var(--c-green-text); border-bottom-color: var(--c-green-border);">Cash In Breakdown</div>
-            <div class="breakdown-wrapper">
-                <table><tbody id="cashInBreakdownBody"></tbody></table>
-            </div>
-            <div style="padding: 15px 20px; text-align: right; font-weight: bold; background: var(--c-green-bg); border-top: 1px solid var(--c-green-border);">
-                Total Cash In <span style="margin-left: 20px; color: var(--c-green-text); font-size: 1.1rem;" id="bdTotalCashIn">₹0.00</span>
+        <div class="table-card" style="margin-bottom: 0;">
+            <div class="breakdown-header" style="background: var(--c-green-bg); color: var(--c-green); border-bottom-color: var(--c-green-border);">UPI & Card In Breakdown</div>
+            <div class="breakdown-wrapper"><table><tbody id="upiInBreakdownBody"></tbody></table></div>
+            <div style="padding: 15px; text-align: right; font-weight: bold; background: var(--c-green-bg); border-top: 1px solid var(--c-green-border);">
+                Total Received <span style="margin-left: 20px; color: var(--c-green);" id="bdTotalUpiIn">₹0.00</span>
             </div>
         </div>
-        <div class="card-container" style="margin-bottom: 0;">
-            <div class="breakdown-header" style="background: var(--c-red-bg); color: var(--c-red-text); border-bottom-color: var(--c-red-border);">Cash Out Breakdown</div>
-            <div class="breakdown-wrapper">
-                <table><tbody id="cashOutBreakdownBody"></tbody></table>
-            </div>
-            <div style="padding: 15px 20px; text-align: right; font-weight: bold; background: var(--c-red-bg); border-top: 1px solid var(--c-red-border);">
-                Total Cash Out <span style="margin-left: 20px; color: var(--c-red-text); font-size: 1.1rem;" id="bdTotalCashOut">₹0.00</span>
+        <div class="table-card" style="margin-bottom: 0;">
+            <div class="breakdown-header" style="background: var(--c-red-bg); color: var(--c-red); border-bottom-color: var(--c-red-border);">UPI Out Breakdown</div>
+            <div class="breakdown-wrapper"><table><tbody id="upiOutBreakdownBody"></tbody></table></div>
+            <div style="padding: 15px; text-align: right; font-weight: bold; background: var(--c-red-bg); border-top: 1px solid var(--c-red-border);">
+                Total Payments <span style="margin-left: 20px; color: var(--c-red);" id="bdTotalUpiOut">₹0.00</span>
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal-overlay" id="cashOutModal">
-    <div class="modal-box">
-        <div class="modal-header">
-            Record Cash Out
-            <button class="close-btn" onclick="closeModal()">×</button>
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+        <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+            <span id="modalTitle" style="font-size:1.2rem; font-weight:bold;">Add Transaction</span>
+            <span onclick="closeModal()" style="cursor:pointer; font-size:1.5rem; color:#9ca3af;">&times;</span>
         </div>
-        <div class="form-group">
-            <label>Category</label>
-            <select id="outCategory" onchange="toggleVendorSelect()">
-                <option value="General">General</option>
-                <option value="Refund">Refund</option>
-                <option value="Vendor Payment">Vendor Payment</option>
-                <option value="Expenses">Expenses</option>
-                <option value="Others">Others</option>
-            </select>
-        </div>
-        <div class="form-group" id="vendorSelectGroup" style="display:none;">
-            <label>Select Vendor</label>
-            <select id="outVendorName">
-                <option value="">-- Choose Vendor --</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label>Description</label>
-            <input type="text" id="outDesc" placeholder="What was this for?">
-        </div>
-        <div class="form-group">
-            <label>Amount (₹)</label>
-            <input type="number" id="outAmount" placeholder="0.00" step="0.01">
-        </div>
-        <div class="modal-actions">
-            <button class="btn" style="border-radius: 8px;" onclick="closeModal()">Cancel</button>
-            <button class="btn btn-black" id="btnSaveCashOut" onclick="saveCashOut()">Record Cash Out</button>
-        </div>
+        <form id="transactionForm" onsubmit="saveTransaction(event)">
+            <div class="form-row">
+                <div class="form-group"><label>Date</label><input type="date" id="modalDate" required></div>
+                <div class="form-group"><label>Time</label><input type="time" id="modalTime" required></div>
+            </div>
+            
+            <div class="form-group">
+                <label>Category</label>
+                <select id="modalCat" required onchange="toggleVendorSelect()">
+                    <option value="Repair Sales">Repair Sales</option>
+                    <option value="Vendor Payment">Vendor Payment</option>
+                    <option value="Expenses">Expenses</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="vendorSelectGroup" style="display:none;">
+                <label>Select Vendor</label>
+                <select id="modalVendorName">
+                    <option value="">-- Choose Vendor --</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Description / Name</label>
+                <input type="text" id="modalDesc" placeholder="Description" required>
+            </div>
+
+            <div id="inAmountFields">
+                <div class="form-row">
+                    <div class="form-group"><label>UPI Received (₹)</label><input type="number" id="modalUpiIn" placeholder="0" step="0.01"></div>
+                    <div class="form-group"><label>Card Received (₹)</label><input type="number" id="modalCardIn" placeholder="0" step="0.01"></div>
+                </div>
+            </div>
+
+            <div id="outAmountFields" style="display: none;">
+                <div class="form-group"><label>UPI Payment Out (₹)</label><input type="number" id="modalUpiOut" placeholder="0" step="0.01"></div>
+            </div>
+
+            <button type="submit" class="modal-btn-submit" id="submitBtn">Save</button>
+        </form>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    const db = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
+    const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
     
-    const ADMIN_EMAIL = 'faizan@gsmsolution.com';
+    const ADMIN_EMAIL = 'faizan@gsmsolution.com'; 
     let currentUserEmail = '';
-    let currentMode = 'Daily';
-    let allEntries = []; 
+    let allUpiData = [];
+    let currentModalType = 'in'; 
 
-    // Sidebar Logic
+    function getLocalDateString() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+    // Sidebar Hover Timers
     let sidebarTimer;
     window.resetSidebarTimer = function() {
         clearTimeout(sidebarTimer);
-        sidebarTimer = setTimeout(() => { 
-            document.getElementById('sidebar').classList.add('collapsed'); 
-            document.getElementById('sidebarToggle').classList.add('sidebar-collapsed-btn'); 
+        sidebarTimer = setTimeout(() => {
+            const sb = document.getElementById('sidebar');
+            const btn = document.getElementById('sidebarToggle');
+            if(sb && btn) {
+                sb.classList.add('collapsed');
+                btn.classList.add('sidebar-collapsed-btn');
+            }
         }, 5000);
     }
     window.clearSidebarTimer = function() { clearTimeout(sidebarTimer); }
+
     window.toggleSidebar = function() {
-        document.getElementById('sidebar').classList.toggle('collapsed'); 
-        document.getElementById('sidebarToggle').classList.toggle('sidebar-collapsed-btn');
-        if(!document.getElementById('sidebar').classList.contains('collapsed')) resetSidebarTimer(); else clearSidebarTimer();
+        const sb = document.getElementById('sidebar');
+        const btn = document.getElementById('sidebarToggle');
+        if(sb && btn) {
+            sb.classList.toggle('collapsed');
+            btn.classList.toggle('sidebar-collapsed-btn');
+            if(!sb.classList.contains('collapsed')) resetSidebarTimer();
+            else clearSidebarTimer();
+        }
     }
 
-    // Dynamic Auth Check logic 
-    async function checkAuth() {
-        const { data: sessionData } = await db.auth.getSession();
-        
+    async function checkAuth() { 
+        const { data: sessionData } = await supabaseClient.auth.getSession(); 
         if (!sessionData.session) {
-            window.location.href = 'login.html';
+            window.location.href = 'login.html'; 
             return;
         }
-
-        currentUserEmail = sessionData.session.user.email;
+        
+        currentUserEmail = sessionData.session.user.email; 
         let displayEmail = currentUserEmail.split('@')[0];
         document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
 
         const isMasterAdmin = currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase();
         
-        const { data: profile } = await db.from('user_profiles').select('role').eq('email', currentUserEmail).single();
+        const { data: profile } = await supabaseClient.from('user_profiles').select('role').eq('email', currentUserEmail).single();
         const isDbAdmin = profile && profile.role === 'Admin';
 
         if (isMasterAdmin || isDbAdmin) {
@@ -281,11 +259,11 @@
         }
     }
     
-    window.logOut = async () => { await db.auth.signOut(); window.location.href = 'login.html'; }
+    async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
 
     async function fetchVendorsForModal() {
-        const { data } = await db.from('vendors').select('*').order('name', { ascending: true });
-        const select = document.getElementById('outVendorName');
+        const { data } = await supabaseClient.from('vendors').select('*').order('name', { ascending: true });
+        const select = document.getElementById('modalVendorName');
         if (data) {
             data.forEach(v => {
                 const opt = document.createElement('option');
@@ -297,167 +275,142 @@
     }
 
     window.toggleVendorSelect = function() {
-        if(document.getElementById('outCategory').value === 'Vendor Payment') {
+        if(document.getElementById('modalCat').value === 'Vendor Payment') {
             document.getElementById('vendorSelectGroup').style.display = 'block';
         } else {
             document.getElementById('vendorSelectGroup').style.display = 'none';
         }
     }
 
-    window.openModal = () => {
-        document.getElementById('cashOutModal').style.display = 'flex';
-        document.getElementById('outCategory').value = 'General';
+    window.openModal = function(type) {
+        currentModalType = type;
+        document.getElementById('modalOverlay').style.display = 'flex';
+        const now = new Date();
+        document.getElementById('modalDate').value = getLocalDateString(now);
+        document.getElementById('modalTime').value = now.toTimeString().substring(0, 5); 
+
+        const btn = document.getElementById('submitBtn');
+        const title = document.getElementById('modalTitle');
+
+        if (type === 'out') {
+            title.innerText = 'Add UPI Payment (Out)';
+            document.getElementById('inAmountFields').style.display = 'none';
+            document.getElementById('outAmountFields').style.display = 'block';
+            document.getElementById('modalCat').value = 'Vendor Payment'; 
+            btn.innerText = 'Save Payment'; btn.className = 'modal-btn-submit btn-red';
+        } else {
+            title.innerText = 'Add Received (In)';
+            document.getElementById('inAmountFields').style.display = 'block';
+            document.getElementById('outAmountFields').style.display = 'none';
+            document.getElementById('modalCat').value = 'Repair Sales'; 
+            btn.innerText = 'Save Collection'; btn.className = 'modal-btn-submit btn-green';
+        }
         toggleVendorSelect();
     }
-    window.closeModal = () => {
-        document.getElementById('cashOutModal').style.display = 'none';
-        document.getElementById('outDesc').value = '';
-        document.getElementById('outAmount').value = '';
-        document.getElementById('outVendorName').value = '';
-    };
 
-    const formatCurr = (num) => '₹' + parseFloat(num || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    window.closeModal = function() { document.getElementById('modalOverlay').style.display = 'none'; document.getElementById('transactionForm').reset(); }
 
-    window.setMode = (mode) => {
-        currentMode = mode;
-        document.getElementById('btnDaily').classList.toggle('active', mode === 'Daily');
-        document.getElementById('btnPeriod').classList.toggle('active', mode === 'Period');
-        document.getElementById('modeLabel').innerText = mode;
+    window.saveTransaction = async function(e) {
+        e.preventDefault();
+        const date = document.getElementById('modalDate').value;
+        const time = document.getElementById('modalTime').value + ':00'; 
+        const desc = document.getElementById('modalDesc').value;
+        const cat = document.getElementById('modalCat').value;
+        const vendorName = document.getElementById('modalVendorName').value;
         
-        if(mode === 'Daily') {
-            document.getElementById('dateInputs').innerHTML = '<input type="date" class="date-picker" id="ledgerDate">';
-            document.getElementById('ledgerDate').value = new Date().toISOString().split('T')[0];
-            document.getElementById('ledgerDate').addEventListener('change', () => fetchCashbook(false));
-        } else {
-            document.getElementById('dateInputs').innerHTML = `<input type="date" class="date-picker" id="fromDate"> <input type="date" class="date-picker" id="toDate">`;
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('fromDate').value = today;
-            document.getElementById('toDate').value = today;
-            document.getElementById('fromDate').addEventListener('change', () => fetchCashbook(false));
-            document.getElementById('toDate').addEventListener('change', () => fetchCashbook(false));
-        }
-        fetchCashbook(false);
-    };
-
-    window.fetchCashbook = async function(forceRefresh = false) {
-        if (forceRefresh || allEntries.length === 0) {
-            const { data, error } = await db.from('cashbook_entries').select('*').order('created_at', { ascending: true });
-            if (error) return console.warn(error.message);
-            allEntries = data || [];
-        }
-
-        let periodIn = 0; let periodOut = 0;
-        let runningBalance = 0;
-        const ledgerHtml = []; const cashInHtml = []; const cashOutHtml = [];
+        let upiIn = 0, cardIn = 0, upiOut = 0;
         
-        let targetDate, fromDate, toDate, subtitleText = '';
-        if (currentMode === 'Daily') {
-            targetDate = document.getElementById('ledgerDate').value || new Date().toISOString().split('T')[0];
-            subtitleText = `Business day: ${targetDate}`;
+        if (currentModalType === 'in') {
+            upiIn = parseFloat(document.getElementById('modalUpiIn').value) || 0;
+            cardIn = parseFloat(document.getElementById('modalCardIn').value) || 0;
+            if (upiIn === 0 && cardIn === 0) return alert("Enter at least one amount (UPI or Card).");
         } else {
-            fromDate = document.getElementById('fromDate').value;
-            toDate = document.getElementById('toDate').value;
-            subtitleText = `Period: ${fromDate || 'Start'} to ${toDate || 'End'}`;
+            upiOut = parseFloat(document.getElementById('modalUpiOut').value) || 0;
+            if (upiOut === 0) return alert("Enter payment amount.");
+            if (cat === 'Vendor Payment' && !vendorName) return alert("Please select a Vendor.");
         }
-        document.getElementById('ledgerSubtitle').innerText = subtitleText;
 
-        allEntries.forEach(row => {
-            const rowDate = row.date || new Date(row.created_at).toISOString().split('T')[0];
-            const amt = parseFloat(row.amount) || 0;
-            let isVisible = false;
-            
-            if (currentMode === 'Daily') isVisible = (rowDate === targetDate);
-            else isVisible = (!fromDate || rowDate >= fromDate) && (!toDate || rowDate <= toDate);
+        try {
+            await supabaseClient.from('upi_entries').insert([{
+                date: date, time: time, description: desc, category: cat,
+                upi_amount: upiIn, card_amount: cardIn, upi_payment: upiOut, created_by: currentUserEmail,
+                vendor_name: cat === 'Vendor Payment' ? vendorName : null
+            }]);
+            closeModal(); fetchLedgerData();
+        } catch (error) { alert("Error: " + error.message); }
+    }
 
-            if (isVisible) {
-                // RUNNING BALANCE IS ONLY CALCULATED FOR THE VISIBLE PERIOD/DAY
-                if (row.type === 'in') {
-                    runningBalance += amt;
-                    periodIn += amt;
-                } else {
-                    runningBalance -= amt;
-                    periodOut += amt;
-                }
+    const formatMoney = (amount) => '₹' + parseFloat(amount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
-                let displayCat = row.category;
-                if (row.vendor_name) displayCat += ` <br><small style="color:#2563eb; font-weight:bold;">[${row.vendor_name}]</small>`;
-                
-                ledgerHtml.push(`
-                    <tr>
-                        <td><div>${new Date(rowDate).toLocaleDateString('en-GB', {day:'2-digit', month:'short'})}</div><div style="font-size:0.75rem; color:#9ca3af;">${new Date(row.created_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</div></td>
-                        <td>${row.description}</td>
-                        <td><span class="pill pill-general">${displayCat}</span></td>
-                        <td class="${row.type === 'in' ? 'text-green' : ''}" style="text-align: right;">${row.type === 'in' ? formatCurr(amt) : '—'}</td>
-                        <td class="${row.type === 'out' ? 'text-red' : ''}" style="text-align: right;">${row.type === 'out' ? formatCurr(amt) : '—'}</td>
-                        <td style="font-weight:bold; text-align: right;">${formatCurr(runningBalance)}</td>
-                    </tr>
-                `);
+    window.fetchLedgerData = async function() {
+        const fromDate = document.getElementById('filterFromDate').value;
+        const toDate = document.getElementById('filterToDate').value;
 
-                if (row.type === 'in') {
-                    cashInHtml.push(`<tr><td style="width:25%; color:#6b7280; border-bottom:1px solid #f3f4f6;">${rowDate}</td><td style="width:55%; border-bottom:1px solid #f3f4f6;">${row.description}</td><td style="width:20%; text-align:right; font-weight:bold; border-bottom:1px solid #f3f4f6;" class="text-green">${formatCurr(amt)}</td></tr>`);
-                } else {
-                    cashOutHtml.push(`<tr><td style="width:25%; color:#6b7280; border-bottom:1px solid #f3f4f6;">${rowDate}</td><td style="width:55%; border-bottom:1px solid #f3f4f6;">${row.description}</td><td style="width:20%; text-align:right; font-weight:bold; border-bottom:1px solid #f3f4f6;" class="text-red">${formatCurr(amt)}</td></tr>`);
-                }
+        const { data } = await supabaseClient.from('upi_entries').select('*')
+            .gte('date', fromDate).lte('date', toDate).order('date').order('time');
+
+        allUpiData = data || [];
+        
+        let tUpiIn = 0, tCard = 0, tOut = 0;
+        const tbody = document.getElementById('dataTableBody'); tbody.innerHTML = '';
+        let inHtml = '', outHtml = '';
+
+        allUpiData.forEach(item => {
+            const upiA = parseFloat(item.upi_amount)||0; const cardA = parseFloat(item.card_amount)||0; const outA = parseFloat(item.upi_payment)||0;
+            tUpiIn += upiA; tCard += cardA; tOut += outA;
+
+            let displayCat = item.category;
+            if (item.vendor_name) displayCat += ` <br><small style="color:#2563eb; font-weight:bold;">[${item.vendor_name}]</small>`;
+
+            tbody.innerHTML += `<tr>
+                <td><div>${item.date}</div><div style="color:gray; font-size:0.75rem;">${item.time.substring(0,5)}</div></td>
+                <td>${item.description}</td><td>${displayCat}</td>
+                <td style="text-align:right; color:var(--c-blue); font-weight:bold;">${upiA > 0 ? formatMoney(upiA) : '-'}</td>
+                <td style="text-align:right; color:var(--c-purple); font-weight:bold;">${cardA > 0 ? formatMoney(cardA) : '-'}</td>
+                <td style="text-align:right; color:var(--c-red); font-weight:bold;">${outA > 0 ? formatMoney(outA) : '-'}</td>
+            </tr>`;
+
+            if(upiA > 0 || cardA > 0) {
+                let combinedHtml = '';
+                if(upiA > 0 && cardA > 0) combinedHtml = `<span style="color:var(--c-blue)">UPI: ${formatMoney(upiA)}</span><br><span style="font-size:0.75rem; color:var(--c-purple)">Card: ${formatMoney(cardA)}</span>`;
+                else if(upiA > 0) combinedHtml = `<span style="color:var(--c-blue)">${formatMoney(upiA)}</span>`;
+                else combinedHtml = `<span style="color:var(--c-purple)">${formatMoney(cardA)} (Card)</span>`;
+
+                inHtml += `<tr><td style="width:25%; color:#6b7280; border-bottom:1px solid #f3f4f6;">${item.date}</td><td style="width:50%; border-bottom:1px solid #f3f4f6;">${item.description}</td><td style="width:25%; text-align:right; font-weight:bold; border-bottom:1px solid #f3f4f6;">${combinedHtml}</td></tr>`;
+            }
+            if(outA > 0) {
+                outHtml += `<tr><td style="width:25%; color:#6b7280; border-bottom:1px solid #f3f4f6;">${item.date}</td><td style="width:50%; border-bottom:1px solid #f3f4f6;">${item.description}</td><td style="width:25%; text-align:right; font-weight:bold; color:var(--c-red); border-bottom:1px solid #f3f4f6;">${formatMoney(outA)}</td></tr>`;
             }
         });
 
-        document.getElementById('dailyCashIn').innerText = formatCurr(periodIn);
-        document.getElementById('dailyCashOut').innerText = formatCurr(periodOut);
-        document.getElementById('dailyClosing').innerText = formatCurr(runningBalance);
+        if (!inHtml) inHtml = '<tr><td colspan="3" style="text-align:center; padding:20px; color:#9ca3af;">No inward entries</td></tr>';
+        if (!outHtml) outHtml = '<tr><td colspan="3" style="text-align:center; padding:20px; color:#9ca3af;">No outward entries</td></tr>';
 
-        document.getElementById('ledgerBody').innerHTML = ledgerHtml.join('') || '<tr><td colspan="6" style="text-align:center; padding:30px; color:#6b7280;">No transactions found.</td></tr>';
-        document.getElementById('totalCashInCol').innerText = formatCurr(periodIn);
-        document.getElementById('totalCashOutCol').innerText = formatCurr(periodOut);
-        document.getElementById('totalBalanceCol').innerText = formatCurr(runningBalance);
+        document.getElementById('statTotalUPI').innerText = formatMoney(tUpiIn);
+        document.getElementById('statTotalCard').innerText = formatMoney(tCard);
+        document.getElementById('statTotalOut').innerText = formatMoney(tOut);
+        document.getElementById('statNetBalance').innerText = formatMoney(tUpiIn + tCard - tOut);
 
-        document.getElementById('cashInBreakdownBody').innerHTML = cashInHtml.join('') || '<tr><td colspan="3" style="text-align:center; padding:20px; color:#9ca3af;">No cash inward entries</td></tr>';
-        document.getElementById('bdTotalCashIn').innerText = formatCurr(periodIn);
-        document.getElementById('cashOutBreakdownBody').innerHTML = cashOutHtml.join('') || '<tr><td colspan="3" style="text-align:center; padding:20px; color:#9ca3af;">No cash outward entries</td></tr>';
-        document.getElementById('bdTotalCashOut').innerText = formatCurr(periodOut);
-    }
-
-    // Includes double-click prevention logic
-    window.saveCashOut = async function() {
-        const btn = document.getElementById('btnSaveCashOut');
-        if (btn.disabled) return;
-
-        const desc = document.getElementById('outDesc').value.trim();
-        const category = document.getElementById('outCategory').value;
-        const amount = parseFloat(document.getElementById('outAmount').value) || 0;
-        const vendorName = document.getElementById('outVendorName').value;
-        const currentDate = new Date().toISOString().split('T')[0];
-
-        if(!desc || amount <= 0) return alert("Please enter description and amount.");
-        if(category === 'Vendor Payment' && !vendorName) return alert("Please select a vendor.");
-
-        // Disable button to prevent double-clicks
-        btn.disabled = true;
-        btn.innerText = "Saving...";
-
-        const entry = {
-            date: currentDate, description: desc, category: category, amount: amount, type: 'out', created_by: currentUserEmail,
-            vendor_name: category === 'Vendor Payment' ? vendorName : null
-        };
-
-        try {
-            const { error } = await db.from('cashbook_entries').insert([entry]);
-            if(error) throw error;
-            closeModal(); 
-            fetchCashbook(true); 
-        } catch(e) { 
-            alert("Error saving: " + e.message); 
-        } finally {
-            // Restore button state
-            btn.disabled = false;
-            btn.innerText = "Record Cash Out";
+        document.getElementById('upiInBreakdownBody').innerHTML = inHtml;
+        document.getElementById('upiOutBreakdownBody').innerHTML = outHtml;
+        
+        let bdInTotalHTML = formatMoney(tUpiIn + tCard);
+        if(tCard > 0 && tUpiIn > 0) {
+            bdInTotalHTML += ` <span style="font-size:0.75rem; font-weight:normal; color:#16a34a; margin-left:8px;">(UPI: ${formatMoney(tUpiIn)} | Card: ${formatMoney(tCard)})</span>`;
         }
+        
+        document.getElementById('bdTotalUpiIn').innerHTML = bdInTotalHTML;
+        document.getElementById('bdTotalUpiOut').innerText = formatMoney(tOut);
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-        checkAuth(); resetSidebarTimer(); fetchVendorsForModal();
-        document.getElementById('ledgerDate').value = new Date().toISOString().split('T')[0];
-        document.getElementById('ledgerDate').addEventListener('change', () => fetchCashbook(false));
-        fetchCashbook(true);
+        checkAuth(); 
+        resetSidebarTimer(); 
+        fetchVendorsForModal();
+        const today = getLocalDateString();
+        document.getElementById('filterFromDate').value = today;
+        document.getElementById('filterToDate').value = today;
+        fetchLedgerData();
     });
 
     // ==========================================
@@ -465,7 +418,7 @@
     // ==========================================
     const setupAutoLogout = function() {
         let inactivityTimer;
-        const timeoutDuration = 30 * 60 * 1000; // 30 minutes in milliseconds
+        const timeoutDuration = 30 * 60 * 1000; 
         function resetTimer() {
             clearTimeout(inactivityTimer);
             inactivityTimer = setTimeout(logOut, timeoutDuration); 
