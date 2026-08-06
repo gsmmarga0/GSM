@@ -334,7 +334,8 @@
                 </select>
             </div>
 
-            <div class="billing-row">
+            <!-- HIDDEN FOR REGULAR USERS, ONLY VISIBLE TO ADMINS -->
+            <div class="billing-row admin-only" style="display: none;">
                 <label style="color: #6b7280;">Part Cost (₹)</label>
                 <input type="number" id="billVendorCost" placeholder="0">
             </div>
@@ -929,7 +930,7 @@
                     
                     if (newTab && newTab !== currentTab) {
                         switchTab(newTab);
-                        return; 
+                        return; // Switch tab calls applyFilters again
                     }
                 }
             }
@@ -1044,6 +1045,7 @@
         }
     }
 
+    // --- REWRITTEN PAGINATION LOGIC ---
     window.prevPage = function() {
         if (currentPage > 1) {
             currentPage--;
@@ -1070,6 +1072,7 @@
         
         const maxPage = Math.ceil(filteredOrdersData.length / rowsPerPage) || 1;
         
+        // Safety bounds
         if (currentPage > maxPage) currentPage = maxPage;
         if (currentPage < 1) currentPage = 1;
 
@@ -1107,6 +1110,7 @@
             let actionHtml = '';
             let displayAmount = 0;
             let displayAmountHtml = '';
+            let vendorHtml = '-';
             let rowStyle = '';
             
             let notesHtml = '';
@@ -1226,10 +1230,12 @@
                 </tr>`;
         });
 
+        // Setup UI for Page info & Button states
         pageInfo.innerText = `Page ${currentPage} of ${maxPage}`;
         if(btnPrev) btnPrev.disabled = (currentPage === 1);
         if(btnNext) btnNext.disabled = (currentPage === maxPage);
     }
+    // --- END REWRITTEN PAGINATION LOGIC ---
 
     window.revertToRepairCompleted = async function(id, jobNo, paymentMode, amount, mobile, targetStatus) {
         if (!confirm(`Are you sure you want to revert Job No: ${jobNo} back to '${targetStatus}'?\n\nThis will DELETE any final delivery records and remove the related Cash, UPI, and Credit entries from the ledgers.`)) return;
@@ -1873,3 +1879,4 @@
 </script>
 </body>
 </html>
+what about part cost which is showing in tabs ? i can still see it as normal user
