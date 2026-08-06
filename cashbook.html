@@ -253,7 +253,7 @@
         if(!document.getElementById('sidebar').classList.contains('collapsed')) resetSidebarTimer(); else clearSidebarTimer();
     }
 
-    // Dynamic Auth Check logic restoring proper admin toggling and UI elements
+    // Dynamic Auth Check logic 
     async function checkAuth() {
         const { data: sessionData } = await db.auth.getSession();
         
@@ -364,9 +364,16 @@
             if (currentMode === 'Daily') isVisible = (rowDate === targetDate);
             else isVisible = (!fromDate || rowDate >= fromDate) && (!toDate || rowDate <= toDate);
 
-            if (row.type === 'in') runningBalance += amt; else runningBalance -= amt;
-
             if (isVisible) {
+                // RUNNING BALANCE IS ONLY CALCULATED FOR THE VISIBLE PERIOD/DAY
+                if (row.type === 'in') {
+                    runningBalance += amt;
+                    periodIn += amt;
+                } else {
+                    runningBalance -= amt;
+                    periodOut += amt;
+                }
+
                 let displayCat = row.category;
                 if (row.vendor_name) displayCat += ` <br><small style="color:#2563eb; font-weight:bold;">[${row.vendor_name}]</small>`;
                 
@@ -382,10 +389,8 @@
                 `);
 
                 if (row.type === 'in') {
-                    periodIn += amt;
                     cashInHtml.push(`<tr><td style="width:25%; color:#6b7280; border-bottom:1px solid #f3f4f6;">${rowDate}</td><td style="width:55%; border-bottom:1px solid #f3f4f6;">${row.description}</td><td style="width:20%; text-align:right; font-weight:bold; border-bottom:1px solid #f3f4f6;" class="text-green">${formatCurr(amt)}</td></tr>`);
                 } else {
-                    periodOut += amt;
                     cashOutHtml.push(`<tr><td style="width:25%; color:#6b7280; border-bottom:1px solid #f3f4f6;">${rowDate}</td><td style="width:55%; border-bottom:1px solid #f3f4f6;">${row.description}</td><td style="width:20%; text-align:right; font-weight:bold; border-bottom:1px solid #f3f4f6;" class="text-red">${formatCurr(amt)}</td></tr>`);
                 }
             }
@@ -429,9 +434,7 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-        checkAuth(); 
-        resetSidebarTimer(); 
-        fetchVendorsForModal();
+        checkAuth(); resetSidebarTimer(); fetchVendorsForModal();
         document.getElementById('ledgerDate').value = new Date().toISOString().split('T')[0];
         document.getElementById('ledgerDate').addEventListener('change', () => fetchCashbook(false));
         fetchCashbook(true);
