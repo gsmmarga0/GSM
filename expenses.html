@@ -152,6 +152,7 @@
     <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
     
     <!-- Admin Only Links -->
+    <a href="vendors.html" class="nav-item admin-only" style="display: none;">🚚 Vendors</a>
     <a href="sales-report.html" class="nav-item admin-only" style="display: none;">📊 Sales Report</a>
     <a href="expenses.html" class="nav-item admin-only active" style="display: none;">💸 Expenses</a>
     <a href="profit.html" class="nav-item admin-only" style="display: none;">📈 Profit Book</a>
@@ -201,27 +202,39 @@
 
     <div class="dashboard-padding">
         
-        <!-- Stats Grid (Visible across main views ideally, but kept modular) -->
-        <div class="expense-stats-grid" id="statsGrid">
-            <div class="stat-card stat-card-total">
-                <h3>Total Expenses (all time)</h3>
-                <p class="number" id="totalExpensesAmount">₹0.00</p>
-                <p class="sub" id="totalExpensesEntries">0 entries</p>
+        <!-- Stats Section -->
+        <div id="statsSection">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="font-size: 1.1rem; margin: 0; color: #374151;">Overview Details</h2>
+                <select id="statsPeriod" onchange="renderStats()" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; font-weight: 600; color: #374151; background: white; cursor: pointer;">
+                    <option value="this_month">This Month</option>
+                    <option value="last_month">Last Month</option>
+                    <option value="this_year">This Year</option>
+                    <option value="all_time">All Time</option>
+                </select>
             </div>
-            <div class="stat-card">
-                <h3>Staff Salary</h3>
-                <p class="number" id="statStaffAmount">₹0.00</p>
-                <p class="sub" id="statStaffPercent">0.0% of total</p>
-            </div>
-            <div class="stat-card">
-                <h3>Rent</h3>
-                <p class="number" id="statRentAmount">₹0.00</p>
-                <p class="sub" id="statRentPercent">0.0% of total</p>
-            </div>
-            <div class="stat-card">
-                <h3>Electricity Bill</h3>
-                <p class="number" id="statElecAmount">₹0.00</p>
-                <p class="sub" id="statElecPercent">0.0% of total</p>
+            
+            <div class="expense-stats-grid" id="statsGrid">
+                <div class="stat-card stat-card-total">
+                    <h3>Total Expenses</h3>
+                    <p class="number" id="totalExpensesAmount">₹0.00</p>
+                    <p class="sub" id="totalExpensesEntries">0 entries</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Staff Salary</h3>
+                    <p class="number" id="statStaffAmount">₹0.00</p>
+                    <p class="sub" id="statStaffPercent">0.0% of total</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Rent</h3>
+                    <p class="number" id="statRentAmount">₹0.00</p>
+                    <p class="sub" id="statRentPercent">0.0% of total</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Electricity Bill</h3>
+                    <p class="number" id="statElecAmount">₹0.00</p>
+                    <p class="sub" id="statElecPercent">0.0% of total</p>
+                </div>
             </div>
         </div>
 
@@ -453,8 +466,6 @@
             document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
             document.querySelectorAll('.admin-hidden').forEach(el => el.classList.remove('admin-hidden'));
         }
-        // NO KICK LOGIC because Expenses might be viewed/used by staff, 
-        // though typically it's an admin section. The elements are protected.
     }
 
     async function logOut() {
@@ -478,7 +489,9 @@
     // --- View Navigation ---
     window.showView = function(viewName) {
         document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-        document.getElementById('statsGrid').style.display = (viewName === 'master') ? 'none' : 'grid';
+        
+        // Only hide the stats overview explicitly if we are in the staff master view
+        document.getElementById('statsSection').style.display = (viewName === 'master') ? 'none' : 'block';
 
         if(viewName === 'expenses') {
             document.getElementById('viewExpenses').classList.add('active');
@@ -532,6 +545,24 @@
         }
     }
 
+    // --- Date Helper logic for dynamically filtering stats ---
+    function getMonthBounds(offset = 0) {
+        const d = new Date();
+        d.setMonth(d.getMonth() + offset);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const lastDay = new Date(y, d.getMonth() + 1, 0).getDate();
+        return {
+            start: `${y}-${m}-01`,
+            end: `${y}-${m}-${String(lastDay).padStart(2, '0')}`
+        };
+    }
+    
+    function getYearBounds() {
+        const y = new Date().getFullYear();
+        return { start: `${y}-01-01`, end: `${y}-12-31` };
+    }
+
     // --- Data Fetching ---
     async function fetchStaff() {
         try {
@@ -559,7 +590,7 @@
 
             allExpenses = expenses || [];
             populateCategoryFilter();
-            renderStats();
+            renderStats(); // Automatically renders based on current dropdown selection
             applyFiltersAndRender();
             if(document.getElementById('viewStaffSummary').classList.contains('active')) renderSummary();
         } catch (error) { console.error("Error loading expenses:", error.message); }
@@ -580,13 +611,27 @@
         select.value = current;
     }
 
-    function renderStats() {
-        const total = allExpenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+    // Rewritten stat rendering logic based on period selection
+    window.renderStats = function() {
+        const period = document.getElementById('statsPeriod').value;
+        let filteredStats = allExpenses;
+
+        if (period !== 'all_time') {
+            let bounds;
+            if (period === 'this_month') bounds = getMonthBounds(0);
+            else if (period === 'last_month') bounds = getMonthBounds(-1);
+            else if (period === 'this_year') bounds = getYearBounds();
+
+            // Filter the master list by the calculated bounds directly comparing YYYY-MM-DD
+            filteredStats = allExpenses.filter(e => e.date >= bounds.start && e.date <= bounds.end);
+        }
+
+        const total = filteredStats.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
         document.getElementById('totalExpensesAmount').innerText = `₹${total.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits:2})}`;
-        document.getElementById('totalExpensesEntries').innerText = `${allExpenses.length} entries`;
+        document.getElementById('totalExpensesEntries').innerText = `${filteredStats.length} entries`;
 
         const byCategory = {};
-        allExpenses.forEach(e => {
+        filteredStats.forEach(e => {
             const cat = e.category || 'Uncategorized';
             byCategory[cat] = (byCategory[cat] || 0) + (parseFloat(e.amount) || 0);
         });
