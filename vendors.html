@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vendors - GSM SOLUTIONS</title>
+    <link rel="icon" href="data:,">
     <style>
         :root { --bg-color: #f4f5f7; --sidebar-width: 250px; --border-color: #e5e7eb; }
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; position: relative;}
@@ -19,32 +20,48 @@
         .sidebar-toggle-btn { position: absolute; left: var(--sidebar-width); top: 50%; transform: translateY(-50%); background: black; color: white; width: 20px; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; border-radius: 0 8px 8px 0; transition: left 0.4s ease; font-weight: bold; box-shadow: 2px 0 5px rgba(0,0,0,0.2);}
         .sidebar-collapsed-btn { left: 0 !important; }
 
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        .header { background: white; padding: 15px 30px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-        .header h1 { margin: 0; font-size: 1.5rem; }
-        .header p { margin: 5px 0 0 0; color: #6b7280; font-size: 0.9rem; }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-color); }
+        
+        /* New Header Design */
+        .header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
+        .header-left h1 { margin: 0; font-size: 1.8rem; font-weight: bold; color: #111827;}
+        .header-left p { margin: 5px 0 0 0; color: #6b7280; font-size: 0.95rem; }
+        .header-right { display: flex; gap: 12px; align-items: center; }
 
-        .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; border: 1px solid var(--border-color); background: white; transition: 0.2s;}
-        .btn-primary { background: black; color: white; border: none; }
+        .segmented-control { display: inline-flex; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; background: white; }
+        .seg-btn { padding: 8px 16px; border: none; background: white; cursor: pointer; font-weight: 600; color: #374151; font-size: 0.9rem; transition: 0.2s; }
+        .seg-btn.active { background: black; color: white; }
+        
+        .date-input { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; font-family: inherit; font-size: 0.9rem; color: #111827; font-weight: 500;}
+        .date-input:focus { border-color: #9ca3af; }
+
+        .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; border: 1px solid var(--border-color); background: white; color: #374151; display: inline-flex; align-items: center; justify-content: center; transition: 0.2s;}
+        .btn:hover { background: #f9fafb; }
+        .btn-primary { background: black; color: white; border: none; font-weight: bold; font-size: 0.95rem; padding: 10px 16px; border-radius: 6px; }
         .btn-primary:hover { opacity: 0.8; }
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .layout-grid { display: grid; grid-template-columns: 300px 1fr; gap: 20px; padding: 20px 30px; height: calc(100vh - 90px); box-sizing: border-box; }
         
-        .card { background: white; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden;}
-        .card-header { padding: 15px 20px; border-bottom: 1px solid var(--border-color); background: #f9fafb; font-weight: bold; display: flex; justify-content: space-between; align-items: center;}
+        .card { background: white; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
+        .card-header { padding: 15px 20px; border-bottom: 1px solid var(--border-color); background: #f9fafb; font-weight: bold; display: flex; justify-content: space-between; align-items: center; color: #6b7280; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;}
         
         .vendor-list { overflow-y: auto; flex: 1; margin: 0; padding: 0; list-style: none; }
         .vendor-list li { padding: 15px 20px; border-bottom: 1px solid #f3f4f6; cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: 0.2s; }
         .vendor-list li:hover { background: #f9fafb; }
         .vendor-list li.active { background: #eff6ff; border-left: 4px solid #2563eb; padding-left: 16px; }
-        .v-name { font-weight: bold; color: #111827; }
+        .v-name { font-weight: bold; color: #111827; font-size: 0.95rem; }
         .v-phone { font-size: 0.8rem; color: #6b7280; }
 
-        .ledger-wrapper { flex: 1; overflow-y: auto; background: white; }
+        .ledger-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: white; }
+        .ledger-table-container { flex: 1; overflow-y: auto; }
+        
         table { width: 100%; border-collapse: collapse; }
         th { position: sticky; top: 0; background: #f9fafb; padding: 12px 20px; text-align: left; font-size: 0.85rem; color: #6b7280; border-bottom: 1px solid var(--border-color); z-index: 10;}
         td { padding: 12px 20px; border-bottom: 1px solid #f3f4f6; font-size: 0.9rem; color: #374151; }
+        
+        .pagination { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: white; border-top: 1px solid var(--border-color); }
+        
         .text-red { color: #ef4444; font-weight: bold; }
         .text-green { color: #10b981; font-weight: bold; }
         .edit-icon { cursor: pointer; color: #9ca3af; margin-left: 8px; font-size: 1rem; transition: 0.2s; }
@@ -63,7 +80,7 @@
         .form-group input { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; outline: none; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;}
         
-        .empty-state { flex: 1; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 0.95rem; }
+        .empty-state { height: 100%; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 0.95rem; }
     </style>
 </head>
 <body>
@@ -98,45 +115,80 @@
 
 <div class="main-content">
     <div class="header">
-        <div>
+        <div class="header-left">
             <h1>Vendor Management</h1>
-            <p>Track part purchases and vendor payments</p>
+            <p id="pageSubtitle">Select a vendor to track purchases and payments</p>
         </div>
-        <button class="btn btn-primary" onclick="openVendorModal()">+ Add New Vendor</button>
+        
+        <div class="header-right">
+            <!-- Segmented Control Header -->
+            <div class="segmented-control" id="viewModeToggle">
+                <button class="seg-btn active" id="btnMonthly" onclick="setViewMode('monthly')">Monthly</button>
+                <button class="seg-btn" id="btnPeriod" onclick="setViewMode('period')">Period</button>
+            </div>
+            
+            <div id="monthlyInputContainer">
+                <input type="month" id="monthSelector" class="date-input" onchange="applyLedgerFilter()">
+            </div>
+            
+            <div id="periodInputContainer" style="display: none; align-items: center; gap: 8px;">
+                <input type="date" id="dateFrom" class="date-input" onchange="applyLedgerFilter()">
+                <span style="color: #6b7280; font-size: 0.9rem; font-weight: 500;">to</span>
+                <input type="date" id="dateTo" class="date-input" onchange="applyLedgerFilter()">
+            </div>
+
+            <button class="btn" onclick="refreshActiveVendor()" style="padding: 8px 12px; font-size: 0.9rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 2v6h6"/></svg>
+                Refresh
+            </button>
+            <button class="btn-primary" onclick="openVendorModal()">+ Add Vendor</button>
+        </div>
     </div>
 
     <div class="layout-grid">
+        <!-- Vendor List Sidebar -->
         <div class="card">
-            <div class="card-header">
-                Vendor List
-                <input type="text" id="searchVendor" placeholder="Search..." style="padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; width: 120px; outline: none;" onkeyup="renderVendors()">
+            <div class="card-header" style="text-transform: none; padding-top: 18px;">
+                <span style="font-size: 0.95rem; color: #111827;">Vendor Directory</span>
+                <input type="text" id="searchVendor" placeholder="Search..." style="padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; width: 100px; outline: none; font-size: 0.8rem;" onkeyup="renderVendors()">
             </div>
             <ul class="vendor-list" id="vendorListUL"></ul>
         </div>
 
+        <!-- Ledger View -->
         <div class="card">
-            <div class="card-header" style="background: white; border-bottom: none;">
-                <span id="ledgerTitle" style="font-size: 1.2rem;">Select a vendor</span>
-                <button class="btn" id="btnEditVendor" style="display:none; padding: 4px 10px; font-size:0.8rem;" onclick="openEditVendorModal()">✏️ Edit Vendor</button>
+            <div class="card-header" style="background: white; border-bottom: none; font-size: 1.2rem; color: #111827; text-transform: none;">
+                <span id="ledgerTitle">Select a vendor</span>
+                <button class="btn" id="btnEditVendor" style="display:none; padding: 6px 12px; font-size:0.85rem;" onclick="openEditVendorModal()">✏️ Edit Vendor</button>
             </div>
             
+            <!-- Statistics -->
             <div class="stats-row" id="ledgerStats" style="display: none;">
                 <div class="stat-box">
-                    <span>Total Purchases (We Owe)</span>
+                    <span>Purchases (Period)</span>
                     <strong class="text-red" id="statPurchases">₹0.00</strong>
                 </div>
                 <div class="stat-box">
-                    <span>Total Payments (We Paid)</span>
+                    <span>Payments (Period)</span>
                     <strong class="text-green" id="statPayments">₹0.00</strong>
                 </div>
                 <div class="stat-box" style="background: #eff6ff; border-color: #bfdbfe;">
-                    <span style="color: #2563eb;">Net Balance Payable</span>
+                    <span style="color: #2563eb;">Period Balance</span>
                     <strong style="color: #1e3a8a;" id="statBalance">₹0.00</strong>
                 </div>
             </div>
 
+            <!-- Ledger Table & Pagination -->
             <div class="ledger-wrapper" id="ledgerWrapper">
-                <div class="empty-state">Select a vendor from the list to view their ledger.</div>
+                <div class="ledger-table-container" id="ledgerTableContainer">
+                    <div class="empty-state">Select a vendor from the list to view their ledger.</div>
+                </div>
+                
+                <div class="pagination" id="ledgerPagination" style="display: none;">
+                    <button class="btn" onclick="prevLedgerPage()">Previous</button>
+                    <span id="ledgerPageInfo" style="font-size:0.9rem; font-weight:bold;">Page 1</span>
+                    <button class="btn" onclick="nextLedgerPage()">Next</button>
+                </div>
             </div>
         </div>
     </div>
@@ -191,6 +243,12 @@
     const ADMIN_EMAIL = 'faizan@gsmsolution.com';
     let vendors = [];
     let activeVendor = null;
+    
+    // Ledger Array & Pagination Setup
+    let activeVendorLedger = [];
+    let filteredLedger = [];
+    let ledgerCurrentPage = 1;
+    const ledgerRowsPerPage = 13;
 
     // Sidebar Logic
     let sidebarTimer;
@@ -235,6 +293,50 @@
     
     async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
 
+    // Initialization & Default Dates
+    document.addEventListener("DOMContentLoaded", () => {
+        checkAuth();
+        
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        
+        // Init header inputs
+        document.getElementById('monthSelector').value = `${yyyy}-${mm}`;
+        document.getElementById('dateFrom').value = `${yyyy}-${mm}-01`;
+        document.getElementById('dateTo').value = `${yyyy}-${mm}-${dd}`;
+        
+        resetSidebarTimer();
+        fetchVendors();
+    });
+
+    // UI Toggle for Header View Mode
+    window.setViewMode = function(mode) {
+        document.getElementById('btnMonthly').classList.remove('active');
+        document.getElementById('btnPeriod').classList.remove('active');
+        
+        if(mode === 'monthly') {
+            document.getElementById('btnMonthly').classList.add('active');
+            document.getElementById('monthlyInputContainer').style.display = 'block';
+            document.getElementById('periodInputContainer').style.display = 'none';
+        } else {
+            document.getElementById('btnPeriod').classList.add('active');
+            document.getElementById('monthlyInputContainer').style.display = 'none';
+            document.getElementById('periodInputContainer').style.display = 'flex';
+        }
+        
+        applyLedgerFilter();
+    }
+
+    // Format utility for Subtitle
+    function formatDateForSubtitle(dateStr) {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        if (isNaN(d)) return dateStr;
+        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
     async function fetchVendors() {
         const { data } = await supabaseClient.from('vendors').select('*').order('name', { ascending: true });
         vendors = data || [];
@@ -255,6 +357,10 @@
         });
     }
 
+    window.refreshActiveVendor = function() {
+        if (activeVendor) selectVendor(activeVendor);
+    }
+
     async function selectVendor(v) {
         activeVendor = v;
         renderVendors();
@@ -262,15 +368,18 @@
         document.getElementById('btnEditVendor').style.display = 'block';
         document.getElementById('ledgerStats').style.display = 'grid';
         
-        const wrapper = document.getElementById('ledgerWrapper');
-        wrapper.innerHTML = '<div class="empty-state">Loading ledger...</div>';
+        const container = document.getElementById('ledgerTableContainer');
+        const pagination = document.getElementById('ledgerPagination');
+        
+        container.innerHTML = '<div class="empty-state">Loading ledger...</div>';
+        pagination.style.display = 'none';
 
         try {
             // 1. Fetch Purchases (ALL jobs where vendor is selected and not deleted)
             const { data: purchases } = await supabaseClient.from('repairOrders')
                 .select('id, jobNo, date, vendor_cost, problemDesc')
                 .eq('vendor_name', v.name)
-                .eq('is_deleted', false) // Protects against deleted items affecting balance
+                .eq('is_deleted', false)
                 .in('status', ['Repair Completed', 'Goods Delivered', 'Delivered (Refused)']);
 
             // 2. Fetch Payments (from Cashbook)
@@ -287,67 +396,143 @@
                 .eq('vendor_name', v.name)
                 .gt('upi_payment', 0);
 
-            // Combine and sort
-            let ledger = [];
-            let totalPurchased = 0;
-            let totalPaid = 0;
+            // Combine and structure internal un-filtered ledger
+            activeVendorLedger = [];
 
             if (purchases) {
                 purchases.forEach(p => {
                     let cost = parseFloat(p.vendor_cost) || 0;
-                    totalPurchased += cost;
-                    ledger.push({ id: p.id, jobNo: p.jobNo, date: p.date, ref: `Job: ${p.jobNo} - ${p.problemDesc}`, type: 'Purchase', amount: cost });
+                    activeVendorLedger.push({ id: p.id, jobNo: p.jobNo, date: p.date, ref: `Job: ${p.jobNo} - ${p.problemDesc}`, type: 'Purchase', amount: cost });
                 });
             }
             if (cashPayments) {
                 cashPayments.forEach(p => {
-                    totalPaid += parseFloat(p.amount);
-                    ledger.push({ date: p.date, ref: `Cash: ${p.description}`, type: 'Payment', amount: parseFloat(p.amount) });
+                    activeVendorLedger.push({ date: p.date, ref: `Cash: ${p.description}`, type: 'Payment', amount: parseFloat(p.amount) });
                 });
             }
             if (upiPayments) {
                 upiPayments.forEach(p => {
-                    totalPaid += parseFloat(p.upi_payment);
-                    ledger.push({ date: p.date, ref: `UPI: ${p.description}`, type: 'Payment', amount: parseFloat(p.upi_payment) });
+                    activeVendorLedger.push({ date: p.date, ref: `UPI: ${p.description}`, type: 'Payment', amount: parseFloat(p.upi_payment) });
                 });
             }
 
-            ledger.sort((a, b) => new Date(a.date) - new Date(b.date));
+            // Sort by date descending (newest first)
+            activeVendorLedger.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-            // Update Stats
-            document.getElementById('statPurchases').innerText = `₹${totalPurchased.toFixed(2)}`;
-            document.getElementById('statPayments').innerText = `₹${totalPaid.toFixed(2)}`;
-            document.getElementById('statBalance').innerText = `₹${(totalPurchased - totalPaid).toFixed(2)}`;
-
-            // Render Table
-            if (ledger.length === 0) {
-                wrapper.innerHTML = '<div class="empty-state">No transactions found for this vendor.</div>';
-                return;
-            }
-
-            let html = `<table><thead><tr><th>Date</th><th>Reference</th><th>Type</th><th style="text-align:right;">Amount (₹)</th></tr></thead><tbody>`;
-            ledger.forEach(item => {
-                const colorClass = item.type === 'Purchase' ? 'text-red' : 'text-green';
-                const sign = item.type === 'Purchase' ? '+' : '-';
-                
-                // Add edit button ONLY for Purchases so you can update Job Part costs dynamically
-                let editBtnHtml = item.type === 'Purchase' 
-                    ? `<span class="edit-icon" title="Edit Vendor Part Cost" onclick="openEditCostModal('${item.id}', '${item.jobNo}', ${item.amount})">✏️</span>` 
-                    : '';
-
-                html += `<tr>
-                    <td>${item.date}</td>
-                    <td>${item.ref}</td>
-                    <td><span style="background:#f3f4f6; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:bold; color: #4b5563;">${item.type}</span></td>
-                    <td style="text-align:right;" class="${colorClass}">${sign}${item.amount.toFixed(2)} ${editBtnHtml}</td>
-                </tr>`;
-            });
-            html += `</tbody></table>`;
-            wrapper.innerHTML = html;
+            // Apply active date filter to render
+            applyLedgerFilter();
 
         } catch (e) {
-            wrapper.innerHTML = '<div class="empty-state">Error loading data.</div>';
+            container.innerHTML = '<div class="empty-state">Error loading data.</div>';
             console.error(e);
+        }
+    }
+
+    // Process Date Filtering & Pagination logic
+    window.applyLedgerFilter = function() {
+        if (!activeVendor) return;
+
+        const mode = document.getElementById('btnMonthly').classList.contains('active') ? 'monthly' : 'period';
+        let fromDate = null;
+        let toDate = null;
+        let subtitleText = `Ledger history for ${activeVendor.name}`;
+
+        if (mode === 'monthly') {
+            const monthVal = document.getElementById('monthSelector').value; // YYYY-MM
+            if (monthVal) {
+                const year = monthVal.split('-')[0];
+                const month = monthVal.split('-')[1];
+                const lastDay = new Date(year, month, 0).getDate();
+                
+                fromDate = `${monthVal}-01`;
+                toDate = `${monthVal}-${String(lastDay).padStart(2, '0')}`;
+                
+                const d = new Date(`${monthVal}-01`);
+                subtitleText = `${activeVendor.name} - Ledger for ${d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric'})}`;
+            }
+        } else {
+            fromDate = document.getElementById('dateFrom').value;
+            toDate = document.getElementById('dateTo').value;
+            
+            if (fromDate && toDate) subtitleText = `${activeVendor.name} - Ledger from ${formatDateForSubtitle(fromDate)} to ${formatDateForSubtitle(toDate)}`;
+            else subtitleText = `${activeVendor.name} - Ledger for custom period`;
+        }
+
+        document.getElementById('pageSubtitle').innerText = subtitleText;
+
+        // Apply array filter
+        filteredLedger = activeVendorLedger.filter(item => {
+            if (fromDate && item.date < fromDate) return false;
+            if (toDate && item.date > toDate) return false;
+            return true;
+        });
+
+        // Compute Stats based strictly on the filtered period
+        let totalPurchased = 0;
+        let totalPaid = 0;
+        
+        filteredLedger.forEach(item => {
+            if (item.type === 'Purchase') totalPurchased += item.amount;
+            if (item.type === 'Payment') totalPaid += item.amount;
+        });
+
+        document.getElementById('statPurchases').innerText = `₹${totalPurchased.toFixed(2)}`;
+        document.getElementById('statPayments').innerText = `₹${totalPaid.toFixed(2)}`;
+        document.getElementById('statBalance').innerText = `₹${(totalPurchased - totalPaid).toFixed(2)}`;
+
+        // Reset to first page
+        ledgerCurrentPage = 1;
+        renderLedgerTable();
+    }
+
+    function renderLedgerTable() {
+        const container = document.getElementById('ledgerTableContainer');
+        const pagination = document.getElementById('ledgerPagination');
+
+        if (filteredLedger.length === 0) {
+            container.innerHTML = '<div class="empty-state">No transactions found for this period.</div>';
+            pagination.style.display = 'none';
+            return;
+        }
+
+        const start = (ledgerCurrentPage - 1) * ledgerRowsPerPage;
+        const paginatedItems = filteredLedger.slice(start, start + ledgerRowsPerPage);
+
+        let html = `<table><thead><tr><th>Date</th><th>Reference</th><th>Type</th><th style="text-align:right;">Amount (₹)</th></tr></thead><tbody>`;
+        paginatedItems.forEach(item => {
+            const colorClass = item.type === 'Purchase' ? 'text-red' : 'text-green';
+            const sign = item.type === 'Purchase' ? '+' : '-';
+            
+            let editBtnHtml = item.type === 'Purchase' 
+                ? `<span class="edit-icon" title="Edit Vendor Part Cost" onclick="openEditCostModal('${item.id}', '${item.jobNo}', ${item.amount})">✏️</span>` 
+                : '';
+
+            html += `<tr>
+                <td>${item.date}</td>
+                <td>${item.ref}</td>
+                <td><span style="background:#f3f4f6; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:bold; color: #4b5563;">${item.type}</span></td>
+                <td style="text-align:right;" class="${colorClass}">${sign}${item.amount.toFixed(2)} ${editBtnHtml}</td>
+            </tr>`;
+        });
+        html += `</tbody></table>`;
+        
+        container.innerHTML = html;
+        pagination.style.display = 'flex';
+        document.getElementById('ledgerPageInfo').innerText = `Page ${ledgerCurrentPage} of ${Math.ceil(filteredLedger.length / ledgerRowsPerPage) || 1}`;
+    }
+
+    // Pagination Methods
+    window.prevLedgerPage = function() {
+        if (ledgerCurrentPage > 1) {
+            ledgerCurrentPage--;
+            renderLedgerTable();
+        }
+    }
+    
+    window.nextLedgerPage = function() {
+        if (ledgerCurrentPage < Math.ceil(filteredLedger.length / ledgerRowsPerPage)) {
+            ledgerCurrentPage++;
+            renderLedgerTable();
         }
     }
 
@@ -446,12 +631,6 @@
             btn.innerText = 'Save Updated Cost';
         }
     }
-
-    document.addEventListener("DOMContentLoaded", () => {
-        checkAuth();
-        resetSidebarTimer();
-        fetchVendors();
-    });
 
     // ==========================================
     // AUTO-LOGOUT AFTER 30 MINUTES OF INACTIVITY
