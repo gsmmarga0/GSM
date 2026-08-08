@@ -1257,60 +1257,38 @@
         if(btnNext) btnNext.disabled = (currentPage === maxPage);
     }
 
+    // UPDATED REVERT TO REPAIR COMPLETED LOGIC (Ensures total ledger cleanup)
     window.revertToRepairCompleted = async function(id, jobNo, paymentMode, amount, mobile, targetStatus) {
         if (!confirm(`Are you sure you want to revert Job No: ${jobNo} back to '${targetStatus}'?\n\nThis will DELETE any final delivery records and remove the related Cash, UPI, and Credit entries from the ledgers.`)) return;
 
         try {
             const searchString = `%${jobNo}%`;
 
-            if (paymentMode === 'Cash') {
-                await supabaseClient.from('cashbook_entries').delete().ilike('description', searchString);
-            } else if (paymentMode === 'UPI') {
-                await supabaseClient.from('upi_entries').delete().ilike('description', searchString);
-            } else if (paymentMode === 'Credit') {
-                const { data: custData } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', mobile).single();
-                if (custData) {
-                    let newBal = (parseFloat(custData.credit_balance) || 0) - amount;
-                    if (newBal < 0) newBal = 0;
-                    await supabaseClient.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
+            // 1. Purge from Cashbook universally
+            await supabaseClient.from('cashbook_entries').delete().ilike('description', searchString);
+            
+            // 2. Purge from UPI book universally
+            await supabaseClient.from('upi_entries').delete().ilike('description', searchString);
+            
+            // 3. Safely revert Customer Credits by querying the exact credit records
+            const { data: credits } = await supabaseClient.from('customer_credits').select('*').eq('job_no', jobNo);
+            if (credits && credits.length > 0) {
+                for (let c of credits) {
+                    if (c.type === 'Given') {
+                        // Fetch the exact customer linked to this specific credit entry
+                        const { data: custData } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', c.mobile).single();
+                        if (custData) {
+                            let newBal = (parseFloat(custData.credit_balance) || 0) - parseFloat(c.amount);
+                            if (newBal < 0) newBal = 0;
+                            await supabaseClient.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
+                        }
+                    }
                 }
+                // Delete the credit records after restoring balances
                 await supabaseClient.from('customer_credits').delete().eq('job_no', jobNo);
-            } else if (paymentMode === 'Split') {
-                await supabaseClient.from('cashbook_entries').delete().ilike('description', searchString);
-                await supabaseClient.from('upi_entries').delete().ilike('description', searchString);
-                const { data: credits } = await supabaseClient.from('customer_credits').select('*').eq('job_no', jobNo);
-                if (credits && credits.length > 0) {
-                    for (let c of credits) {
-                        if (c.type === 'Given') {
-                            const { data: custData } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', c.mobile).single();
-                            if (custData) {
-                                let newBal = (parseFloat(custData.credit_balance) || 0) - parseFloat(c.amount);
-                                if (newBal < 0) newBal = 0;
-                                await supabaseClient.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
-                            }
-                        }
-                    }
-                    await supabaseClient.from('customer_credits').delete().eq('job_no', jobNo);
-                }
-            } else {
-                await supabaseClient.from('cashbook_entries').delete().ilike('description', searchString);
-                await supabaseClient.from('upi_entries').delete().ilike('description', searchString);
-                const { data: credits } = await supabaseClient.from('customer_credits').select('*').eq('job_no', jobNo);
-                if (credits && credits.length > 0) {
-                    for (let c of credits) {
-                        if (c.type === 'Given') {
-                            const { data: custData } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', c.mobile).single();
-                            if (custData) {
-                                let newBal = (parseFloat(custData.credit_balance) || 0) - parseFloat(c.amount);
-                                if (newBal < 0) newBal = 0;
-                                await supabaseClient.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
-                            }
-                        }
-                    }
-                    await supabaseClient.from('customer_credits').delete().eq('job_no', jobNo);
-                }
             }
 
+            // 4. Update the Order Status back to the target state
             const { error } = await supabaseClient.from('repairOrders').update({
                 status: targetStatus,
                 paymentMethod: null,
