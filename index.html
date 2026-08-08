@@ -1714,15 +1714,34 @@
         }
     }
 
+    // MODIFIED toggleForm function handles the complete visual reset and cleanup
     window.toggleForm = async function() {
         const form = document.getElementById('orderFormCard');
         if (form.style.display === 'block') { 
+            // CLOSE FORM - CLEAR EVERYTHING
             form.style.display = 'none'; 
+            
+            // Clear Customer Select Inputs
+            document.getElementById('custSearchInput').value = '';
+            document.getElementById('selectedCustName').value = '';
+            document.getElementById('selectedCustMobile').value = '';
+            
+            // Clear Create Customer Inputs
+            document.getElementById('newCustName').value = '';
+            document.getElementById('newCustMobile').value = '';
+            document.getElementById('altContactNo').value = '';
+            
+            // Uncheck bulk checkbox and call toggleBulkMode to reset visibility
             document.getElementById('bulkEntryCheckbox').checked = false;
             toggleBulkMode(); 
+            
+            // DESTROY all ghost rows so they don't persist next time
+            document.getElementById('deviceEntriesContainer').innerHTML = ''; 
         } else { 
+            // OPEN FORM - INITIALIZE FRESH STATE
             form.style.display = 'block'; 
             
+            // Ensure there is exactly 1 fresh row injected when opening
             const container = document.getElementById('deviceEntriesContainer');
             if (container.querySelectorAll('.device-entry-row').length === 0) {
                 addDeviceRow(true);
@@ -1733,6 +1752,7 @@
         }
     }
 
+    // MODIFIED saveOrder - Removed manual clearing as toggleForm() handles it reliably now
     window.saveOrder = async function() {
         const btn = document.getElementById('btnSaveOrder');
         if (btn.disabled) return;
@@ -1825,15 +1845,7 @@
                 }
             }
 
-            document.getElementById('custSearchInput').value = ''; 
-            document.getElementById('selectedCustName').value = ''; 
-            document.getElementById('selectedCustMobile').value = ''; 
-            document.getElementById('newCustName').value = ''; 
-            document.getElementById('newCustMobile').value = ''; 
-            document.getElementById('altContactNo').value = '';
-            
-            document.getElementById('bulkEntryCheckbox').checked = false;
-            
+            // Let toggleForm() handle the entire form visual cleanup automatically
             toggleForm(); 
             switchTab('Pending'); 
             fetchOrders();
