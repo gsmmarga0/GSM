@@ -27,6 +27,7 @@
         .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; border: 1px solid var(--border-color); background: white; transition: 0.2s;}
         .btn-primary { background: black; color: white; border: none; }
         .btn-primary:hover { opacity: 0.8; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .layout-grid { display: grid; grid-template-columns: 300px 1fr; gap: 20px; padding: 20px 30px; height: calc(100vh - 90px); box-sizing: border-box; }
         
@@ -42,10 +43,12 @@
 
         .ledger-wrapper { flex: 1; overflow-y: auto; background: white; }
         table { width: 100%; border-collapse: collapse; }
-        th { position: sticky; top: 0; background: #f9fafb; padding: 12px 20px; text-align: left; font-size: 0.85rem; color: #6b7280; border-bottom: 1px solid var(--border-color); }
+        th { position: sticky; top: 0; background: #f9fafb; padding: 12px 20px; text-align: left; font-size: 0.85rem; color: #6b7280; border-bottom: 1px solid var(--border-color); z-index: 10;}
         td { padding: 12px 20px; border-bottom: 1px solid #f3f4f6; font-size: 0.9rem; color: #374151; }
         .text-red { color: #ef4444; font-weight: bold; }
         .text-green { color: #10b981; font-weight: bold; }
+        .edit-icon { cursor: pointer; color: #9ca3af; margin-left: 8px; font-size: 1rem; transition: 0.2s; }
+        .edit-icon:hover { color: #2563eb; transform: scale(1.1); }
 
         .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 20px; border-bottom: 1px solid var(--border-color); background: #f9fafb;}
         .stat-box { background: white; border: 1px solid var(--border-color); border-radius: 6px; padding: 15px; }
@@ -160,6 +163,27 @@
     </div>
 </div>
 
+<!-- Modal: Edit Part Cost -->
+<div class="modal-overlay" id="editCostModal">
+    <div class="modal">
+        <h2>Edit Part Cost</h2>
+        <p style="font-size: 0.8rem; color: #6b7280; margin-top: -10px; margin-bottom: 15px;">Update the vendor billing amount for this specific job.</p>
+        
+        <div class="form-group">
+            <label>Job Number</label>
+            <input type="text" id="ecJobNo" readonly style="background:#f3f4f6; color:#6b7280; cursor:not-allowed; font-weight:bold;">
+        </div>
+        <div class="form-group">
+            <label>Part Cost (₹)</label>
+            <input type="number" id="ecCost" placeholder="0">
+        </div>
+        <div class="modal-actions">
+            <button class="btn" onclick="closeEditCostModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="savePartCost()" id="btnSaveCost">Save Updated Cost</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
     const supabaseClient = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
@@ -242,11 +266,11 @@
         wrapper.innerHTML = '<div class="empty-state">Loading ledger...</div>';
 
         try {
-            // 1. Fetch Purchases (from repairOrders where vendor_name matches and cost > 0)
+            // 1. Fetch Purchases (ALL jobs where vendor is selected and not deleted)
             const { data: purchases } = await supabaseClient.from('repairOrders')
-                .select('jobNo, date, vendor_cost, problemDesc')
+                .select('id, jobNo, date, vendor_cost, problemDesc')
                 .eq('vendor_name', v.name)
-                .gt('vendor_cost', 0)
+                .eq('is_deleted', false) // Protects against deleted items affecting balance
                 .in('status', ['Repair Completed', 'Goods Delivered', 'Delivered (Refused)']);
 
             // 2. Fetch Payments (from Cashbook)
@@ -270,8 +294,9 @@
 
             if (purchases) {
                 purchases.forEach(p => {
-                    totalPurchased += parseFloat(p.vendor_cost);
-                    ledger.push({ date: p.date, ref: `Job: ${p.jobNo} - ${p.problemDesc}`, type: 'Purchase', amount: parseFloat(p.vendor_cost) });
+                    let cost = parseFloat(p.vendor_cost) || 0;
+                    totalPurchased += cost;
+                    ledger.push({ id: p.id, jobNo: p.jobNo, date: p.date, ref: `Job: ${p.jobNo} - ${p.problemDesc}`, type: 'Purchase', amount: cost });
                 });
             }
             if (cashPayments) {
@@ -304,11 +329,17 @@
             ledger.forEach(item => {
                 const colorClass = item.type === 'Purchase' ? 'text-red' : 'text-green';
                 const sign = item.type === 'Purchase' ? '+' : '-';
+                
+                // Add edit button ONLY for Purchases so you can update Job Part costs dynamically
+                let editBtnHtml = item.type === 'Purchase' 
+                    ? `<span class="edit-icon" title="Edit Vendor Part Cost" onclick="openEditCostModal('${item.id}', '${item.jobNo}', ${item.amount})">✏️</span>` 
+                    : '';
+
                 html += `<tr>
                     <td>${item.date}</td>
                     <td>${item.ref}</td>
-                    <td><span style="background:#f3f4f6; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:bold;">${item.type}</span></td>
-                    <td style="text-align:right;" class="${colorClass}">${sign}${item.amount.toFixed(2)}</td>
+                    <td><span style="background:#f3f4f6; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:bold; color: #4b5563;">${item.type}</span></td>
+                    <td style="text-align:right;" class="${colorClass}">${sign}${item.amount.toFixed(2)} ${editBtnHtml}</td>
                 </tr>`;
             });
             html += `</tbody></table>`;
@@ -320,6 +351,7 @@
         }
     }
 
+    // Modal: Edit Vendor Info
     function openVendorModal() {
         document.getElementById('modalTitle').innerText = 'Add New Vendor';
         document.getElementById('vId').value = '';
@@ -371,6 +403,47 @@
             if(id && activeVendor) selectVendor({id, name: newName, phone});
         } catch (e) {
             alert("Error saving vendor: " + e.message);
+        }
+    }
+
+    // Modal: Edit Part Cost Details
+    let editCostOrderId = null;
+
+    window.openEditCostModal = function(id, jobNo, amount) {
+        editCostOrderId = id;
+        document.getElementById('ecJobNo').value = jobNo;
+        document.getElementById('ecCost').value = amount || '';
+        document.getElementById('editCostModal').style.display = 'flex';
+    }
+
+    window.closeEditCostModal = function() { 
+        document.getElementById('editCostModal').style.display = 'none'; 
+    }
+
+    window.savePartCost = async function() {
+        const newCost = parseFloat(document.getElementById('ecCost').value) || 0;
+        const btn = document.getElementById('btnSaveCost');
+        
+        btn.disabled = true;
+        btn.innerText = 'Saving...';
+        
+        try {
+            const { error } = await supabaseClient.from('repairOrders').update({ 
+                vendor_cost: newCost 
+            }).eq('id', editCostOrderId);
+            
+            if (error) throw error;
+            
+            closeEditCostModal();
+            
+            // Re-render ledger to reflect updated cost
+            if (activeVendor) selectVendor(activeVendor); 
+
+        } catch (e) {
+            alert("Error updating part cost: " + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = 'Save Updated Cost';
         }
     }
 
