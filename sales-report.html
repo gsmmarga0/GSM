@@ -34,9 +34,18 @@
 
         .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg-color); z-index: 10; padding: 20px 30px;}
         
+        /* New Header Design */
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;}
-        .header h1 { margin: 0; font-size: 1.5rem; color: #111827; }
-        .header-right { font-size: 0.85rem; color: #6b7280; font-weight: 500; }
+        .header-left h1 { margin: 0; font-size: 1.8rem; font-weight: bold; color: #111827;}
+        .header-left p { margin: 5px 0 0 0; color: #6b7280; font-size: 0.95rem; }
+        .header-right { display: flex; gap: 12px; align-items: center; }
+
+        .segmented-control { display: inline-flex; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; background: white; }
+        .seg-btn { padding: 8px 16px; border: none; background: white; cursor: pointer; font-weight: 600; color: #374151; font-size: 0.9rem; transition: 0.2s; }
+        .seg-btn.active { background: black; color: white; }
+        
+        .date-input { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; font-family: inherit; font-size: 0.9rem; color: #111827; font-weight: 500;}
+        .date-input:focus { border-color: #9ca3af; }
 
         /* Card Styles */
         .card { background: white; border-radius: 8px; border: 1px solid var(--border-color); padding: 25px; margin-bottom: 25px; }
@@ -83,17 +92,12 @@
         .btn:hover { background: #f9fafb; }
         .btn-text { background: transparent; border: none; color: #4b5563; font-size: 0.85rem; cursor: pointer; font-weight: 600; transition: 0.2s;}
         .btn-text:hover { color: black; }
-        .btn-primary { background: black; color: white; border: none; padding: 10px 20px; }
+        .btn-primary { background: black; color: white; border: none; padding: 10px 20px; font-size: 0.95rem; }
         .btn-primary:hover { opacity: 0.8; }
         .btn-success { background: #10b981; color: white; border: none; }
         .btn-success:hover { background: #059669; }
         .btn-icon { background: transparent; border: 1px solid #ef4444; color: #ef4444; border-radius: 4px; padding: 6px; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center;}
         .btn-icon:hover { background: #fef2f2; }
-
-        /* Filter Section */
-        .filter-row { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
-        .filter-row .form-group { flex-direction: row; align-items: center; gap: 10px; margin: 0; }
-        .filter-row .form-group label { margin: 0; }
 
         /* Table Styles */
         .table-card { padding: 0; overflow-x: auto; margin-bottom: 50px;}
@@ -124,6 +128,7 @@
     <a href="cashbook.html" class="nav-item">💵 Cashbook</a>
     
     <!-- Admin Only Links -->
+    <a href="vendors.html" class="nav-item admin-only" style="display: none;">🚚 Vendors</a>
     <a href="sales-report.html" class="nav-item active admin-only" style="display: none;">📊 Sales Report</a>
     <a href="expenses.html" class="nav-item admin-only" style="display: none;">💸 Expenses</a>
     <a href="profit.html" class="nav-item admin-only" style="display: none;">📈 Profit Book</a>
@@ -145,8 +150,35 @@
 
 <div class="main-content">
     <div class="header">
-        <h1>Sales Report</h1>
-        <div class="header-right" id="currentDateDisplay"></div>
+        <div class="header-left">
+            <h1 id="pageTitle">Sales Report</h1>
+            <p id="pageSubtitle">Track all sales transactions</p>
+        </div>
+        <div class="header-right">
+            <div class="segmented-control" id="viewModeToggle">
+                <button class="seg-btn active" id="btnMonthly" onclick="setViewMode('monthly')">Monthly</button>
+                <button class="seg-btn" id="btnPeriod" onclick="setViewMode('period')">Period</button>
+            </div>
+            
+            <div id="monthlyInputContainer">
+                <input type="month" id="monthSelector" class="date-input" onchange="fetchSalesReports()">
+            </div>
+            
+            <div id="periodInputContainer" style="display: none; align-items: center; gap: 8px;">
+                <input type="date" id="dateFrom" class="date-input" onchange="fetchSalesReports()">
+                <span style="color: #6b7280; font-size: 0.9rem; font-weight: 500;">to</span>
+                <input type="date" id="dateTo" class="date-input" onchange="fetchSalesReports()">
+            </div>
+
+            <button class="btn" onclick="fetchSalesReports()" style="padding: 8px 12px; font-size: 0.9rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 2v6h6"/></svg>
+                Refresh
+            </button>
+            
+            <button class="btn btn-success" style="padding: 8px 12px; font-size: 0.9rem;" onclick="exportToExcel()">
+                📊 Export
+            </button>
+        </div>
     </div>
 
     <!-- New Entry Card (Collapsible) -->
@@ -188,28 +220,6 @@
             <div style="margin-top: 25px;">
                 <button class="btn btn-primary" onclick="saveSalesEntry()">+ Save Entry</button>
             </div>
-        </div>
-    </div>
-
-    <!-- Filter Card -->
-    <div class="card">
-        <div class="card-header">FILTER & EXPORT</div>
-        <div class="filter-row">
-            <div class="form-group">
-                <label>From:</label>
-                <input type="date" id="filterFromDate">
-            </div>
-            <div class="form-group">
-                <label>To:</label>
-                <input type="date" id="filterToDate">
-            </div>
-            <button class="btn btn-primary" style="padding: 8px 16px;" onclick="fetchSalesReports()">🔍 Apply Filter</button>
-            <button class="btn" style="padding: 8px 16px;" onclick="clearFilter()">Clear</button>
-            
-            <!-- Export to Excel Button -->
-            <button class="btn btn-success" style="padding: 8px 16px; margin-left: auto;" onclick="exportToExcel()">
-                📊 Export to Excel
-            </button>
         </div>
     </div>
 
@@ -292,14 +302,35 @@
         chevron.classList.toggle('up');
     }
 
-    // Date formatting for Header & Inputs
-    const dateOptions = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
-    document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString('en-GB', dateOptions) + " | GSM SOLUTION";
-    
     function setCurrentDateTime() {
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         document.getElementById('entryDate').value = now.toISOString().slice(0, 16);
+    }
+
+    // UI Toggle for Header View Mode
+    window.setViewMode = function(mode) {
+        document.getElementById('btnMonthly').classList.remove('active');
+        document.getElementById('btnPeriod').classList.remove('active');
+        
+        if(mode === 'monthly') {
+            document.getElementById('btnMonthly').classList.add('active');
+            document.getElementById('monthlyInputContainer').style.display = 'block';
+            document.getElementById('periodInputContainer').style.display = 'none';
+        } else {
+            document.getElementById('btnPeriod').classList.add('active');
+            document.getElementById('monthlyInputContainer').style.display = 'none';
+            document.getElementById('periodInputContainer').style.display = 'flex';
+        }
+        
+        fetchSalesReports();
+    }
+
+    function formatDateForSubtitle(dateStr) {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        if (isNaN(d)) return dateStr;
+        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     }
 
     // Auto-generate next Sale ID (Locked field)
@@ -456,12 +487,36 @@
         }
     }
 
-    // Fetch Table Data
+    // Fetch Table Data based on active Header mode
     window.fetchSalesReports = async function() {
-        const fromDate = document.getElementById('filterFromDate').value;
-        const toDate = document.getElementById('filterToDate').value;
+        const mode = document.getElementById('btnMonthly').classList.contains('active') ? 'monthly' : 'period';
+        let fromDate = null;
+        let toDate = null;
+        let subtitleText = 'Track all sales transactions';
 
-        // Ensure top entries always appear on top
+        if (mode === 'monthly') {
+            const monthVal = document.getElementById('monthSelector').value; // YYYY-MM format
+            if (monthVal) {
+                const year = monthVal.split('-')[0];
+                const month = monthVal.split('-')[1];
+                const lastDay = new Date(year, month, 0).getDate();
+                
+                fromDate = `${monthVal}-01`;
+                toDate = `${monthVal}-${String(lastDay).padStart(2, '0')}`;
+                
+                const d = new Date(`${monthVal}-01`);
+                subtitleText = `Sales for ${d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric'})}`;
+            }
+        } else {
+            fromDate = document.getElementById('dateFrom').value;
+            toDate = document.getElementById('dateTo').value;
+            
+            if (fromDate && toDate) subtitleText = `Sales from ${formatDateForSubtitle(fromDate)} to ${formatDateForSubtitle(toDate)}`;
+            else subtitleText = `Sales for custom period`;
+        }
+
+        document.getElementById('pageSubtitle').innerText = subtitleText;
+
         let query = supabaseClient.from('sales_reports')
             .select('*')
             .order('date', { ascending: false })
@@ -489,7 +544,8 @@
         tableBody.innerHTML = '';
 
         if(allSalesData.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: gray;">No entries found.</td></tr>`;
+            const colSpan = isAdmin ? 8 : 7;
+            tableBody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align: center; color: gray;">No entries found.</td></tr>`;
             document.getElementById('pageInfo').innerText = `Page 1 of 1`;
             return;
         }
@@ -552,12 +608,6 @@
             currentPage++; 
             renderTable(); 
         } 
-    }
-
-    window.clearFilter = function() {
-        document.getElementById('filterFromDate').value = '';
-        document.getElementById('filterToDate').value = '';
-        fetchSalesReports();
     }
 
     // Export to Excel (CSV Format)
@@ -639,9 +689,22 @@
     // Initialize App
     document.addEventListener("DOMContentLoaded", async () => {
         await checkAuth();
+        
+        // Setup Default Dates
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        
+        document.getElementById('monthSelector').value = `${yyyy}-${mm}`;
+        document.getElementById('dateFrom').value = `${yyyy}-${mm}-01`;
+        document.getElementById('dateTo').value = `${yyyy}-${mm}-${dd}`;
+        
         initializeRows();
         setCurrentDateTime();
         await generateNextSaleID();
+        
+        // Fetch Reports with default monthly view
         fetchSalesReports();
         resetSidebarTimer();
     });
