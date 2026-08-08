@@ -501,6 +501,72 @@
     let currentPage = 1;
     const rowsPerPage = 10;
 
+    // --- REALTIME NOTIFICATIONS START ---
+    // Create a broadcast channel for pushing alerts
+    const notificationChannel = supabaseClient.channel('dashboard-alerts');
+
+    notificationChannel
+      .on('broadcast', { event: 'job-alert' }, (payload) => {
+         playAlertSoundAndSpeech(payload.payload.jobNo);
+      })
+      .subscribe();
+
+    window.triggerAlert = async function(jobNo) {
+        const btn = event.currentTarget;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = "🔔 Sending...";
+        btn.disabled = true;
+
+        await notificationChannel.send({
+            type: 'broadcast',
+            event: 'job-alert',
+            payload: { jobNo: jobNo }
+        });
+
+        setTimeout(() => {
+            btn.innerHTML = "✅ Sent!";
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }, 2000);
+        }, 300);
+    };
+
+    window.playAlertSoundAndSpeech = function(jobNo) {
+        try {
+            // 1. Play a beep sound (Using Web Audio API)
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(600, audioCtx.currentTime); // Frequency
+            gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime); // Volume
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.3); // Play for 300ms
+
+            // 2. Text to Speech
+            setTimeout(() => {
+                // Extract just the number from GSM05 -> 5 for natural reading
+                const justNumber = jobNo.replace(/\D/g, ''); 
+                const text = `Job number ${justNumber}, kindly update the status, customer is waiting.`;
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 0.9; // Slightly slower for clarity
+                utterance.pitch = 1;
+                window.speechSynthesis.speak(utterance);
+            }, 400); // speak right after beep finishes
+
+        } catch(e) {
+            console.error("Audio playback failed. Interaction with document is required before auto-play is allowed.", e);
+        }
+    };
+    // --- REALTIME NOTIFICATIONS END ---
+
     function getLocalDateString() {
         const now = new Date();
         const year = now.getFullYear();
@@ -1079,7 +1145,6 @@
         }
     }
 
-    // FUNCTION ADDED: Delete Order logic
     window.deleteOrder = async function(id, jobNo, status) {
         if (!confirm(`Are you sure you want to permanently delete Job No: ${jobNo}?\n\nThis will move the order to the Deleted Orders tab.`)) return;
 
@@ -1177,7 +1242,11 @@
                 displayAmount = order.approxEstimate || 0;
                 displayAmountHtml = `<span style="font-weight:bold; color:#059669;">₹${displayAmount}</span>`;
                 displayAmountHtml += `<span onclick="promptUpdateEstimate('${orderIdSafe}', 'Pending', ${displayAmount})">${pencilSVG}</span>`;
-                actionHtml = `<button class="btn-bill" onclick="openBillingModal('${orderIdSafe}', '${jobNoSafe}', '${customerNameSafe}', '${contactNoSafe}')">Repair Complete ✓</button>`;
+                actionHtml = `
+                    <button class="btn-bill" onclick="openBillingModal('${orderIdSafe}', '${jobNoSafe}', '${customerNameSafe}', '${contactNoSafe}')">Repair Complete ✓</button>
+                    <br>
+                    <button class="btn" style="font-size: 0.75rem; background:#fde047; color:#854d0e; padding: 6px 12px; margin-top: 6px; border:none; font-weight:bold; cursor:pointer;" onclick="triggerAlert('${jobNoSafe}')">🔔 Alert Staff</button>
+                `;
             
             } else if (order.status === 'Repair Completed') {
                 displayAmount = order.estimateAmount || order.approxEstimate || 0;
