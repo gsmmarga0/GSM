@@ -1079,6 +1079,26 @@
         }
     }
 
+    // FUNCTION ADDED: Delete Order logic
+    window.deleteOrder = async function(id, jobNo, status) {
+        if (!confirm(`Are you sure you want to permanently delete Job No: ${jobNo}?\n\nThis will move the order to the Deleted Orders tab.`)) return;
+
+        try {
+            const { error: deleteErr } = await supabaseClient.from('repairOrders').update({
+                is_deleted: true
+            }).eq('id', id);
+
+            if (deleteErr) throw new Error(deleteErr.message);
+
+            alert(`Order ${jobNo} has been deleted and moved to the Deleted Orders tab.`);
+            fetchOrders(); 
+
+        } catch (err) {
+            console.error("Delete Order Failed:", err);
+            alert("Error deleting order: " + err.message);
+        }
+    }
+
     function renderOrdersTable() {
         const tbody = document.getElementById('ordersTableBody');
         tbody.innerHTML = '';
@@ -1257,39 +1277,46 @@
         if(btnNext) btnNext.disabled = (currentPage === maxPage);
     }
 
-    // UPDATED REVERT TO REPAIR COMPLETED LOGIC (Ensures total ledger cleanup)
     window.revertToRepairCompleted = async function(id, jobNo, paymentMode, amount, mobile, targetStatus) {
         if (!confirm(`Are you sure you want to revert Job No: ${jobNo} back to '${targetStatus}'?\n\nThis will DELETE any final delivery records and remove the related Cash, UPI, and Credit entries from the ledgers.`)) return;
 
         try {
             const searchString = `%${jobNo}%`;
 
-            // 1. Purge from Cashbook universally
-            await supabaseClient.from('cashbook_entries').delete().ilike('description', searchString);
+            // 1. Purge from Cashbook
+            const { error: errCash } = await supabaseClient.from('cashbook_entries').delete().ilike('description', searchString);
+            if (errCash) throw new Error("Cashbook Delete Error: " + errCash.message);
             
-            // 2. Purge from UPI book universally
-            await supabaseClient.from('upi_entries').delete().ilike('description', searchString);
+            // 2. Purge from UPI book
+            const { error: errUpi } = await supabaseClient.from('upi_entries').delete().ilike('description', searchString);
+            if (errUpi) throw new Error("UPI Delete Error: " + errUpi.message);
             
-            // 3. Safely revert Customer Credits by querying the exact credit records
-            const { data: credits } = await supabaseClient.from('customer_credits').select('*').eq('job_no', jobNo);
+            // 3. Safely revert Customer Credits
+            const { data: credits, error: errFetchCredits } = await supabaseClient.from('customer_credits').select('*').eq('job_no', jobNo);
+            if (errFetchCredits) throw new Error("Credit Fetch Error: " + errFetchCredits.message);
+
             if (credits && credits.length > 0) {
                 for (let c of credits) {
                     if (c.type === 'Given') {
-                        // Fetch the exact customer linked to this specific credit entry
-                        const { data: custData } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', c.mobile).single();
+                        const { data: custData, error: errCust } = await supabaseClient.from('customers').select('id, credit_balance').eq('mobile', c.mobile).single();
+                        if (errCust) throw new Error("Customer Lookup Error: " + errCust.message);
+
                         if (custData) {
                             let newBal = (parseFloat(custData.credit_balance) || 0) - parseFloat(c.amount);
                             if (newBal < 0) newBal = 0;
-                            await supabaseClient.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
+                            
+                            const { error: errUpdateCust } = await supabaseClient.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
+                            if (errUpdateCust) throw new Error("Customer Balance Update Error: " + errUpdateCust.message);
                         }
                     }
                 }
-                // Delete the credit records after restoring balances
-                await supabaseClient.from('customer_credits').delete().eq('job_no', jobNo);
+                // Delete the credit records
+                const { error: errDeleteCredit } = await supabaseClient.from('customer_credits').delete().eq('job_no', jobNo);
+                if (errDeleteCredit) throw new Error("Credit Delete Error: " + errDeleteCredit.message);
             }
 
-            // 4. Update the Order Status back to the target state
-            const { error } = await supabaseClient.from('repairOrders').update({
+            // 4. Update the Order Status
+            const { error: errOrder } = await supabaseClient.from('repairOrders').update({
                 status: targetStatus,
                 paymentMethod: null,
                 finalAmount: null,
@@ -1298,13 +1325,14 @@
                 gd_timestamp: null
             }).eq('id', id);
 
-            if (error) throw error;
+            if (errOrder) throw new Error("Order Update Error: " + errOrder.message);
 
             alert(`Order reverted to '${targetStatus}' successfully!`);
             fetchOrders();
 
         } catch (err) {
-            alert("Error reverting order: " + err.message);
+            console.error("Revert Process Failed:", err);
+            alert("Error reverting order: " + err.message + "\n\n(If this says RLS policy violation, you need to add DELETE policies in Supabase.)");
         }
     }
 
@@ -1692,34 +1720,26 @@
         }
     }
 
-    // MODIFIED toggleForm function handles the complete visual reset and cleanup
     window.toggleForm = async function() {
         const form = document.getElementById('orderFormCard');
         if (form.style.display === 'block') { 
-            // CLOSE FORM - CLEAR EVERYTHING
             form.style.display = 'none'; 
             
-            // Clear Customer Select Inputs
             document.getElementById('custSearchInput').value = '';
             document.getElementById('selectedCustName').value = '';
             document.getElementById('selectedCustMobile').value = '';
             
-            // Clear Create Customer Inputs
             document.getElementById('newCustName').value = '';
             document.getElementById('newCustMobile').value = '';
             document.getElementById('altContactNo').value = '';
             
-            // Uncheck bulk checkbox and call toggleBulkMode to reset visibility
             document.getElementById('bulkEntryCheckbox').checked = false;
             toggleBulkMode(); 
             
-            // DESTROY all ghost rows so they don't persist next time
             document.getElementById('deviceEntriesContainer').innerHTML = ''; 
         } else { 
-            // OPEN FORM - INITIALIZE FRESH STATE
             form.style.display = 'block'; 
             
-            // Ensure there is exactly 1 fresh row injected when opening
             const container = document.getElementById('deviceEntriesContainer');
             if (container.querySelectorAll('.device-entry-row').length === 0) {
                 addDeviceRow(true);
@@ -1730,7 +1750,6 @@
         }
     }
 
-    // MODIFIED saveOrder - Removed manual clearing as toggleForm() handles it reliably now
     window.saveOrder = async function() {
         const btn = document.getElementById('btnSaveOrder');
         if (btn.disabled) return;
@@ -1823,7 +1842,6 @@
                 }
             }
 
-            // Let toggleForm() handle the entire form visual cleanup automatically
             toggleForm(); 
             switchTab('Pending'); 
             fetchOrders();
