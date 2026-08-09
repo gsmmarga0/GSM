@@ -39,6 +39,7 @@
         .btn { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; border: 1px solid var(--border-color); background: white; font-size: 0.85rem;}
         .btn-primary { background: black; color: white; border: none; }
         .btn-success { background: #10b981; color: white; border: none; }
+        .btn-danger { background: #ef4444; color: white; border: none; }
 
         .form-card { background: white; border-radius: 8px; border: 1px solid var(--border-color); padding: 15px 25px; margin-bottom: 25px; }
         .form-title { font-size: 0.95rem; font-weight: bold; color: #111827; text-transform: uppercase;}
@@ -49,10 +50,9 @@
         .form-group { display: flex; flex-direction: column; }
         .form-group label { font-size: 0.8rem; color: #4b5563; margin-bottom: 5px; font-weight: 600;}
         .form-group label span { color: red; }
-        .form-group input, .form-group select { padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem; outline: none;}
+        .form-group input, .form-group select { padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem; outline: none; box-sizing: border-box;}
         .form-group.col-span-2 { grid-column: span 2; }
 
-        /* Searchable Customer Dropdown Styles */
         .search-select-container { position: relative; width: 100%; }
         .search-select-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem; outline: none; box-sizing: border-box; background: white url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%239ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>') no-repeat right 10px center; padding-right: 35px; }
         .search-select-input:focus { border-color: #9ca3af; }
@@ -60,11 +60,10 @@
         .search-select-list li { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f3f4f6; font-size: 0.85rem; color: #374151; }
         .search-select-list li:last-child { border-bottom: none; }
         .search-select-list li:hover { background: #f3f4f6; color: #111827; }
-        .search-select-list li.no-results { color: #9ca3af; cursor: default; text-align: center; font-style: italic; }
-        .search-select-list li.no-results:hover { background: white; }
 
         .items-section { border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-bottom: 20px; background: #fdfdfd;}
-        .item-row { display: grid; grid-template-columns: 2fr 1fr auto; gap: 10px; margin-bottom: 10px; align-items: end;}
+        .item-row { display: grid; grid-template-columns: 3fr 1.5fr 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 10px; align-items: center;}
+        .item-headers { display: grid; grid-template-columns: 3fr 1.5fr 1fr 1fr 1fr auto; gap: 10px; font-size: 0.75rem; font-weight: bold; color: #6b7280; padding-bottom: 8px; margin-bottom: 10px; border-bottom: 1px solid var(--border-color);}
         
         .segmented-input { display: flex; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; background: #fdfdfd; width: fit-content; }
         .segmented-input .pay-btn { border: none; background: transparent; color: #4b5563; padding: 10px 20px; cursor: pointer; font-weight: bold; font-size: 0.85rem; transition: background 0.2s, color 0.2s; border-right: 1px solid var(--border-color);}
@@ -86,19 +85,12 @@
         .btn-icon { background: transparent; border: 1px solid var(--border-color); padding: 6px 10px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 0.8rem;}
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; align-items: flex-start; justify-content: center; z-index: 100; overflow: hidden;}
-        .modal-overlay-center { align-items: center; }
-        
         .modal-box { background: white; width: 100%; height: 100vh; display: flex; flex-direction: column; transform: translateY(-100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         .modal-overlay.active .modal-box { transform: translateY(0); }
-        
-        .modal-box-small { background: white; padding: 25px; border-radius: 8px; width: 450px; max-width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.1); transform: none; height: auto;}
-
         .modal-header { padding: 25px 40px; background: #f9fafb; border-bottom: 1px solid var(--border-color); font-size: 1.4rem; font-weight: bold; display: flex; justify-content: space-between; align-items: center;}
         .close-btn { cursor: pointer; font-size: 2rem; border: none; background: transparent; color: #6b7280; line-height: 1; }
-        .close-btn:hover { color: #111827; }
         .modal-content { padding: 30px 40px; overflow-y: auto; flex: 1; max-width: 1400px; margin: 0 auto; width: 100%; box-sizing: border-box;}
         
-        .catalog-add-row { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 20px;}
         .dropdown-form { display: none; background: #fdfdfd; border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 15px; margin-bottom: 30px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .catalog-table { width: 100%; font-size: 0.95rem; border-collapse: collapse; }
         .catalog-table th { background: #f3f4f6; padding: 15px; border-bottom: 1px solid var(--border-color); font-weight: bold; text-align: left;}
@@ -142,34 +134,31 @@
                 <h1>Accessories</h1>
             </div>
             <div class="header-right">
-                <!-- Global Job Search -->
                 <div style="position: relative;">
                     <input type="text" id="globalJobSearch" class="search-bar search-bar-global" placeholder="🔍 Track Any Job No..." oninput="debounceGlobalSearch()">
                     <ul id="globalSearchResults"></ul>
                 </div>
-                <!-- Local Invoice Search -->
                 <input type="text" id="searchInput" class="search-bar" placeholder="🔍 Search Invoices..." onkeyup="applyFilters()">
                 <button class="btn btn-primary" onclick="openCatalogModal()" style="font-size: 1rem; padding: 10px 20px;">📦 Manage Catalog ➔</button>
             </div>
         </div>
 
         <!-- Entry Form (Collapsible) -->
-        <div class="form-card">
+        <div class="form-card" id="invoiceFormCard">
             <div class="form-title toggle-header" onclick="toggleInvoiceForm()">
-                <span>NEW INVOICE ENTRY</span>
+                <span id="invoiceFormTitle">NEW INVOICE ENTRY</span>
                 <span id="invoiceFormArrow">▼</span>
             </div>
             
             <div id="invoiceFormBody" style="display: none; padding-top: 20px; margin-top: 5px; border-top: 1px solid var(--border-color);">
                 <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
-                    <!-- CUSTOMER SELECTION / CREATION MODULE -->
+                    <!-- CUSTOMER SELECTION -->
                     <div class="form-group" style="grid-column: 1 / -1; border-bottom: 1px solid #e5e7eb; padding-bottom: 15px; margin-bottom: 5px;">
                         <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <label style="margin:0;">Customer Details <span>*</span></label>
                             <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.75rem; background: #f9fafb;" onclick="toggleCustomerMode()" id="btnToggleCustomerMode">➕ Create New Customer</button>
                         </div>
                         
-                        <!-- Search Mode -->
                         <div id="customerSelectMode">
                             <div class="search-select-container">
                                 <input type="text" id="custSearchInput" class="search-select-input" placeholder="🔍 Search existing customer by Name or Mobile..." oninput="filterCustomerSearch()" onfocus="openCustomerDropdown()">
@@ -180,7 +169,6 @@
                             </div>
                         </div>
 
-                        <!-- Create Mode -->
                         <div id="customerCreateMode" style="display: none; gap: 15px;">
                             <input type="text" id="newCustName" placeholder="Full Name" style="flex:1; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline:none;">
                             <div style="position: relative; flex: 1;">
@@ -195,11 +183,24 @@
 
                     <!-- Dynamic Items Box -->
                     <div class="items-section" style="grid-column: 1 / -1;">
-                        <div style="font-size: 0.8rem; font-weight: bold; color: #4b5563; margin-bottom: 15px;">ITEMS INCLUDED IN INVOICE</div>
-                        <div id="invoiceItemsContainer">
-                            <!-- JavaScript will inject item rows here -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <div style="font-size: 0.85rem; font-weight: bold; color: #4b5563;">ITEMS INCLUDED IN INVOICE</div>
+                            <div style="font-size: 1.1rem; font-weight: bold;">Grand Total: <span id="uiGrandTotal">₹0.00</span></div>
                         </div>
-                        <button class="btn" style="font-size: 0.8rem;" onclick="addInvoiceItem()">+ Add Another Item</button>
+                        
+                        <div class="item-headers">
+                            <div>Item Name <span>*</span></div>
+                            <div>Serial (Opt)</div>
+                            <div>Price (₹) <span>*</span></div>
+                            <div>Qty <span>*</span></div>
+                            <div>Total (₹)</div>
+                            <div></div>
+                        </div>
+
+                        <div id="invoiceItemsContainer">
+                            <!-- JS injected rows -->
+                        </div>
+                        <button class="btn" style="font-size: 0.8rem; margin-top:10px;" onclick="addInvoiceItem()">+ Add Item Row</button>
                     </div>
 
                     <div class="form-group col-span-2">
@@ -215,14 +216,16 @@
                         <input type="date" id="inv-date">
                     </div>
                     
-                    <!-- Dynamic UPI Notes -->
                     <div class="form-group col-span-2" id="upiNotesGroup" style="display: none;">
                         <label style="color: #4b5563;">UPI Account Details / Notes</label>
                         <input type="text" id="upiAccountNotes" placeholder="e.g. Paid to GPay / Personal Acct" style="width: 100%;">
                     </div>
                 </div>
 
-                <button class="btn btn-primary" id="btnSubmitInv" style="margin-top: 10px;" onclick="saveInvoice()">+ Create Invoice</button>
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button class="btn btn-primary" id="btnSubmitInv" onclick="saveInvoice()">+ Create Invoice</button>
+                    <button class="btn btn-danger" id="btnCancelEdit" style="display:none;" onclick="cancelEditMode()">Cancel Edit</button>
+                </div>
             </div>
         </div>
 
@@ -250,48 +253,12 @@
                         <th style="text-align:center;">Action</th>
                     </tr>
                 </thead>
-                <tbody id="invoicesTableBody">
-                    <!-- Data injected via JS -->
-                </tbody>
+                <tbody id="invoicesTableBody"></tbody>
             </table>
             <div class="pagination">
                 <button class="btn" onclick="prevPage()">Previous</button>
                 <span id="pageInfo" style="font-size:0.9rem; font-weight:bold;">Page 1</span>
                 <button class="btn" onclick="nextPage()">Next</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Payment Mode Modal (Admin Only) -->
-    <div class="modal-overlay modal-overlay-center" id="modalEditPaymentMode">
-        <div class="modal-box-small">
-            <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
-                Change Payment Mode
-                <button class="close-btn" onclick="closeEditModeModal()" style="font-size: 1.5rem; margin-top:-5px;">×</button>
-            </div>
-            <p id="editModeSubtitle" style="font-size: 0.85rem; color: #2563eb; font-weight: bold; margin-top: 0; margin-bottom: 20px;">Invoice #AC00 | Customer | ₹0</p>
-
-            <div class="form-group">
-                <label>New Payment Mode</label>
-                <select id="editPaymentModeSelect" class="search-bar" style="width: 100%; padding: 10px; font-weight: bold; background:#fdfdfd;" onchange="toggleEditModeUpiNote()">
-                    <option value="Cash">Cash</option>
-                    <option value="UPI">UPI</option>
-                    <option value="Credit">Credit</option>
-                </select>
-            </div>
-
-            <div class="form-group" id="editPaymentUpiSection" style="display: none; margin-bottom: 15px;">
-                <label style="font-weight:bold; color: #374151; font-size: 0.9rem;">UPI Account Received In (Note)</label>
-                <input type="text" id="editPaymentUpiNote" class="search-bar" style="width: 100%; padding: 10px; background:#fdfdfd;" placeholder="e.g. Shop QR, Personal GPay, etc.">
-            </div>
-
-            <p style="font-size: 0.75rem; color: #ef4444; margin-top: 5px; line-height: 1.4;">
-                * This will rewrite the Cashbook & UPI book and update customer credit automatically.
-            </p>
-
-            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
-                <button class="btn" onclick="closeEditModeModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="savePaymentModeChange()">Save Changes</button>
             </div>
         </div>
     </div>
@@ -306,21 +273,17 @@
                 <button class="close-btn" onclick="closeCatalogModal()" title="Close Catalog">&times;</button>
             </div>
             <div class="modal-content">
-                
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px;">
-                    <!-- CHANGED: Removed the 'admin-only' class and default inline style that kept it hidden -->
                     <button class="btn btn-primary" onclick="toggleCatalogForm()" style="font-size: 1rem; padding: 10px 20px;">+ Add New Item ▼</button>
-                    
                     <div style="position: relative;">
                         <input type="text" id="catalogSearchInput" placeholder="🔍 Search catalog..." oninput="filterCatalogTable()" style="padding: 10px 15px 10px 35px; border: 1px solid var(--border-color); border-radius: 6px; width: 300px; font-size: 0.95rem; outline: none;">
-                        <svg style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #9ca3af;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                     </div>
                 </div>
                 
                 <div class="dropdown-form" id="catalogFormDropdown">
                     <h3 style="margin-top: 0; color: #111827;" id="catalogFormTitle">Add New Item</h3>
                     <input type="hidden" id="cat-id">
-                    <div class="catalog-add-row">
+                    <div class="catalog-add-row" style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 20px;">
                         <div class="form-group">
                             <label>Item Description <span>*</span></label>
                             <input type="text" id="cat-desc" placeholder="e.g. iPhone 15 Cover">
@@ -355,6 +318,7 @@
         const db = window.supabase.createClient('https://cvxjvicpefggheiojmtn.supabase.co', 'sb_publishable_46BLTTeZbmnQLCKGqqidAg_YwJCm75I');
         const ADMIN_EMAIL = 'faizan@gsmsolution.com'; 
         let currentUserEmail = '';
+        let currentUserDisplay = '';
         let isAdmin = false;
         
         let catalogItems = [];
@@ -364,39 +328,32 @@
         let isNewCustomerMode = false;
         let selectedPaymentMode = 'Cash';
         
+        // Edit Mode Tracking
+        let editingInvoice = null;
+
         let currentPage = 1;
         const rowsPerPage = 10;
 
         // ==========================================
-        // DYNAMIC AUTHENTICATION CHECK
+        // AUTHENTICATION
         // ==========================================
         async function checkAuth() {
             const { data: sessionData } = await db.auth.getSession();
-            
-            if (!sessionData.session) {
-                window.location.href = 'login.html';
-                return;
-            }
+            if (!sessionData.session) { window.location.href = 'login.html'; return; }
 
             currentUserEmail = sessionData.session.user.email;
-            let displayEmail = currentUserEmail.split('@')[0];
-            document.getElementById('userNameDisplay').innerText = displayEmail.charAt(0).toUpperCase() + displayEmail.slice(1);
+            currentUserDisplay = currentUserEmail.split('@')[0];
+            currentUserDisplay = currentUserDisplay.charAt(0).toUpperCase() + currentUserDisplay.slice(1);
+            document.getElementById('userNameDisplay').innerText = currentUserDisplay;
 
             const isMasterAdmin = currentUserEmail.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase();
-            
-            const { data: profile } = await db
-                .from('user_profiles')
-                .select('role')
-                .eq('email', currentUserEmail)
-                .single();
-            
+            const { data: profile } = await db.from('user_profiles').select('role').eq('email', currentUserEmail).single();
             const isDbAdmin = profile && profile.role === 'Admin';
 
             if (isMasterAdmin || isDbAdmin) {
                 isAdmin = true;
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
             }
-            // NO KICK LOGIC because Accessories is a shared page.
         }
 
         window.logOut = async () => { await db.auth.signOut(); window.location.href = 'login.html'; }
@@ -417,76 +374,6 @@
             else clearSidebarTimer();
         }
 
-        // --- Global Job Search Logic ---
-        let globalSearchTimeout = null;
-        window.debounceGlobalSearch = function() {
-            clearTimeout(globalSearchTimeout);
-            globalSearchTimeout = setTimeout(performGlobalSearch, 400);
-        }
-
-        async function performGlobalSearch() {
-            const input = document.getElementById('globalJobSearch').value.trim();
-            const resultsList = document.getElementById('globalSearchResults');
-            if (input.length < 3) { resultsList.style.display = 'none'; return; }
-
-            const { data, error } = await db.from('repairOrders').select('jobNo, status, customerName').ilike('jobNo', `%${input}%`).limit(5);
-
-            if (error) { console.error(error); return; }
-
-            resultsList.innerHTML = '';
-            if (data.length === 0) {
-                resultsList.innerHTML = `<li class="no-results">No jobs found matching "${input}"</li>`;
-            } else {
-                data.forEach(job => {
-                    let statusColor = '#3b82f6'; 
-                    if (job.status === 'Repair Completed') statusColor = '#f59e0b'; 
-                    else if (job.status === 'Repair Refusal') statusColor = '#ef4444'; 
-                    else if (job.status === 'Goods Delivered' || job.status === 'Delivered (Refused)') statusColor = '#10b981'; 
-
-                    resultsList.innerHTML += `
-                        <li>
-                            <div>
-                                <strong style="color: #111827;">${job.jobNo}</strong> <span style="color: #9ca3af; font-size: 0.75rem;">(${job.customerName})</span><br>
-                                <span style="font-size: 0.7rem; font-weight: bold; color: ${statusColor};">${job.status}</span>
-                            </div>
-                            <button class="btn" style="padding: 6px 10px; font-size: 0.7rem; color: #374151;" onclick="window.location.href='index.html?search=${job.jobNo}'">Go ➔</button>
-                        </li>
-                    `;
-                });
-            }
-            resultsList.style.display = 'block';
-        }
-
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('#globalJobSearch') && !e.target.closest('#globalSearchResults')) {
-                const list = document.getElementById('globalSearchResults');
-                if (list) list.style.display = 'none';
-            }
-            if (!e.target.closest('#customerSelectMode')) {
-                const list = document.getElementById('customerDropdownList');
-                if (list) list.style.display = 'none';
-            }
-            if (!e.target.closest('#customerCreateMode')) {
-                const newCustList = document.getElementById('newCustMobileDropdown');
-                if (newCustList) newCustList.style.display = 'none';
-            }
-            if (!e.target.closest('.search-select-container')) {
-                document.querySelectorAll('.items-section .search-select-list').forEach(list => list.style.display = 'none');
-            }
-        });
-
-        window.toggleInvoiceForm = function() {
-            const body = document.getElementById('invoiceFormBody');
-            const arrow = document.getElementById('invoiceFormArrow');
-            if (body.style.display === 'none') {
-                body.style.display = 'block';
-                arrow.innerText = '▲';
-            } else {
-                body.style.display = 'none';
-                arrow.innerText = '▼';
-            }
-        }
-
         document.addEventListener("DOMContentLoaded", async () => {
             await checkAuth(); 
             resetSidebarTimer();
@@ -498,7 +385,9 @@
             addInvoiceItem(); 
         });
 
-        // --- Customer Database Logic ---
+        // ==========================================
+        // CUSTOMER LOGIC
+        // ==========================================
         async function fetchCustomers() {
             const { data } = await db.from('customers').select('*').order('name', { ascending: true });
             if (data) {
@@ -519,10 +408,8 @@
             const filter = document.getElementById('custSearchInput').value.toLowerCase();
             const list = document.getElementById('customerDropdownList');
             const items = list.getElementsByTagName('li');
-            
             for (let i = 0; i < items.length; i++) {
-                if (items[i].innerText.toLowerCase().includes(filter)) items[i].style.display = 'block';
-                else items[i].style.display = 'none';
+                items[i].style.display = items[i].innerText.toLowerCase().includes(filter) ? 'block' : 'none';
             }
         }
 
@@ -546,36 +433,27 @@
 
             if (input.length >= 3) {
                 const matches = customersList.filter(c => c.mobile && c.mobile.includes(input));
-
                 if (matches.length > 0) {
                     matches.forEach(c => {
                         list.innerHTML += `<li onclick="autoSelectFromNew(${c.id}, '${c.name.replace(/'/g, "\\'")}', '${c.mobile}')"><span style="color:#2563eb; font-weight:bold;">Existing:</span> ${c.name} - ${c.mobile}</li>`;
                     });
                     list.style.display = 'block';
-                } else {
-                    list.style.display = 'none';
-                }
-            } else {
-                list.style.display = 'none';
-            }
+                } else list.style.display = 'none';
+            } else list.style.display = 'none';
         }
 
         window.autoSelectFromNew = function(id, name, mobile) {
             document.getElementById('newCustMobileDropdown').style.display = 'none';
-            
             document.getElementById('newCustName').value = '';
             document.getElementById('newCustMobile').value = '';
-            
-            isNewCustomerMode = false;
-            document.getElementById('customerSelectMode').style.display = 'block';
-            document.getElementById('customerCreateMode').style.display = 'none';
-            document.getElementById('btnToggleCustomerMode').innerText = '➕ Create New Customer';
-            
+            toggleCustomerMode();
             selectCustomer(id, name, mobile);
         }
 
-        window.toggleCustomerMode = function() {
-            isNewCustomerMode = !isNewCustomerMode;
+        window.toggleCustomerMode = function(forceMode = null) {
+            if(forceMode !== null) isNewCustomerMode = forceMode;
+            else isNewCustomerMode = !isNewCustomerMode;
+
             if (isNewCustomerMode) {
                 document.getElementById('customerSelectMode').style.display = 'none';
                 document.getElementById('customerCreateMode').style.display = 'flex';
@@ -592,137 +470,361 @@
             document.getElementById('payCash').className = mode === 'Cash' ? 'pay-btn active' : 'pay-btn';
             document.getElementById('payUPI').className = mode === 'UPI' ? 'pay-btn active' : 'pay-btn';
             document.getElementById('payCredit').className = mode === 'Credit' ? 'pay-btn credit active' : 'pay-btn credit';
-            
-            if (mode === 'UPI') {
-                document.getElementById('upiNotesGroup').style.display = 'flex';
-            } else {
-                document.getElementById('upiNotesGroup').style.display = 'none';
-            }
+            document.getElementById('upiNotesGroup').style.display = mode === 'UPI' ? 'flex' : 'none';
         }
 
-        window.openSearchDropdown = function(input) {
-            document.querySelectorAll('.items-section .search-select-list').forEach(list => list.style.display = 'none');
-            const list = input.nextElementSibling.nextElementSibling;
-            list.style.display = 'block';
-            filterSearchItems(input); 
-        }
-
-        window.onSearchInputChange = function(input) {
-            const hiddenInput = input.nextElementSibling;
-            hiddenInput.value = ''; 
-            filterSearchItems(input);
-        }
-
-        window.filterSearchItems = function(input) {
-            const filter = input.value.toLowerCase();
-            const list = input.nextElementSibling.nextElementSibling;
-            const items = list.getElementsByTagName('li');
-            let hasVisible = false;
-            
-            for (let i = 0; i < items.length; i++) {
-                if (items[i].classList.contains('no-results')) continue;
-                const text = items[i].innerText.toLowerCase();
-                if (text.includes(filter)) {
-                    items[i].style.display = 'block';
-                    hasVisible = true;
-                } else {
-                    items[i].style.display = 'none';
-                }
-            }
-            
-            let noRes = list.querySelector('.no-results');
-            if (!hasVisible) {
-                if (!noRes) list.insertAdjacentHTML('beforeend', '<li class="no-results">No items found in catalog</li>');
-                else noRes.style.display = 'block';
-            } else if (noRes) {
-                noRes.style.display = 'none';
-            }
-        }
-
-        window.selectSearchItem = function(li) {
-            const container = li.closest('.search-select-container');
-            const input = container.querySelector('.search-select-input');
-            const hidden = container.querySelector('.item-select');
-            
-            input.value = li.innerText; 
-            hidden.value = li.getAttribute('data-id'); 
-            li.parentElement.style.display = 'none'; 
-        }
-
-        window.addInvoiceItem = function() {
+        // ==========================================
+        // DYNAMIC ITEMS LOGIC
+        // ==========================================
+        window.addInvoiceItem = function(existingData = null) {
             const container = document.getElementById('invoiceItemsContainer');
             const row = document.createElement('div');
             row.className = 'item-row';
             
             let listItems = '';
             catalogItems.forEach(item => {
-                listItems += `<li data-id="${item.id}" onclick="selectSearchItem(this)">${item.description} (₹${item.amount})</li>`;
+                listItems += `<li data-id="${item.id}" data-price="${item.amount}" onclick="selectSearchItem(this)">${item.description} (₹${item.amount})</li>`;
             });
 
+            // Default values
+            let desc = existingData ? existingData.desc : '';
+            let catId = existingData ? (existingData.catalogId || '') : '';
+            let serial = existingData ? (existingData.serial || '') : '';
+            let price = existingData ? (existingData.price || existingData.total_amt) : ''; // fallback for old data without qty
+            let qty = existingData ? (existingData.qty || 1) : 1;
+            let total = existingData ? existingData.total_amt : '';
+
             row.innerHTML = `
-                <div class="form-group">
-                    <label>Search & Select Item <span>*</span></label>
-                    <div class="search-select-container">
-                        <input type="text" class="search-select-input" placeholder="Search item..." oninput="onSearchInputChange(this)" onfocus="openSearchDropdown(this)">
-                        <input type="hidden" class="item-select">
-                        <ul class="search-select-list">${listItems}</ul>
-                    </div>
+                <div class="search-select-container">
+                    <input type="text" class="search-select-input item-desc-input" placeholder="Type or select item..." value="${desc}" oninput="onItemSearchChange(this)" onfocus="openItemDropdown(this)">
+                    <input type="hidden" class="item-catalog-id" value="${catId}">
+                    <ul class="search-select-list">${listItems}</ul>
                 </div>
-                <div class="form-group">
-                    <label>Serial (Optional)</label>
-                    <input type="text" class="item-serial" placeholder="Serial no.">
-                </div>
-                <button class="btn-icon" style="color:red; height: 38px; margin-bottom:2px;" onclick="this.parentElement.remove()" title="Remove Item">🗑️</button>
+                <input type="text" class="item-serial" placeholder="Serial no." value="${serial}" style="width:100%; padding: 10px; border: 1px solid var(--border-color); border-radius:6px;">
+                <input type="number" class="item-price" placeholder="0" value="${price}" oninput="calculateRowTotal(this)" style="width:100%; padding: 10px; border: 1px solid var(--border-color); border-radius:6px;">
+                <input type="number" class="item-qty" placeholder="1" value="${qty}" min="1" oninput="calculateRowTotal(this)" style="width:100%; padding: 10px; border: 1px solid var(--border-color); border-radius:6px;">
+                <input type="number" class="item-total" placeholder="0" value="${total}" readonly style="width:100%; padding: 10px; border: 1px solid var(--border-color); border-radius:6px; background:#f3f4f6; font-weight:bold;">
+                <button class="btn-icon" style="color:red; height: 38px;" onclick="removeInvoiceItem(this)" title="Remove Item">🗑️</button>
             `;
             container.appendChild(row);
+            updateUI_GrandTotal();
         }
 
-        // --- Catalog Modal Logic ---
-        window.openCatalogModal = () => {
-            const overlay = document.getElementById('catalogModal');
-            document.getElementById('catalogSearchInput').value = ''; 
-            window.filterCatalogTable(); 
-            overlay.style.display = 'flex';
-            setTimeout(() => overlay.classList.add('active'), 10);
-        };
-        
-        window.closeCatalogModal = () => {
-            const overlay = document.getElementById('catalogModal');
-            overlay.classList.remove('active');
-            
-            setTimeout(() => {
-                overlay.style.display = 'none';
-                
-                document.querySelectorAll('.items-section .search-select-container').forEach(container => {
-                    const hidden = container.querySelector('.item-select');
-                    const input = container.querySelector('.search-select-input');
-                    const list = container.querySelector('.search-select-list');
-                    const currentVal = hidden.value;
-                    
-                    let listItems = '';
-                    let foundText = '';
-                    catalogItems.forEach(item => {
-                        listItems += `<li data-id="${item.id}" onclick="selectSearchItem(this)">${item.description} (₹${item.amount})</li>`;
-                        if (item.id == currentVal) foundText = `${item.description} (₹${item.amount})`;
-                    });
-                    
-                    list.innerHTML = listItems;
-                    
-                    if (currentVal && foundText) input.value = foundText; 
-                    else { input.value = ''; hidden.value = ''; }
-                });
-            }, 400);
-        };
+        window.removeInvoiceItem = function(btn) {
+            btn.parentElement.remove();
+            updateUI_GrandTotal();
+        }
 
-        window.filterCatalogTable = function() {
-            const filter = document.getElementById('catalogSearchInput').value.toLowerCase();
-            const rows = document.getElementById('catalogTableBody').getElementsByTagName('tr');
-            for (let i = 0; i < rows.length; i++) {
-                if (rows[i].innerText.toLowerCase().includes(filter)) rows[i].style.display = '';
-                else rows[i].style.display = 'none';
+        window.openItemDropdown = function(input) {
+            document.querySelectorAll('.items-section .search-select-list').forEach(list => list.style.display = 'none');
+            const list = input.nextElementSibling.nextElementSibling;
+            list.style.display = 'block';
+            filterItemDropdown(input); 
+        }
+
+        window.onItemSearchChange = function(input) {
+            input.nextElementSibling.value = ''; // clear catalog ID because they are free-typing
+            filterItemDropdown(input);
+        }
+
+        window.filterItemDropdown = function(input) {
+            const filter = input.value.toLowerCase();
+            const list = input.nextElementSibling.nextElementSibling;
+            const items = list.getElementsByTagName('li');
+            
+            for (let i = 0; i < items.length; i++) {
+                const text = items[i].innerText.toLowerCase();
+                items[i].style.display = text.includes(filter) ? 'block' : 'none';
             }
         }
 
+        window.selectSearchItem = function(li) {
+            const container = li.closest('.search-select-container');
+            const input = container.querySelector('.search-select-input');
+            const hidden = container.querySelector('.item-catalog-id');
+            const row = container.closest('.item-row');
+            
+            input.value = li.innerText.split(' (₹')[0]; // Set name without price string
+            hidden.value = li.getAttribute('data-id'); 
+            
+            const priceInput = row.querySelector('.item-price');
+            priceInput.value = li.getAttribute('data-price');
+            
+            li.parentElement.style.display = 'none'; 
+            calculateRowTotal(priceInput);
+        }
+
+        window.calculateRowTotal = function(element) {
+            const row = element.closest('.item-row');
+            const price = parseFloat(row.querySelector('.item-price').value) || 0;
+            const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+            const totalInput = row.querySelector('.item-total');
+            
+            totalInput.value = (price * qty).toFixed(2);
+            updateUI_GrandTotal();
+        }
+
+        window.updateUI_GrandTotal = function() {
+            let total = 0;
+            document.querySelectorAll('.item-total').forEach(input => {
+                total += parseFloat(input.value) || 0;
+            });
+            document.getElementById('uiGrandTotal').innerText = `₹${total.toFixed(2)}`;
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.search-select-container')) {
+                document.querySelectorAll('.search-select-list').forEach(list => list.style.display = 'none');
+            }
+        });
+
+        // ==========================================
+        // INVOICE SAVING & AUTO-CATALOG
+        // ==========================================
+        window.toggleInvoiceForm = function(forceOpen = false) {
+            const body = document.getElementById('invoiceFormBody');
+            const arrow = document.getElementById('invoiceFormArrow');
+            if (forceOpen || body.style.display === 'none') {
+                body.style.display = 'block';
+                arrow.innerText = '▲';
+            } else {
+                body.style.display = 'none';
+                arrow.innerText = '▼';
+            }
+        }
+
+        window.saveInvoice = async function() {
+            let custId = null, custName = '', contactNo = '';
+
+            if (isNewCustomerMode) {
+                custName = document.getElementById('newCustName').value.trim();
+                let rawContact = document.getElementById('newCustMobile').value.trim();
+                if(!custName || rawContact.length !== 10) return alert("Please provide a valid Customer Name and a 10-digit Mobile Number.");
+                contactNo = '+91' + rawContact;
+
+                const { data: existing } = await db.from('customers').select('id').eq('mobile', contactNo).limit(1);
+                if (existing && existing.length > 0) return alert("Customer mobile already exists. Please use 'Search Existing Database'.");
+                
+                const { data: newCustData, error: custErr } = await db.from('customers').insert([{ name: custName, mobile: contactNo, credit_balance: 0 }]).select();
+                if(custErr) return alert("Error creating customer: " + custErr.message);
+                
+                custId = newCustData[0].id;
+                await fetchCustomers(); 
+            } else {
+                custId = document.getElementById('selectedCustId').value;
+                custName = document.getElementById('selectedCustName').value;
+                contactNo = document.getElementById('selectedCustMobile').value;
+                if(!custId || !custName || !contactNo) return alert("Please select a customer.");
+            }
+
+            const date = document.getElementById('inv-date').value;
+            const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            
+            const itemRows = document.querySelectorAll('.item-row');
+            const itemsArray = [];
+            let grandTotal = 0;
+            let needsCatalogRefresh = false;
+
+            // Process Items
+            for (let row of itemRows) {
+                let desc = row.querySelector('.item-desc-input').value.trim();
+                let catId = row.querySelector('.item-catalog-id').value;
+                let serial = row.querySelector('.item-serial').value.trim();
+                let price = parseFloat(row.querySelector('.item-price').value) || 0;
+                let qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                let total = parseFloat(row.querySelector('.item-total').value) || 0;
+
+                if (desc && qty > 0) {
+                    // Auto Add to Catalog Logic
+                    if (!catId) {
+                        let finalName = desc;
+                        let counter = 1;
+                        // Avoid duplicates: if name exists, append counter
+                        while(catalogItems.some(c => c.description.toLowerCase() === finalName.toLowerCase())) {
+                            finalName = `${desc} ${counter}`;
+                            counter++;
+                        }
+                        
+                        const {data: newCat, error} = await db.from('accessories_catalog').insert([{description: finalName, amount: price}]).select();
+                        if (!error && newCat && newCat.length > 0) {
+                            catId = newCat[0].id;
+                            desc = finalName; // update name for invoice JSON
+                            catalogItems.push(newCat[0]); // update cache locally
+                            needsCatalogRefresh = true;
+                        }
+                    }
+
+                    grandTotal += total;
+                    itemsArray.push({ desc, catalogId: catId, serial, price, qty, total_amt: total });
+                }
+            }
+
+            if (itemsArray.length === 0) return alert("Please add at least one valid item with a price and quantity.");
+            if (needsCatalogRefresh) fetchCatalog(); // background refresh UI catalog table
+
+            // Build Invoice Core Payload
+            const summaryDesc = itemsArray.map(i => i.desc).join(', ');
+            let invoiceNoStr = '';
+
+            if (editingInvoice) {
+                invoiceNoStr = editingInvoice.invoice_no;
+            } else {
+                const { data: latest } = await db.from('accessories_invoices').select('invoice_no').ilike('invoice_no', 'AC%').order('created_at', { ascending: false }).limit(1);
+                let nextNum = 1;
+                if (latest && latest.length > 0 && latest[0].invoice_no) {
+                    nextNum = parseInt(latest[0].invoice_no.replace(/\D/g, '')) + 1;
+                }
+                invoiceNoStr = `AC${String(nextNum).padStart(2, '0')}`;
+            }
+
+            const invData = {
+                invoice_no: invoiceNoStr,
+                invoice_type: 'Regular',
+                customer_name: custName,
+                mobile: contactNo,
+                item_desc: summaryDesc, 
+                items: itemsArray,      
+                serial_no: itemsArray[0].serial,
+                total_amt: grandTotal,
+                payment_mode: selectedPaymentMode,
+                date: date,
+                // Time and CreatedBy only set on creation, not edit
+            };
+            if (!editingInvoice) {
+                invData.time = time;
+                invData.created_by = currentUserDisplay; 
+            }
+
+            let currentDate = new Date().toISOString().split('T')[0];
+            let currentTime = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' });
+            let baseDesc = `Acc. Invoice #${invoiceNoStr} - ${custName} (${selectedPaymentMode})`;
+
+            try {
+                // --- ROLLBACK LOGIC IF EDITING ---
+                if (editingInvoice) {
+                    const searchStr = `Acc. Invoice #${invoiceNoStr}%`;
+                    await db.from('cashbook_entries').delete().ilike('description', searchStr);
+                    await db.from('upi_entries').delete().ilike('description', searchStr);
+                    
+                    if (editingInvoice.payment_mode === 'Credit') {
+                        const { data: oldCust } = await db.from('customers').select('id, credit_balance').eq('mobile', editingInvoice.mobile).single();
+                        if (oldCust) {
+                            let newBal = (oldCust.credit_balance || 0) - editingInvoice.total_amt;
+                            await db.from('customers').update({ credit_balance: Math.max(0, newBal) }).eq('id', oldCust.id);
+                        }
+                    }
+                    
+                    const { error: updErr } = await db.from('accessories_invoices').update(invData).eq('id', editingInvoice.id);
+                    if (updErr) throw updErr;
+                } else {
+                    const { error: insErr } = await db.from('accessories_invoices').insert([invData]);
+                    if (insErr) throw insErr;
+                }
+
+                // --- APPLY LEDGER ENTRIES ---
+                if (selectedPaymentMode === 'Credit') {
+                    const { data: custData } = await db.from('customers').select('credit_balance').eq('id', custId).single();
+                    if (custData) {
+                        await db.from('customers').update({ credit_balance: (custData.credit_balance || 0) + grandTotal }).eq('id', custId);
+                    }
+                } else if (selectedPaymentMode === 'Cash') {
+                    await db.from('cashbook_entries').insert([{
+                        description: baseDesc, category: 'Accessories', amount: grandTotal, type: 'in', 
+                        date: date, created_by: currentUserDisplay
+                    }]);
+                } else if (selectedPaymentMode === 'UPI') {
+                    let upiNotes = document.getElementById('upiAccountNotes').value.trim();
+                    let finalDesc = upiNotes ? `${baseDesc} - Acct: ${upiNotes}` : baseDesc;
+                    await db.from('upi_entries').insert([{
+                        date: date, time: currentTime, description: finalDesc, category: 'Accessories', 
+                        upi_amount: grandTotal, card_amount: 0, created_by: currentUserDisplay
+                    }]);
+                }
+
+                alert(`Invoice ${editingInvoice ? 'Updated' : 'Saved'} successfully!`);
+                
+            } catch (err) {
+                alert("Operation failed: " + err.message);
+            }
+
+            // Cleanup
+            cancelEditMode();
+            fetchInvoices();
+        }
+
+        // ==========================================
+        // EDIT MODE HANDLING
+        // ==========================================
+        window.openFullEditMode = function(invBase64) {
+            const inv = JSON.parse(decodeURIComponent(escape(window.atob(invBase64))));
+            editingInvoice = inv;
+            
+            document.getElementById('invoiceFormTitle').innerText = `✏️ EDIT INVOICE #${inv.invoice_no}`;
+            document.getElementById('btnSubmitInv').innerText = '💾 Update Invoice';
+            document.getElementById('btnSubmitInv').className = 'btn btn-success';
+            document.getElementById('btnCancelEdit').style.display = 'inline-block';
+            document.getElementById('invoiceFormCard').style.border = '2px solid #2563eb';
+            
+            toggleCustomerMode(false); // Search mode
+            const custMatch = customersList.find(c => c.mobile === inv.mobile);
+            if(custMatch) selectCustomer(custMatch.id, custMatch.name, custMatch.mobile);
+            else document.getElementById('custSearchInput').value = `${inv.customer_name} (${inv.mobile})`; // fallback
+            
+            document.getElementById('inv-date').value = inv.date;
+            setPaymentMode(inv.payment_mode);
+            
+            document.getElementById('invoiceItemsContainer').innerHTML = '';
+            
+            let itemsToLoad = inv.items;
+            // Handle legacy data structure gracefully
+            if (!itemsToLoad || itemsToLoad.length === 0) {
+                itemsToLoad = [{ desc: inv.item_desc, price: inv.total_amt, qty: 1, total_amt: inv.total_amt, serial: inv.serial_no }];
+            }
+            itemsToLoad.forEach(item => addInvoiceItem(item));
+            
+            toggleInvoiceForm(true);
+            document.getElementById('invoiceFormCard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        window.cancelEditMode = function() {
+            editingInvoice = null;
+            document.getElementById('invoiceFormTitle').innerText = `NEW INVOICE ENTRY`;
+            document.getElementById('btnSubmitInv').innerText = '+ Create Invoice';
+            document.getElementById('btnSubmitInv').className = 'btn btn-primary';
+            document.getElementById('btnCancelEdit').style.display = 'none';
+            document.getElementById('invoiceFormCard').style.border = '1px solid var(--border-color)';
+            
+            document.getElementById('custSearchInput').value = '';
+            document.getElementById('newCustName').value = '';
+            document.getElementById('newCustMobile').value = '';
+            document.getElementById('invoiceItemsContainer').innerHTML = '';
+            document.getElementById('upiAccountNotes').value = '';
+            addInvoiceItem(); 
+            setPaymentMode('Cash');
+            document.getElementById('inv-date').value = new Date().toISOString().split('T')[0];
+            toggleInvoiceForm(); // close
+        }
+
+        // ==========================================
+        // DATA RENDERING (CATALOG & INVOICES)
+        // ==========================================
+        window.fetchCatalog = async function() {
+            const { data } = await db.from('accessories_catalog').select('*').order('created_at', { ascending: false });
+            catalogItems = data || [];
+            
+            const tbody = document.getElementById('catalogTableBody');
+            tbody.innerHTML = '';
+            catalogItems.forEach(item => {
+                let adminBtns = isAdmin 
+                    ? `<button onclick="editCatalogItem(${item.id})" style="color:#2563eb; background:none; border:none; cursor:pointer; margin-right: 15px;">✏️</button>
+                       <button onclick="deleteCatalogItem(${item.id})" style="color:red; background:none; border:none; cursor:pointer;">🗑️</button>`
+                    : `-`;
+                tbody.innerHTML += `<tr><td style="font-weight:bold;">${item.description}</td><td>₹${item.amount.toFixed(2)}</td><td style="text-align: center;">${adminBtns}</td></tr>`;
+            });
+            filterCatalogTable();
+        }
+
+        // ... catalog save/edit/delete logic remains same ...
         window.toggleCatalogForm = function() {
             const form = document.getElementById('catalogFormDropdown');
             if (form.style.display === 'none' || form.style.display === '') {
@@ -732,100 +834,51 @@
                     document.getElementById('cat-desc').value = '';
                     document.getElementById('cat-amount').value = '';
                 }
-            } else {
-                form.style.display = 'none';
-                document.getElementById('cat-id').value = ''; 
-            }
+            } else { form.style.display = 'none'; document.getElementById('cat-id').value = ''; }
         }
-
         window.editCatalogItem = function(id) {
             const item = catalogItems.find(c => c.id === id);
-            if(!item) return;
-            
-            document.getElementById('catalogFormTitle').innerText = 'Edit Item: ' + item.description;
+            document.getElementById('catalogFormTitle').innerText = 'Edit: ' + item.description;
             document.getElementById('cat-id').value = item.id;
             document.getElementById('cat-desc').value = item.description;
             document.getElementById('cat-amount').value = item.amount;
-            
             document.getElementById('catalogFormDropdown').style.display = 'block';
-            document.getElementById('catalogFormDropdown').scrollIntoView({ behavior: 'smooth' });
         }
-
-        window.fetchCatalog = async function() {
-            const { data, error } = await db.from('accessories_catalog').select('*').order('created_at', { ascending: false });
-            if (error) return console.error(error);
-            catalogItems = data || [];
-
-            const tbody = document.getElementById('catalogTableBody');
-            tbody.innerHTML = '';
-            catalogItems.forEach(item => {
-                // Edit and Delete remain protected by admin check
-                let adminActions = isAdmin 
-                    ? `<button onclick="editCatalogItem(${item.id})" style="color:#2563eb; background:none; border:none; cursor:pointer; margin-right: 15px; font-size: 1.1rem;" title="Edit">✏️</button>
-                       <button onclick="deleteCatalogItem(${item.id})" style="color:red; background:none; border:none; cursor:pointer; font-size: 1.1rem;" title="Delete">🗑️</button>`
-                    : `-`;
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td style="font-weight:bold; color:#374151;">${item.description}</td>
-                        <td><strong style="font-size: 1.05rem;">₹${item.amount.toFixed(2)}</strong></td>
-                        <td style="text-align: center;">${adminActions}</td>
-                    </tr>`;
-            });
-            window.filterCatalogTable();
-        }
-
         window.saveCatalogItem = async function() {
             const id = document.getElementById('cat-id').value;
             const desc = document.getElementById('cat-desc').value.trim();
             const amt = parseFloat(document.getElementById('cat-amount').value);
-
-            if(!desc || !amt) return alert("Description and Amount are required.");
-
-            const payload = { description: desc, amount: amt };
-
-            if (id) {
-                const { error } = await db.from('accessories_catalog').update(payload).eq('id', id);
-                if(error) return alert("Error updating: " + error.message);
-            } else {
-                const { error } = await db.from('accessories_catalog').insert([payload]);
-                if(error) return alert("Error saving: " + error.message);
-            }
-            
-            document.getElementById('cat-id').value = '';
-            document.getElementById('cat-desc').value = '';
-            document.getElementById('cat-amount').value = '';
+            if(!desc || !amt) return;
+            if (id) await db.from('accessories_catalog').update({ description: desc, amount: amt }).eq('id', id);
+            else await db.from('accessories_catalog').insert([{ description: desc, amount: amt }]);
             document.getElementById('catalogFormDropdown').style.display = 'none';
             fetchCatalog();
         }
-
         window.deleteCatalogItem = async function(id) {
-            if(!confirm("Delete this catalog item?")) return;
+            if(!confirm("Delete this?")) return;
             await db.from('accessories_catalog').delete().eq('id', id);
             fetchCatalog();
         }
-
-        // --- Invoice Search & Filter Logic ---
-        window.applyFilters = function() {
-            const query = document.getElementById('searchInput').value.toLowerCase().trim();
-            if (!query) {
-                filteredInvoices = [...allInvoices];
-            } else {
-                filteredInvoices = allInvoices.filter(inv => {
-                    const descSafe = inv.item_desc || '';
-                    const combined = `${inv.invoice_no} ${inv.customer_name} ${inv.mobile} ${descSafe}`.toLowerCase();
-                    return combined.includes(query);
-                });
-            }
-            currentPage = 1;
-            renderInvoiceTable();
+        window.openCatalogModal = () => { document.getElementById('catalogModal').style.display = 'flex'; setTimeout(() => document.getElementById('catalogModal').classList.add('active'), 10); };
+        window.closeCatalogModal = () => { document.getElementById('catalogModal').classList.remove('active'); setTimeout(() => document.getElementById('catalogModal').style.display = 'none', 400); };
+        window.filterCatalogTable = function() {
+            const filter = document.getElementById('catalogSearchInput').value.toLowerCase();
+            const rows = document.getElementById('catalogTableBody').getElementsByTagName('tr');
+            for (let i = 0; i < rows.length; i++) rows[i].style.display = rows[i].innerText.toLowerCase().includes(filter) ? '' : 'none';
         }
 
         window.fetchInvoices = async function() {
-            const { data, error } = await db.from('accessories_invoices').select('*').order('created_at', { ascending: false });
-            if (error) return console.error(error);
+            const { data } = await db.from('accessories_invoices').select('*').order('created_at', { ascending: false });
             allInvoices = data || [];
             applyFilters();
+        }
+
+        window.applyFilters = function() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            if (!query) filteredInvoices = [...allInvoices];
+            else filteredInvoices = allInvoices.filter(inv => `${inv.invoice_no} ${inv.customer_name} ${inv.mobile} ${inv.item_desc}`.toLowerCase().includes(query));
+            currentPage = 1;
+            renderInvoiceTable();
         }
 
         function renderInvoiceTable() {
@@ -844,352 +897,80 @@
             paginatedItems.forEach(inv => {
                 let pillClass = inv.payment_mode === 'Cash' ? 'pill-cash' : (inv.payment_mode === 'UPI' ? 'pill-upi' : 'pill-credit');
                 
-                let actionBtns = `<button class="btn-icon" onclick='printInvoice(${JSON.stringify(inv).replace(/'/g, "&#39;")})' style="color:#374151;">📄 Bill</button>`;
+                // Safe JSON serialization for buttons
+                let invBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(inv))));
                 
+                let actionBtns = `<button class="btn-icon" onclick="printInvoice('${invBase64}')" style="color:#374151;">📄 Bill</button>`;
                 if (isAdmin) {
-                    actionBtns += `<button class="btn-icon" onclick="openEditModeModal(${inv.id}, '${inv.invoice_no}', '${inv.payment_mode}', ${inv.total_amt}, '${inv.customer_name.replace(/'/g, "\\'")}', '${inv.mobile}', '${inv.date}')" style="color:#2563eb;" title="Edit Payment">✏️</button>`;
+                    actionBtns += `<button class="btn-icon" onclick="openFullEditMode('${invBase64}')" style="color:#2563eb;" title="Edit Invoice">✏️ Edit</button>`;
                     actionBtns += `<button class="btn-icon" onclick="deleteInvoice(${inv.id}, '${inv.invoice_no}', '${inv.payment_mode}', ${inv.total_amt}, '${inv.mobile}')" style="color:red;" title="Delete">🗑️</button>`;
                 }
 
-                let summaryDesc = inv.item_desc;
-                if (inv.items && inv.items.length > 1) {
-                    summaryDesc = `${inv.items.length} items (Total: ₹${inv.total_amt})`;
-                }
+                let summaryDesc = inv.items && inv.items.length > 1 ? `${inv.items.length} items (Total: ₹${inv.total_amt})` : inv.item_desc;
 
                 tbody.innerHTML += `
                     <tr>
                         <td><strong>${inv.invoice_no}</strong></td>
                         <td style="text-transform: capitalize;">${inv.created_by || '-'}</td>
-                        <td>
-                            ${inv.date}<br>
-                            <span style="font-size: 0.8rem; color: #6b7280;">${inv.time || ''}</span>
-                        </td>
+                        <td>${inv.date}<br><span style="font-size: 0.8rem; color: #6b7280;">${inv.time || ''}</span></td>
                         <td style="font-weight:bold;">${inv.customer_name}</td>
                         <td>${inv.mobile}</td>
                         <td style="color:#4b5563;">${summaryDesc}</td>
                         <td style="font-weight:bold; color:black;">₹${inv.total_amt.toFixed(2)}</td>
                         <td><span class="pill ${pillClass}">${inv.payment_mode.toUpperCase()}</span></td>
-                        <td style="display:flex; gap:8px; justify-content:center;">
-                            ${actionBtns}
-                        </td>
+                        <td style="display:flex; gap:8px; justify-content:center;">${actionBtns}</td>
                     </tr>`;
             });
 
             document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${Math.ceil(filteredInvoices.length / rowsPerPage) || 1}`;
         }
-
         window.prevPage = function() { if (currentPage > 1) { currentPage--; renderInvoiceTable(); } }
         window.nextPage = function() { if (currentPage < Math.ceil(filteredInvoices.length / rowsPerPage)) { currentPage++; renderInvoiceTable(); } }
 
-        window.saveInvoice = async function() {
-            let custId = null;
-            let custName = '';
-            let contactNo = '';
-
-            if (isNewCustomerMode) {
-                custName = document.getElementById('newCustName').value.trim();
-                let rawContact = document.getElementById('newCustMobile').value.trim();
-                
-                if(!custName || rawContact.length !== 10) return alert("Please provide a valid Customer Name and a 10-digit Mobile Number.");
-                contactNo = '+91' + rawContact;
-
-                const { data: existing } = await db.from('customers').select('id').eq('mobile', contactNo).limit(1);
-                if (existing && existing.length > 0) {
-                    return alert("A customer with this mobile number already exists in the database. Please click 'Search Existing Database' to select them instead.");
-                }
-                
-                const { data: newCustData, error: custErr } = await db.from('customers').insert([{ name: custName, mobile: contactNo, credit_balance: 0 }]).select();
-                if(custErr) return alert("Error creating customer: " + custErr.message);
-                
-                custId = newCustData[0].id;
-                fetchCustomers(); 
-            } else {
-                custId = document.getElementById('selectedCustId').value;
-                custName = document.getElementById('selectedCustName').value;
-                contactNo = document.getElementById('selectedCustMobile').value;
-                if(!custId || !custName || !contactNo) return alert("Please select a customer from the dropdown search.");
-            }
-
-            const date = document.getElementById('inv-date').value;
-            const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-            const itemRows = document.querySelectorAll('.item-row');
-            const itemsArray = [];
-            let grandTotal = 0;
-
-            itemRows.forEach(row => {
-                const selectVal = row.querySelector('.item-select').value; 
-                const serialVal = row.querySelector('.item-serial').value.trim();
-                
-                if (selectVal) {
-                    const catalogItem = catalogItems.find(c => c.id == selectVal);
-                    if (catalogItem) {
-                        const total = parseFloat(catalogItem.amount);
-                        grandTotal += total;
-                        itemsArray.push({ desc: catalogItem.description, serial: serialVal, total_amt: total });
-                    }
-                }
-            });
-
-            if (itemsArray.length === 0) return alert("Please search and select at least one valid item from the catalog.");
-
-            const prefix = 'AC';
-            const { data: latest } = await db.from('accessories_invoices').select('invoice_no').ilike('invoice_no', 'AC%').order('created_at', { ascending: false }).limit(1);
-            
-            let nextNum = 1;
-            if (latest && latest.length > 0 && latest[0].invoice_no) {
-                const lastNum = parseInt(latest[0].invoice_no.replace(/\D/g, ''));
-                if(!isNaN(lastNum)) nextNum = lastNum + 1;
-            }
-            const invoiceNoStr = `${prefix}${String(nextNum).padStart(2, '0')}`;
-
-            const summaryDesc = itemsArray.map(i => i.desc).join(', ');
-
-            const invData = {
-                invoice_no: invoiceNoStr,
-                invoice_type: 'Regular',
-                customer_name: custName,
-                mobile: contactNo,
-                item_desc: summaryDesc, 
-                items: itemsArray,      
-                serial_no: itemsArray[0].serial,
-                total_amt: grandTotal,
-                payment_mode: selectedPaymentMode,
-                created_by: document.getElementById('userNameDisplay').innerText,
-                date: date,
-                time: time
-            };
-
-            const { error: invSaveErr } = await db.from('accessories_invoices').insert([invData]);
-            if(invSaveErr) return alert("Error saving invoice: " + invSaveErr.message);
-
-            let currentDate = new Date().toISOString().split('T')[0];
-            let currentTime = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' });
-            let baseDesc = `Acc. Invoice #${invoiceNoStr} - ${custName} (${selectedPaymentMode})`;
-
-            try {
-                if (selectedPaymentMode === 'Credit') {
-                    const { data: custDataArr, error: fetchCustErr } = await db.from('customers').select('credit_balance').eq('id', custId).limit(1);
-                    if (fetchCustErr) throw fetchCustErr;
-                    
-                    if (custDataArr && custDataArr.length > 0) {
-                        let currentBal = parseFloat(custDataArr[0].credit_balance) || 0;
-                        const { error: updateCustErr } = await db.from('customers').update({ credit_balance: currentBal + grandTotal }).eq('id', custId);
-                        if (updateCustErr) throw updateCustErr;
-                    }
-                    
-                    alert("Invoice saved as Credit! Customer balance updated.");
-                } else if (selectedPaymentMode === 'Cash') {
-                    const { error: cashErr } = await db.from('cashbook_entries').insert([{
-                        description: baseDesc, category: 'Accessories', amount: grandTotal, type: 'in', 
-                        date: currentDate, created_by: currentUserEmail
-                    }]);
-                    if (cashErr) throw cashErr;
-                    
-                    alert("Invoice Saved successfully to Cashbook!");
-                } else if (selectedPaymentMode === 'UPI') {
-                    let upiNotes = document.getElementById('upiAccountNotes').value.trim();
-                    let finalDesc = upiNotes ? `${baseDesc} - Acct: ${upiNotes}` : baseDesc;
-                    
-                    const { error: upiErr } = await db.from('upi_entries').insert([{
-                        date: currentDate, time: currentTime, description: finalDesc, category: 'Accessories', 
-                        upi_amount: grandTotal, card_amount: 0, created_by: currentUserEmail
-                    }]);
-                    if (upiErr) throw upiErr;
-                    
-                    alert("Invoice Saved successfully to UPI Book!");
-                }
-            } catch (err) {
-                alert("Invoice saved, but ledger update failed: " + err.message);
-            }
-
-            document.getElementById('custSearchInput').value = '';
-            document.getElementById('newCustName').value = '';
-            document.getElementById('newCustMobile').value = '';
-            document.getElementById('invoiceItemsContainer').innerHTML = '';
-            document.getElementById('upiAccountNotes').value = '';
-            addInvoiceItem(); 
-            setPaymentMode('Cash');
-            
-            document.getElementById('invoiceFormBody').style.display = 'none';
-            document.getElementById('invoiceFormArrow').innerText = '▼';
-            
-            fetchInvoices();
-        }
-
         window.deleteInvoice = async function(id, invoiceNoStr, paymentMode, amount, mobile) {
             if(!confirm("Are you sure you want to delete this invoice? Associated ledger entries will also be removed.")) return;
-            
             try {
                 const searchString = `Acc. Invoice #${invoiceNoStr}%`;
-                
-                const { error: cashDelErr } = await db.from('cashbook_entries').delete().ilike('description', searchString);
-                if (cashDelErr) throw cashDelErr;
-                
-                const { error: upiDelErr } = await db.from('upi_entries').delete().ilike('description', searchString);
-                if (upiDelErr) throw upiDelErr;
-
+                await db.from('cashbook_entries').delete().ilike('description', searchString);
+                await db.from('upi_entries').delete().ilike('description', searchString);
                 if (paymentMode === 'Credit') {
-                    const { data: custDataArr, error: custFetchErr } = await db.from('customers').select('id, credit_balance').eq('mobile', mobile).limit(1);
-                    if (custFetchErr) throw custFetchErr;
-                    
+                    const { data: custDataArr } = await db.from('customers').select('id, credit_balance').eq('mobile', mobile).limit(1);
                     if (custDataArr && custDataArr.length > 0) {
-                        const custData = custDataArr[0];
-                        let newBal = (parseFloat(custData.credit_balance) || 0) - amount;
-                        if (newBal < 0) newBal = 0;
-                        const { error: custUpdErr } = await db.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
-                        if (custUpdErr) throw custUpdErr;
+                        let newBal = (parseFloat(custDataArr[0].credit_balance) || 0) - amount;
+                        await db.from('customers').update({ credit_balance: Math.max(0, newBal) }).eq('id', custDataArr[0].id);
                     }
                 }
-
-                const { error: invDelErr } = await db.from('accessories_invoices').delete().eq('id', id);
-                if (invDelErr) throw invDelErr;
-                
+                await db.from('accessories_invoices').delete().eq('id', id);
                 fetchInvoices();
-            } catch (err) {
-                alert("Error deleting invoice: " + err.message);
-            }
+            } catch (err) { alert("Error deleting invoice: " + err.message); }
         }
 
-        // --- Edit Payment Mode Logic (Admin Only) ---
-        let editInvId = null, editInvNo = '', editInvOldMode = '', editInvAmount = 0, editInvCustName = '', editInvMobile = '', editInvDate = '';
-
-        window.openEditModeModal = function(id, invoiceNo, oldMode, amount, custName, mobile, date) {
-            editInvId = id; editInvNo = invoiceNo; editInvOldMode = oldMode; editInvAmount = amount; editInvCustName = custName; editInvMobile = mobile; editInvDate = date;
-
-            document.getElementById('editModeSubtitle').innerText = `Invoice #${invoiceNo} | ${custName} | ₹${amount}`;
-            document.getElementById('editPaymentModeSelect').value = oldMode;
-            document.getElementById('editPaymentUpiNote').value = '';
-            toggleEditModeUpiNote();
-            
-            document.getElementById('modalEditPaymentMode').style.display = 'flex';
-        }
-
-        window.toggleEditModeUpiNote = function() {
-            if(document.getElementById('editPaymentModeSelect').value === 'UPI') {
-                document.getElementById('editPaymentUpiSection').style.display = 'block';
-            } else {
-                document.getElementById('editPaymentUpiSection').style.display = 'none';
-            }
-        }
-
-        window.closeEditModeModal = function() {
-            document.getElementById('modalEditPaymentMode').style.display = 'none';
-        }
-
-        window.savePaymentModeChange = async function() {
-            const newMode = document.getElementById('editPaymentModeSelect').value;
-            const upiNote = document.getElementById('editPaymentUpiNote').value.trim();
-
-            if (newMode === editInvOldMode) {
-                closeEditModeModal();
-                return;
-            }
-
-            if (!confirm(`Change payment mode from ${editInvOldMode} to ${newMode}? The relevant accounting books will be updated.`)) return;
-
-            try {
-                const searchString = `Acc. Invoice #${editInvNo}%`;
-                
-                // 1. Rollback old entry
-                if (editInvOldMode === 'Cash') {
-                    const { error } = await db.from('cashbook_entries').delete().ilike('description', searchString);
-                    if (error) throw new Error("Cashbook delete failed: " + error.message);
-                } else if (editInvOldMode === 'UPI') {
-                    const { error } = await db.from('upi_entries').delete().ilike('description', searchString);
-                    if (error) throw new Error("UPI Book delete failed: " + error.message);
-                } else if (editInvOldMode === 'Credit') {
-                    const { data: custDataArr, error: custFetchErr } = await db.from('customers').select('id, credit_balance').eq('mobile', editInvMobile).limit(1);
-                    if (custFetchErr) throw new Error("Customer fetch failed: " + custFetchErr.message);
-                    
-                    if (custDataArr && custDataArr.length > 0) {
-                        const custData = custDataArr[0];
-                        let newBal = (parseFloat(custData.credit_balance) || 0) - editInvAmount;
-                        if (newBal < 0) newBal = 0;
-                        const { error: custUpdErr } = await db.from('customers').update({ credit_balance: newBal }).eq('id', custData.id);
-                        if (custUpdErr) throw new Error("Customer update failed: " + custUpdErr.message);
-                    }
-                }
-
-                // 2. Insert new entry
-                let currentTime = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' });
-                let baseDesc = `Acc. Invoice #${editInvNo} - ${editInvCustName} (${newMode})`;
-                
-                if (newMode === 'Cash') {
-                    const { error } = await db.from('cashbook_entries').insert([{
-                        description: baseDesc, category: 'Accessories', amount: editInvAmount, type: 'in', 
-                        date: editInvDate, created_by: currentUserEmail
-                    }]);
-                    if (error) throw new Error("Cashbook insert failed: " + error.message);
-                } else if (newMode === 'UPI') {
-                    let finalDesc = upiNote ? `${baseDesc} - Acct: ${upiNote}` : baseDesc;
-                    const { error } = await db.from('upi_entries').insert([{
-                        date: editInvDate, time: currentTime, description: finalDesc, category: 'Accessories', 
-                        upi_amount: editInvAmount, card_amount: 0, created_by: currentUserEmail
-                    }]);
-                    if (error) throw new Error("UPI Book insert failed: " + error.message);
-                } else if (newMode === 'Credit') {
-                    const { data: custDataArr, error: custFetchErr } = await db.from('customers').select('id, credit_balance').eq('mobile', editInvMobile).limit(1);
-                    if (custFetchErr) throw new Error("Customer fetch failed: " + custFetchErr.message);
-                    
-                    if (custDataArr && custDataArr.length > 0) {
-                        const custData = custDataArr[0];
-                        let currentBal = parseFloat(custData.credit_balance) || 0;
-                        const { error: custUpdErr } = await db.from('customers').update({ credit_balance: currentBal + editInvAmount }).eq('id', custData.id);
-                        if (custUpdErr) throw new Error("Customer update failed: " + custUpdErr.message);
-                    }
-                }
-
-                // 3. Update the invoice record
-                const { error: invErr } = await db.from('accessories_invoices').update({ payment_mode: newMode }).eq('id', editInvId);
-                if (invErr) throw new Error("Invoice update failed: " + invErr.message);
-
-                closeEditModeModal();
-                fetchInvoices();
-                alert("Payment mode updated successfully!");
-
-            } catch (err) {
-                alert("Error updating payment mode:\n" + err.message);
-            }
-        }
-
-        // --- Export to Excel ---
+        // ==========================================
+        // EXPORT & PRINT LOGIC
+        // ==========================================
         window.exportToExcel = function() {
             const selectedMonth = document.getElementById('exportMonth').value; 
             if (!selectedMonth) return alert("Please select a month to export data.");
-
             const filtered = allInvoices.filter(inv => inv.date && inv.date.startsWith(selectedMonth));
             if (filtered.length === 0) return alert("No invoices found for the selected month.");
 
             const exportData = [];
-
             filtered.forEach(inv => {
-                if (inv.items && inv.items.length > 0) {
-                    inv.items.forEach(item => {
-                        exportData.push({
-                            "Invoice Number": inv.invoice_no,
-                            "Invoice Date": inv.date,
-                            "Invoice Time": inv.time || '-',
-                            "Customer Name": inv.customer_name,
-                            "Customer Mobile": inv.mobile,
-                            "Item Description": item.desc,
-                            "Line Item Value (Total)": parseFloat(item.total_amt.toFixed(2)),
-                            "Invoice Grand Total": parseFloat(inv.total_amt.toFixed(2)),
-                            "Payment Mode": inv.payment_mode
-                        });
-                    });
-                } else {
+                let itemsList = inv.items || [{ desc: inv.item_desc, qty: 1, total_amt: inv.total_amt }];
+                itemsList.forEach(item => {
                     exportData.push({
                         "Invoice Number": inv.invoice_no,
-                        "Invoice Date": inv.date,
-                        "Invoice Time": inv.time || '-',
+                        "Date": inv.date,
+                        "Created By": inv.created_by || '-',
                         "Customer Name": inv.customer_name,
-                        "Customer Mobile": inv.mobile,
-                        "Item Description": inv.item_desc,
-                        "Line Item Value (Total)": parseFloat(inv.total_amt.toFixed(2)),
+                        "Mobile": inv.mobile,
+                        "Item Description": item.desc,
+                        "Qty": item.qty || 1,
+                        "Line Item Value (Total)": parseFloat(item.total_amt.toFixed(2)),
                         "Invoice Grand Total": parseFloat(inv.total_amt.toFixed(2)),
                         "Payment Mode": inv.payment_mode
                     });
-                }
+                });
             });
 
             const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -1198,8 +979,6 @@
             XLSX.writeFile(workbook, `GSM_Accessories_Report_${selectedMonth}.xlsx`);
         };
 
-
-        // --- Number to Words utility for printing ---
         function numberToWords(num) {
             const a = ['','One ','Two ','Three ','Four ', 'Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
             const b = ['', '', 'Twenty','Thirty','Forty','Fifty', 'Sixty','Seventy','Eighty','Ninety'];
@@ -1214,12 +993,12 @@
             return str;
         }
 
-        // --- Print Template Logic ---
-        window.printInvoice = function(inv) {
+        window.printInvoice = function(invBase64) {
+            const inv = JSON.parse(decodeURIComponent(escape(window.atob(invBase64))));
             const amountInWords = numberToWords(Math.round(inv.total_amt));
             
             let itemsHtml = '';
-            let itemsList = inv.items || [{ desc: inv.item_desc, serial: inv.serial_no, total_amt: inv.total_amt }];
+            let itemsList = inv.items || [{ desc: inv.item_desc, qty: 1, serial: inv.serial_no, total_amt: inv.total_amt }];
 
             itemsList.forEach((item, index) => {
                 itemsHtml += `
@@ -1227,6 +1006,7 @@
                         <td>${index + 1}</td>
                         <td style="font-weight:bold;">${item.desc}</td>
                         <td style="color:gray; font-size:10px;">${item.serial || '-'}</td>
+                        <td class="text-center">${item.qty || 1}</td>
                         <td class="text-right" style="font-weight:bold;">₹${item.total_amt.toFixed(2)}</td>
                     </tr>
                 `;
@@ -1247,35 +1027,29 @@
                     .header-right .inv-label { font-size: 10px; color: #94a3b8; }
                     .header-right .inv-num { font-size: 20px; font-weight: bold; color: #facc15; margin: 5px 0;}
                     .header-right .inv-date { font-size: 10px; color: #cbd5e1;}
-                    
                     .details-row { display: flex; border-bottom: 2px solid #1e293b; }
                     .box { padding: 15px 40px; flex: 1; border-right: 1px solid #e2e8f0;}
                     .box:last-child { border-right: none;}
                     .box-title { font-size: 10px; font-weight: bold; color: #64748b; margin-bottom: 8px; text-transform: uppercase;}
                     .box-content { font-size: 12px; line-height: 1.5; }
                     .box-content strong { font-size: 14px; }
-                    
                     table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 12px;}
                     th { background-color: #1e293b; color: white; text-align: left; padding: 10px 15px; font-size: 10px; }
                     td { padding: 15px; border-bottom: 1px solid #e2e8f0; vertical-align: top;}
                     .text-right { text-align: right; }
                     .text-center { text-align: center; }
-
                     .totals-container { display: flex; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 0;}
                     .words-box { padding: 15px 40px; font-size: 11px; font-weight: bold; flex: 1; align-self: flex-end;}
                     .totals-box { width: 300px; }
                     .totals-row { display: flex; justify-content: space-between; padding: 8px 15px; border-bottom: 1px solid #e2e8f0; border-left: 1px solid #e2e8f0;}
                     .totals-row.grand { background: #1e293b; color: white; font-weight: bold; font-size: 14px;}
-                    
                     .footer { padding: 20px 40px; display: flex; justify-content: space-between; align-items: flex-end; margin-top: 20px;}
                     .pill { border: 1px solid ${inv.payment_mode === 'Credit' ? '#dc2626' : '#16a34a'}; color: ${inv.payment_mode === 'Credit' ? '#dc2626' : '#16a34a'}; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 10px; display: inline-flex; align-items: center; gap: 5px;}
                     .sign-box { text-align: right; font-size: 10px; }
-                    
                     .bottom-text { text-align: center; font-size: 9px; color: #64748b; margin-top: 50px; }
                 </style>
             </head>
             <body>
-
             <div class="header-banner">
                 <h1>GSM SOLUTION</h1>
                 <div class="header-right">
@@ -1284,52 +1058,42 @@
                     <div class="inv-date">Date: ${dateStr}</div>
                 </div>
             </div>
-
             <div class="details-row">
                 <div class="box">
                     <div class="box-title">SELLER DETAILS</div>
                     <div class="box-content">
                         <strong>GSM SOLUTIONS</strong><br>
-                        B-1 Pancharatna Building,<br>
-                        Near Jakris Bakery, Margao, Goa<br>
-                        <strong>Phone:</strong> 8975213794
+                        B-1 Pancharatna Building,<br>Near Jakris Bakery, Margao, Goa<br><strong>Phone:</strong> 8975213794
                     </div>
                 </div>
                 <div class="box">
                     <div class="box-title">BILL TO</div>
                     <div class="box-content">
-                        <strong>${inv.customer_name}</strong><br>
-                        Ph: ${inv.mobile}
+                        <strong>${inv.customer_name}</strong><br>Ph: ${inv.mobile}
                     </div>
                 </div>
                 <div class="box">
                     <div class="box-title">PAYMENT</div>
                     <div class="box-content">
-                        <strong>${inv.payment_mode.toUpperCase()}</strong><br><br>
-                        Total Due<br>
+                        <strong>${inv.payment_mode.toUpperCase()}</strong><br><br>Total Due<br>
                         <strong style="font-size:16px;">₹${inv.total_amt.toFixed(2)}</strong>
                     </div>
                 </div>
             </div>
-
             <table>
                 <thead>
                     <tr>
                         <th style="width: 5%;">#</th>
-                        <th style="width: 50%;">ITEM DESCRIPTION</th>
-                        <th style="width: 25%;">SERIAL NO.</th>
+                        <th style="width: 45%;">ITEM DESCRIPTION</th>
+                        <th style="width: 20%;">SERIAL NO.</th>
+                        <th class="text-center" style="width: 10%;">QTY</th>
                         <th class="text-right" style="width: 20%;">TOTAL (₹)</th>
                     </tr>
                 </thead>
-                <tbody>
-                    ${itemsHtml}
-                </tbody>
+                <tbody>${itemsHtml}</tbody>
             </table>
-
             <div class="totals-container">
-                <div class="words-box">
-                    Amount in Words: ${amountInWords}
-                </div>
+                <div class="words-box">Amount in Words: ${amountInWords}</div>
                 <div class="totals-box">
                     <div class="totals-row grand">
                         <span>Grand Total</span>
@@ -1337,7 +1101,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="footer">
                 <div>
                     <div style="font-size:9px; color:gray; margin-bottom:5px; text-transform:uppercase;">PAYMENT MODE</div>
@@ -1348,15 +1111,11 @@
                     <span style="color:gray;">Authorised Signatory</span>
                 </div>
             </div>
-
             <div class="bottom-text">
                 <strong>GSM SOLUTION</strong> - B-1 Pancharatna Building, Near Jakris Bakery, Margao, Goa - Ph: 8975213794<br>
                 This is a computer-generated invoice. No signature required. - Thank you for your business!
             </div>
-
-            <script>
-                window.onload = function() { window.print(); }
-            <\/script>
+            <script>window.onload = function() { window.print(); }<\/script>
             </body>
             </html>
             `);
@@ -1368,21 +1127,10 @@
         // ==========================================
         const setupAutoLogout = function() {
             let inactivityTimer;
-            const timeoutDuration = 30 * 60 * 1000; 
-
-            function resetTimer() {
-                clearTimeout(inactivityTimer);
-                inactivityTimer = setTimeout(logOut, timeoutDuration); 
-            }
-
-            window.onload = resetTimer;
-            document.onmousemove = resetTimer;
-            document.onkeypress = resetTimer;
-            document.onclick = resetTimer;
-            document.onscroll = resetTimer;
-            document.ontouchstart = resetTimer; 
+            function resetTimer() { clearTimeout(inactivityTimer); inactivityTimer = setTimeout(logOut, 30 * 60 * 1000); }
+            window.onload = resetTimer; document.onmousemove = resetTimer; document.onkeypress = resetTimer;
+            document.onclick = resetTimer; document.onscroll = resetTimer; document.ontouchstart = resetTimer; 
         };
-
         setupAutoLogout();
     </script>
 </body>
