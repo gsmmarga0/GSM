@@ -141,7 +141,19 @@
         .edit-pen { cursor: pointer; display: inline-block; width: 14px; height: 14px; margin-left: 6px; vertical-align: middle; color: #9ca3af; transition: 0.2s; }
         .edit-pen:hover { color: #2563eb; }
 
-        .device-entry-row { display: grid; grid-template-columns: 3fr 1fr 1fr auto; gap: 15px; align-items: center; background: #fff; padding: 15px; border: 1px solid #d1d5db; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        /* Dynamic Bulk Device Row Styles */
+        .device-entry-row {
+            display: grid;
+            grid-template-columns: 3fr 1fr 1fr auto;
+            gap: 15px;
+            align-items: center;
+            background: #fff;
+            padding: 15px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
         .device-entry-row .form-group { margin-bottom: 0; }
         .device-entry-row .form-group label { margin-bottom: 4px; font-size: 0.75rem; text-transform: uppercase; color: #6b7280; }
         .device-entry-row .form-group input { padding: 8px 12px; }
@@ -259,7 +271,6 @@
                         </div>
                     </div>
 
-                    <!-- NEW ALTERNATE CONTACT FIELD -->
                     <div style="margin-top: 15px;">
                         <label style="font-size: 0.85rem; color: #4b5563; font-weight: 500;">Alternate Contact Number (Optional)</label>
                         <input type="text" id="altContactNo" placeholder="Enter alternate 10-digit number" maxlength="10" style="margin-top: 5px; width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none;">
@@ -279,6 +290,7 @@
                     </label>
                 </div>
 
+                <!-- Dynamic Container for Device Rows -->
                 <div id="deviceEntriesContainer" style="grid-column: 1 / -1;">
                     <!-- Rows injected here by JavaScript -->
                 </div>
@@ -442,7 +454,7 @@
     </div>
 </div>
 
-<!-- CHANGE PAYMENT MODE MODAL (ADMIN ONLY) -->
+<!-- NEW: CHANGE PAYMENT MODE MODAL (ADMIN ONLY) -->
 <div class="modal-overlay" id="modalEditPayment">
     <div class="modal-container">
         <h2 class="modal-title">Edit Payment Mode</h2>
@@ -502,7 +514,6 @@
     const rowsPerPage = 10;
 
     // --- REALTIME NOTIFICATIONS START ---
-    // Create a broadcast channel for pushing alerts
     const notificationChannel = supabaseClient.channel('dashboard-alerts');
 
     notificationChannel
@@ -534,32 +545,29 @@
 
     window.playAlertSoundAndSpeech = function(jobNo) {
         try {
-            // 1. Play a beep sound (Using Web Audio API)
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const oscillator = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
 
             oscillator.type = 'triangle';
-            oscillator.frequency.setValueAtTime(600, audioCtx.currentTime); // Frequency
-            gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime); // Volume
+            oscillator.frequency.setValueAtTime(600, audioCtx.currentTime); 
+            gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime); 
 
             oscillator.connect(gainNode);
             gainNode.connect(audioCtx.destination);
 
             oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.3); // Play for 300ms
+            oscillator.stop(audioCtx.currentTime + 0.3); 
 
-            // 2. Text to Speech
             setTimeout(() => {
-                // Extract just the number from GSM05 -> 5 for natural reading
                 const justNumber = jobNo.replace(/\D/g, ''); 
                 const text = `Job number ${justNumber}, kindly update the status, customer is waiting.`;
 
                 const utterance = new SpeechSynthesisUtterance(text);
-                utterance.rate = 0.9; // Slightly slower for clarity
+                utterance.rate = 0.9; 
                 utterance.pitch = 1;
                 window.speechSynthesis.speak(utterance);
-            }, 400); // speak right after beep finishes
+            }, 400); 
 
         } catch(e) {
             console.error("Audio playback failed. Interaction with document is required before auto-play is allowed.", e);
@@ -868,83 +876,6 @@
         }
     }
 
-    window.toggleBulkMode = function() {
-        const isBulk = document.getElementById('bulkEntryCheckbox').checked;
-        const btnContainer = document.getElementById('addDeviceBtnContainer');
-        const entriesContainer = document.getElementById('deviceEntriesContainer');
-        
-        if (isBulk) {
-            btnContainer.style.display = 'block';
-            const rows = entriesContainer.querySelectorAll('.device-entry-row');
-            rows.forEach(r => {
-                const delBtn = r.querySelector('.delete-row-btn');
-                if(delBtn) delBtn.style.visibility = 'visible';
-            });
-        } else {
-            btnContainer.style.display = 'none';
-            const rows = entriesContainer.querySelectorAll('.device-entry-row');
-            for (let i = 1; i < rows.length; i++) {
-                rows[i].remove();
-            }
-            const firstRow = entriesContainer.querySelector('.device-entry-row');
-            if(firstRow) {
-                const delBtn = firstRow.querySelector('.delete-row-btn');
-                if(delBtn) delBtn.style.visibility = 'hidden';
-            }
-        }
-        fetchNextJobNoPreview();
-    }
-
-    window.addDeviceRow = function(isInitial = false) {
-        const container = document.getElementById('deviceEntriesContainer');
-        const rows = container.querySelectorAll('.device-entry-row');
-        
-        if (!isInitial && rows.length >= 10) {
-            return alert("Maximum 10 devices allowed per bulk entry.");
-        }
-
-        const row = document.createElement('div');
-        row.className = 'device-entry-row';
-        row.innerHTML = `
-            <div class="form-group">
-                <label>Model & Problem <span>*</span></label>
-                <input type="text" class="dev-model" placeholder="e.g. iPhone 13 - Screen">
-            </div>
-            <div class="form-group">
-                <label>Password</label>
-                <input type="text" class="dev-pass" placeholder="1234">
-            </div>
-            <div class="form-group">
-                <label>Estimate (₹)</label>
-                <input type="number" class="dev-est" placeholder="0" step="0.01">
-            </div>
-            <button type="button" class="btn-icon delete-row-btn" style="color:#ef4444; height: 38px; margin-bottom: 2px;" onclick="removeDeviceRow(this)" title="Remove Device">🗑️</button>
-        `;
-        container.appendChild(row);
-
-        if (container.querySelectorAll('.device-entry-row').length === 1 && !document.getElementById('bulkEntryCheckbox').checked) {
-            row.querySelector('.delete-row-btn').style.visibility = 'hidden';
-        } else if (container.querySelectorAll('.device-entry-row').length === 1 && document.getElementById('bulkEntryCheckbox').checked) {
-             row.querySelector('.delete-row-btn').style.visibility = 'hidden';
-        } else {
-            const firstRowBtn = container.querySelector('.device-entry-row .delete-row-btn');
-            if(firstRowBtn) firstRowBtn.style.visibility = 'visible';
-        }
-    }
-
-    window.removeDeviceRow = function(btn) {
-        const container = document.getElementById('deviceEntriesContainer');
-        const rows = container.querySelectorAll('.device-entry-row');
-        if (rows.length > 1) {
-            btn.closest('.device-entry-row').remove();
-        }
-        
-        const remainingRows = container.querySelectorAll('.device-entry-row');
-        if(remainingRows.length === 1) {
-            remainingRows[0].querySelector('.delete-row-btn').style.visibility = 'hidden';
-        }
-    }
-
     window.switchTab = function(tabName) {
         currentTab = tabName;
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -1050,13 +981,40 @@
         renderOrdersTable();
     }
 
+    // ===============================================
+    // PAGINATED FETCH LOGIC (SOLVES 1,000 ROW LIMIT)
+    // ===============================================
     async function fetchOrders() {
-        const { data, error } = await supabaseClient.from('repairOrders').select('*');
-        if (error) return console.error(error);
-        
-        allOrdersData = data || [];
-        updateStats(allOrdersData);
-        applyFilters();
+        let fetchedData = [];
+        let keepFetching = true;
+        let start = 0;
+        const step = 1000;
+
+        try {
+            while (keepFetching) {
+                const { data, error } = await supabaseClient
+                    .from('repairOrders')
+                    .select('*')
+                    .range(start, start + step - 1);
+
+                if (error) throw error;
+
+                fetchedData = fetchedData.concat(data);
+
+                if (data.length < step) {
+                    keepFetching = false;
+                } else {
+                    start += step;
+                }
+            }
+
+            allOrdersData = fetchedData;
+            updateStats(allOrdersData);
+            applyFilters();
+            
+        } catch (error) {
+            console.error("Error fetching orders:", error);
+        }
     }
     
     async function fetchNextJobNoPreview() {
@@ -1278,6 +1236,7 @@
                 
                 actionHtml = `<div style="display:flex; flex-direction:column; gap:8px; align-items:center;">`;
                 actionHtml += `<span class="status-badge" style="background:#fca5a5; color:#7f1d1d;">Returned (Refused)</span>`;
+                
                 actionHtml += `<button class="btn" style="font-size: 0.7rem; padding: 4px 8px; color: #d97706; border-color: #fde68a; background: #fffbeb;" onclick="revertToRepairCompleted('${orderIdSafe}', '${jobNoSafe}', '${order.paymentMethod}', ${displayAmount}, '${contactNoSafe}', 'Repair Refusal')">⏪ Revert Status</button>`;
                 actionHtml += `</div>`;
                 rowStyle = 'background-color: #fef2f2;';
@@ -1379,7 +1338,6 @@
                         }
                     }
                 }
-                // Delete the credit records
                 const { error: errDeleteCredit } = await supabaseClient.from('customer_credits').delete().eq('job_no', jobNo);
                 if (errDeleteCredit) throw new Error("Credit Delete Error: " + errDeleteCredit.message);
             }
