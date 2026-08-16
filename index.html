@@ -352,7 +352,6 @@
                 </select>
             </div>
 
-            <!-- HIDDEN FOR REGULAR USERS, ONLY VISIBLE TO ADMINS -->
             <div class="billing-row admin-only" style="display: none;">
                 <label style="color: #6b7280;">Part Cost (₹)</label>
                 <input type="number" id="billVendorCost" placeholder="0">
@@ -454,7 +453,7 @@
     </div>
 </div>
 
-<!-- NEW: CHANGE PAYMENT MODE MODAL (ADMIN ONLY) -->
+<!-- CHANGE PAYMENT MODE MODAL (ADMIN ONLY) -->
 <div class="modal-overlay" id="modalEditPayment">
     <div class="modal-container">
         <h2 class="modal-title">Edit Payment Mode</h2>
@@ -522,28 +521,28 @@
       })
       .subscribe();
 
-    window.triggerAlert = async function(jobNo) {
+    function triggerAlert(jobNo) {
         const btn = event.currentTarget;
         const originalText = btn.innerHTML;
         btn.innerHTML = "🔔 Sending...";
         btn.disabled = true;
 
-        await notificationChannel.send({
+        notificationChannel.send({
             type: 'broadcast',
             event: 'job-alert',
             payload: { jobNo: jobNo }
-        });
-
-        setTimeout(() => {
-            btn.innerHTML = "✅ Sent!";
+        }).then(() => {
             setTimeout(() => {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }, 2000);
-        }, 300);
-    };
+                btn.innerHTML = "✅ Sent!";
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }, 2000);
+            }, 300);
+        });
+    }
 
-    window.playAlertSoundAndSpeech = function(jobNo) {
+    function playAlertSoundAndSpeech(jobNo) {
         try {
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const oscillator = audioCtx.createOscillator();
@@ -570,9 +569,9 @@
             }, 400); 
 
         } catch(e) {
-            console.error("Audio playback failed. Interaction with document is required before auto-play is allowed.", e);
+            console.error("Audio playback failed.", e);
         }
-    };
+    }
     // --- REALTIME NOTIFICATIONS END ---
 
     function getLocalDateString() {
@@ -584,7 +583,7 @@
     }
 
     let sidebarTimer;
-    window.resetSidebarTimer = function() {
+    function resetSidebarTimer() {
         clearTimeout(sidebarTimer);
         sidebarTimer = setTimeout(() => {
             const sb = document.getElementById('sidebar');
@@ -595,9 +594,9 @@
             }
         }, 5000);
     }
-    window.clearSidebarTimer = function() { clearTimeout(sidebarTimer); }
+    function clearSidebarTimer() { clearTimeout(sidebarTimer); }
     
-    window.toggleSidebar = function() {
+    function toggleSidebar() {
         const sb = document.getElementById('sidebar');
         const btn = document.getElementById('sidebarToggle');
         if(sb && btn) {
@@ -637,14 +636,14 @@
     
     async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
 
-    const escapeStr = (str) => {
+    function escapeStr(str) {
         if (!str) return '';
         return String(str)
             .replace(/\\/g, "\\\\")
             .replace(/'/g, "\\'")
             .replace(/"/g, "&quot;")
             .replace(/\n/g, " ");
-    };
+    }
 
     let globalSearchTimeout = null;
     function debounceGlobalSearch() {
@@ -685,7 +684,7 @@
         resultsList.style.display = 'block';
     }
 
-    window.jumpToOrder = function(status, jobNo) {
+    function jumpToOrder(status, jobNo) {
         if (status === 'Delivered (Refused)') status = 'Goods Delivered';
         switchTab(status || 'Pending'); 
         document.getElementById('searchInput').value = jobNo;
@@ -729,7 +728,7 @@
         }
     }
 
-    window.renderCustomerDropdown = function(filterStr = '') {
+    function renderCustomerDropdown(filterStr = '') {
         const list = document.getElementById('customerDropdownList');
         list.innerHTML = '';
         
@@ -759,25 +758,25 @@
         }
     }
 
-    window.filterCustomerSearch = function() {
+    function filterCustomerSearch() {
         const filter = document.getElementById('custSearchInput').value;
         renderCustomerDropdown(filter);
     }
 
-    window.openCustomerDropdown = function() {
+    function openCustomerDropdown() {
         document.getElementById('customerDropdownList').style.display = 'block';
         const filter = document.getElementById('custSearchInput').value;
         renderCustomerDropdown(filter);
     }
 
-    window.selectCustomer = function(name, mobile) {
+    function selectCustomer(name, mobile) {
         document.getElementById('custSearchInput').value = `${name} (${mobile})`;
         document.getElementById('selectedCustName').value = name;
         document.getElementById('selectedCustMobile').value = mobile;
         document.getElementById('customerDropdownList').style.display = 'none';
     }
 
-    window.checkExistingMobile = function() {
+    function checkExistingMobile() {
         const input = document.getElementById('newCustMobile').value.trim();
         const list = document.getElementById('newCustMobileDropdown');
         list.innerHTML = '';
@@ -801,7 +800,7 @@
         }
     }
 
-    window.autoSelectFromNew = function(name, mobile) {
+    function autoSelectFromNew(name, mobile) {
         document.getElementById('newCustMobileDropdown').style.display = 'none';
         
         document.getElementById('newCustName').value = '';
@@ -815,7 +814,7 @@
         selectCustomer(name, mobile);
     }
 
-    window.renderCreditCustomerDropdown = function(filterStr = '') {
+    function renderCreditCustomerDropdown(filterStr = '') {
         const list = document.getElementById('creditCustomerDropdownList');
         list.innerHTML = '';
         
@@ -845,25 +844,25 @@
         }
     }
 
-    window.filterCreditCustomer = function() {
+    function filterCreditCustomer() {
         const filter = document.getElementById('creditCustSearch').value;
         renderCreditCustomerDropdown(filter);
     }
 
-    window.openCreditCustomerDropdown = function() {
+    function openCreditCustomerDropdown() {
         document.getElementById('creditCustomerDropdownList').style.display = 'block';
         const filter = document.getElementById('creditCustSearch').value;
         renderCreditCustomerDropdown(filter);
     }
 
-    window.selectCreditCustomer = function(name, mobile) {
+    function selectCreditCustomer(name, mobile) {
         document.getElementById('creditCustSearch').value = `${name} (${mobile})`;
         document.getElementById('selectedCreditCustName').value = name;
         document.getElementById('selectedCreditCustMobile').value = mobile;
         document.getElementById('creditCustomerDropdownList').style.display = 'none';
     }
 
-    window.toggleCustomerMode = function() {
+    function toggleCustomerMode() {
         isNewCustomerMode = !isNewCustomerMode;
         if (isNewCustomerMode) {
             document.getElementById('customerSelectMode').style.display = 'none';
@@ -876,7 +875,7 @@
         }
     }
 
-    window.switchTab = function(tabName) {
+    function switchTab(tabName) {
         currentTab = tabName;
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         const tabId = 'tab-' + tabName.replace(' ', '-');
@@ -912,7 +911,7 @@
         applyFilters();
     }
 
-    window.applyFilters = function() {
+    function applyFilters() {
         const input = document.getElementById("searchInput").value.toLowerCase();
         
         if (input.trim() !== '') {
@@ -934,7 +933,7 @@
                     
                     if (newTab && newTab !== currentTab) {
                         switchTab(newTab);
-                        return; // Switch tab calls applyFilters again
+                        return; 
                     }
                 }
             }
@@ -1018,15 +1017,25 @@
     }
     
     async function fetchNextJobNoPreview() {
-        const { data: maxData } = await supabaseClient.from('repairOrders').select('jobNo').ilike('jobNo', 'GSM%').order('created_at', { ascending: false }).limit(100);
-        let currentMax = 0;
-        if (maxData && maxData.length > 0) {
-            maxData.forEach(order => {
-                const match = order.jobNo.match(/^GSM(\d+)$/i);
-                if (match) { const num = parseInt(match[1], 10); if (num > currentMax) currentMax = num; }
-            });
+        const label = document.getElementById('jobNoLabel');
+        label.innerHTML = `Job Number <span style="color:#6b7280; font-weight:normal; font-size:0.75rem;">(Next: Loading...)</span>`;
+        try {
+            const { data: maxData } = await supabaseClient.from('repairOrders').select('jobNo').ilike('jobNo', 'GSM%').order('created_at', { ascending: false }).limit(100);
+            let currentMax = 0;
+            if (maxData && maxData.length > 0) {
+                maxData.forEach(order => {
+                    const match = order.jobNo.match(/^GSM(\d+)$/i);
+                    if (match) { const num = parseInt(match[1], 10); if (num > currentMax) currentMax = num; }
+                });
+            }
+            let nextJobStr = `GSM${String(currentMax + 1).padStart(2, '0')}`;
+            if(document.getElementById('bulkEntryCheckbox').checked) {
+                nextJobStr += ` (and onwards)`;
+            }
+            label.innerHTML = `Job Number <span style="color:#2563eb; font-weight:bold; font-size:0.8rem;">(Auto-Generated from ${nextJobStr})</span>`;
+        } catch(e) {
+            label.innerHTML = `Job Number <span style="color:#ef4444; font-weight:normal; font-size:0.75rem;">(Auto-Generated)</span>`;
         }
-        document.getElementById('jobNo').placeholder = `Next Job No Approx: GSM${String(currentMax + 1).padStart(2, '0')}`;
     }
 
     function updateStats(data) {
@@ -1058,7 +1067,7 @@
         }
     }
 
-    window.updateInlineEstimate = async function(id, num, status) {
+    async function updateInlineEstimate(id, num, status) {
         try {
             if(status === 'Pending') {
                 await supabaseClient.from('repairOrders').update({ approxEstimate: num }).eq('id', id);
@@ -1076,7 +1085,7 @@
         }
     }
 
-    window.promptUpdateEstimate = async function(id, status, currentVal) {
+    async function promptUpdateEstimate(id, status, currentVal) {
         let newVal = prompt("Enter new amount (₹):", currentVal);
         if (newVal !== null) {
             let num = parseFloat(newVal);
@@ -1088,14 +1097,14 @@
         }
     }
 
-    window.prevPage = function() {
+    function prevPage() {
         if (currentPage > 1) {
             currentPage--;
             renderOrdersTable();
         }
     }
 
-    window.nextPage = function() {
+    function nextPage() {
         const maxPage = Math.ceil(filteredOrdersData.length / rowsPerPage) || 1;
         if (currentPage < maxPage) {
             currentPage++;
@@ -1103,7 +1112,7 @@
         }
     }
 
-    window.deleteOrder = async function(id, jobNo, status) {
+    async function deleteOrder(id, jobNo, status) {
         if (!confirm(`Are you sure you want to permanently delete Job No: ${jobNo}?\n\nThis will move the order to the Deleted Orders tab.`)) return;
 
         try {
@@ -1305,21 +1314,18 @@
         if(btnNext) btnNext.disabled = (currentPage === maxPage);
     }
 
-    window.revertToRepairCompleted = async function(id, jobNo, paymentMode, amount, mobile, targetStatus) {
+    async function revertToRepairCompleted(id, jobNo, paymentMode, amount, mobile, targetStatus) {
         if (!confirm(`Are you sure you want to revert Job No: ${jobNo} back to '${targetStatus}'?\n\nThis will DELETE any final delivery records and remove the related Cash, UPI, and Credit entries from the ledgers.`)) return;
 
         try {
             const searchString = `%${jobNo}%`;
 
-            // 1. Purge from Cashbook
             const { error: errCash } = await supabaseClient.from('cashbook_entries').delete().ilike('description', searchString);
             if (errCash) throw new Error("Cashbook Delete Error: " + errCash.message);
             
-            // 2. Purge from UPI book
             const { error: errUpi } = await supabaseClient.from('upi_entries').delete().ilike('description', searchString);
             if (errUpi) throw new Error("UPI Delete Error: " + errUpi.message);
             
-            // 3. Safely revert Customer Credits
             const { data: credits, error: errFetchCredits } = await supabaseClient.from('customer_credits').select('*').eq('job_no', jobNo);
             if (errFetchCredits) throw new Error("Credit Fetch Error: " + errFetchCredits.message);
 
@@ -1342,7 +1348,6 @@
                 if (errDeleteCredit) throw new Error("Credit Delete Error: " + errDeleteCredit.message);
             }
 
-            // 4. Update the Order Status
             const { error: errOrder } = await supabaseClient.from('repairOrders').update({
                 status: targetStatus,
                 paymentMethod: null,
@@ -1363,7 +1368,7 @@
         }
     }
 
-    window.revertToPending = async function(id, jobNo) {
+    async function revertToPending(id, jobNo) {
         if (!confirm(`Are you sure you want to revert Job No: ${jobNo} back to 'Pending'?\n\nThis will remove its completion/refusal status and vendor records.`)) return;
 
         try {
@@ -1394,7 +1399,7 @@
     let editPaymentCustomerName = '';
     let editPaymentMobile = '';
 
-    window.openEditPaymentModal = function(id, jobNo, amount, custName, mobile, currentMethod) {
+    function openEditPaymentModal(id, jobNo, amount, custName, mobile, currentMethod) {
         editPaymentOrderId = id;
         editPaymentJobNo = jobNo;
         editPaymentAmount = amount;
@@ -1413,7 +1418,7 @@
         document.getElementById('modalEditPayment').style.display = 'flex';
     }
 
-    window.toggleEditPaymentUpiNote = function() {
+    function toggleEditPaymentUpiNote() {
         if(document.getElementById('newPaymentMode').value === 'UPI') {
             document.getElementById('editPaymentUpiSection').style.display = 'block';
         } else {
@@ -1421,9 +1426,9 @@
         }
     }
 
-    window.closeEditPaymentModal = function() { document.getElementById('modalEditPayment').style.display = 'none'; }
+    function closeEditPaymentModal() { document.getElementById('modalEditPayment').style.display = 'none'; }
 
-    window.saveNewPaymentMode = async function() {
+    async function saveNewPaymentMode() {
         const btn = document.getElementById('btnSavePaymentMode');
         if (btn.disabled) return;
 
@@ -1503,7 +1508,7 @@
         }
     }
 
-    window.openBillingModal = function(id, jobNo, customer, mobile) {
+    function openBillingModal(id, jobNo, customer, mobile) {
         billingOrderId = id; billingJobNo = jobNo; billingCustomerName = customer; billingCustomerMobile = mobile;
         document.getElementById('billingSubtitle').innerText = `Job No: ${jobNo} | Customer: ${customer}`;
         document.getElementById('billEstimateAmount').value = '';
@@ -1514,9 +1519,9 @@
         document.getElementById('billEstimateAmount').focus();
     }
 
-    window.closeBillingModal = function() { document.getElementById('modalBilling').style.display = 'none'; }
+    function closeBillingModal() { document.getElementById('modalBilling').style.display = 'none'; }
 
-    window.confirmBilling = async function() {
+    async function confirmBilling() {
         const btn = document.getElementById('btnConfirmBilling');
         if (btn.disabled) return;
 
@@ -1557,7 +1562,7 @@
         }
     }
 
-    window.markRepairNP = async function() {
+    async function markRepairNP() {
         const btn = document.getElementById('btnMarkNP');
         if (btn.disabled) return;
 
@@ -1595,7 +1600,7 @@
         }
     }
 
-    window.openDeliveryModal = function(id, jobNo, estimateAmount, customerName, customerMobile, currentStatus) {
+    function openDeliveryModal(id, jobNo, estimateAmount, customerName, customerMobile, currentStatus) {
         deliveryOrderId = id;
         deliveryJobNo = jobNo;
         deliveryCurrentStatus = currentStatus; 
@@ -1617,7 +1622,7 @@
         document.getElementById('modalDelivery').style.display = 'flex';
     }
 
-    window.calculateSplit = function() {
+    function calculateSplit() {
         if (selectedPaymentMethod === 'Split') {
             let total = parseFloat(document.getElementById('deliveryAmount').value) || 0;
             let cash = parseFloat(document.getElementById('splitCash').value) || 0;
@@ -1636,7 +1641,7 @@
         }
     }
 
-    window.selectPaymentMode = function(mode, element) {
+    function selectPaymentMode(mode, element) {
         selectedPaymentMethod = mode;
         
         document.querySelectorAll('.seg-btn').forEach(btn => btn.classList.remove('active'));
@@ -1660,9 +1665,9 @@
         }
     }
 
-    window.closeDeliveryModal = function() { document.getElementById('modalDelivery').style.display = 'none'; }
+    function closeDeliveryModal() { document.getElementById('modalDelivery').style.display = 'none'; }
 
-    window.confirmDelivery = async function() {
+    async function confirmDelivery() {
         const btn = document.getElementById('btnConfirmDelivery');
         if (btn.disabled) return;
         
@@ -1747,7 +1752,7 @@
         }
     }
 
-    window.toggleForm = async function() {
+    async function toggleForm() {
         const form = document.getElementById('orderFormCard');
         if (form.style.display === 'block') { 
             form.style.display = 'none'; 
@@ -1777,7 +1782,87 @@
         }
     }
 
-    window.saveOrder = async function() {
+    // ==========================================
+    // BULK ENTRY LOGIC
+    // ==========================================
+    function toggleBulkMode() {
+        const isBulk = document.getElementById('bulkEntryCheckbox').checked;
+        const btnContainer = document.getElementById('addDeviceBtnContainer');
+        const entriesContainer = document.getElementById('deviceEntriesContainer');
+        
+        if (isBulk) {
+            btnContainer.style.display = 'block';
+            const rows = entriesContainer.querySelectorAll('.device-entry-row');
+            rows.forEach(r => {
+                const delBtn = r.querySelector('.delete-row-btn');
+                if(delBtn) delBtn.style.visibility = 'visible';
+            });
+        } else {
+            btnContainer.style.display = 'none';
+            const rows = entriesContainer.querySelectorAll('.device-entry-row');
+            for (let i = 1; i < rows.length; i++) {
+                rows[i].remove();
+            }
+            const firstRow = entriesContainer.querySelector('.device-entry-row');
+            if(firstRow) {
+                const delBtn = firstRow.querySelector('.delete-row-btn');
+                if(delBtn) delBtn.style.visibility = 'hidden';
+            }
+        }
+        fetchNextJobNoPreview();
+    }
+
+    function addDeviceRow(isInitial = false) {
+        const container = document.getElementById('deviceEntriesContainer');
+        const rows = container.querySelectorAll('.device-entry-row');
+        
+        if (!isInitial && rows.length >= 10) {
+            return alert("Maximum 10 devices allowed per bulk entry.");
+        }
+
+        const row = document.createElement('div');
+        row.className = 'device-entry-row';
+        row.innerHTML = `
+            <div class="form-group">
+                <label>Model & Problem <span>*</span></label>
+                <input type="text" class="dev-model" placeholder="e.g. iPhone 13 - Screen">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="text" class="dev-pass" placeholder="1234">
+            </div>
+            <div class="form-group">
+                <label>Estimate (₹)</label>
+                <input type="number" class="dev-est" placeholder="0" step="0.01">
+            </div>
+            <button type="button" class="btn-icon delete-row-btn" style="color:#ef4444; height: 38px; margin-bottom: 2px;" onclick="removeDeviceRow(this)" title="Remove Device">🗑️</button>
+        `;
+        container.appendChild(row);
+
+        if (container.querySelectorAll('.device-entry-row').length === 1 && !document.getElementById('bulkEntryCheckbox').checked) {
+            row.querySelector('.delete-row-btn').style.visibility = 'hidden';
+        } else if (container.querySelectorAll('.device-entry-row').length === 1 && document.getElementById('bulkEntryCheckbox').checked) {
+             row.querySelector('.delete-row-btn').style.visibility = 'hidden';
+        } else {
+            const firstRowBtn = container.querySelector('.device-entry-row .delete-row-btn');
+            if(firstRowBtn) firstRowBtn.style.visibility = 'visible';
+        }
+    }
+
+    function removeDeviceRow(btn) {
+        const container = document.getElementById('deviceEntriesContainer');
+        const rows = container.querySelectorAll('.device-entry-row');
+        if (rows.length > 1) {
+            btn.closest('.device-entry-row').remove();
+        }
+        
+        const remainingRows = container.querySelectorAll('.device-entry-row');
+        if(remainingRows.length === 1) {
+            remainingRows[0].querySelector('.delete-row-btn').style.visibility = 'hidden';
+        }
+    }
+
+    async function saveOrder() {
         const btn = document.getElementById('btnSaveOrder');
         if (btn.disabled) return;
 
@@ -1880,11 +1965,13 @@
         }
     };
 
-    window.openEditModal = function(id, jobNo, currentProblem, currentPassword) {
+    function openEditModal(id, jobNo, currentProblem, currentPassword) {
         editOrderId = id; document.getElementById('editSubtitle').innerText = `Editing details for Job No: ${jobNo}`; document.getElementById('editProblemDesc').value = currentProblem; document.getElementById('editDevicePassword').value = currentPassword; document.getElementById('modalEdit').style.display = 'flex';
     }
-    window.closeEditModal = function() { document.getElementById('modalEdit').style.display = 'none'; }
-    window.saveEditOrder = async function() {
+    
+    function closeEditModal() { document.getElementById('modalEdit').style.display = 'none'; }
+    
+    async function saveEditOrder() {
         const btn = document.getElementById('btnSaveEditOrder');
         if (btn.disabled) return;
 
