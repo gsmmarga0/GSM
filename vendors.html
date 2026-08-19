@@ -77,7 +77,7 @@
         .modal h2 { margin: 0 0 15px 0; font-size: 1.2rem; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-size: 0.85rem; margin-bottom: 5px; color: #4b5563; font-weight: bold;}
-        .form-group input { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; outline: none; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; outline: none; font-family: inherit;}
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;}
         
         .empty-state { height: 100%; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 0.95rem; }
@@ -157,9 +157,16 @@
 
         <!-- Ledger View -->
         <div class="card">
-            <div class="card-header" style="background: white; border-bottom: none; font-size: 1.2rem; color: #111827; text-transform: none;">
-                <span id="ledgerTitle">Select a vendor</span>
-                <button class="btn" id="btnEditVendor" style="display:none; padding: 6px 12px; font-size:0.85rem;" onclick="openEditVendorModal()">✏️ Edit Vendor</button>
+            <div class="card-header" style="background: white; border-bottom: none; font-size: 1.2rem; color: #111827; text-transform: none; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display:flex; align-items:center; gap: 10px;">
+                    <span id="ledgerTitle">Select a vendor</span>
+                    <button class="btn" id="btnEditVendor" style="display:none; padding: 4px 8px; font-size:0.8rem;" onclick="openEditVendorModal()">✏️ Edit</button>
+                </div>
+                <!-- New Manual Actions -->
+                <div id="vendorActionButtons" style="display:none; gap: 8px;">
+                    <button class="btn" style="padding: 6px 12px; font-size: 0.85rem; color: #ef4444; border-color: #fca5a5; background: #fef2f2;" onclick="openAddBillModal()">+ Add Bill</button>
+                    <button class="btn" style="padding: 6px 12px; font-size: 0.85rem; color: #10b981; border-color: #6ee7b7; background: #ecfdf5;" onclick="openAddPaymentModal()">+ Add Payment</button>
+                </div>
             </div>
             
             <!-- Statistics -->
@@ -232,6 +239,61 @@
         <div class="modal-actions">
             <button class="btn" onclick="closeEditCostModal()">Cancel</button>
             <button class="btn btn-primary" onclick="savePartCost()" id="btnSaveCost">Save Updated Cost</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add Manual Bill -->
+<div class="modal-overlay" id="addBillModal">
+    <div class="modal">
+        <h2>Add Manual Bill</h2>
+        <p style="font-size: 0.8rem; color: #6b7280; margin-top: -10px; margin-bottom: 15px;">Record a manual purchase/stock entry.</p>
+        <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="abDate">
+        </div>
+        <div class="form-group">
+            <label>Bill Amount (₹)</label>
+            <input type="number" id="abAmount" placeholder="0">
+        </div>
+        <div class="form-group">
+            <label>Description / Items</label>
+            <input type="text" id="abDesc" placeholder="e.g. Assorted LCDs, Batteries">
+        </div>
+        <div class="modal-actions">
+            <button class="btn" onclick="closeAddBillModal()">Cancel</button>
+            <button class="btn btn-primary" id="btnSaveBill" onclick="saveManualBill()" style="background: #ef4444;">Save Bill</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add Vendor Payment -->
+<div class="modal-overlay" id="addPaymentModal">
+    <div class="modal">
+        <h2>Add Vendor Payment</h2>
+        <p style="font-size: 0.8rem; color: #6b7280; margin-top: -10px; margin-bottom: 15px;">Record a payment sent to this vendor.</p>
+        <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="apDate">
+        </div>
+        <div class="form-group">
+            <label>Amount (₹)</label>
+            <input type="number" id="apAmount" placeholder="0">
+        </div>
+        <div class="form-group">
+            <label>Payment Method</label>
+            <select id="apMethod">
+                <option value="Cash">Cash</option>
+                <option value="UPI">UPI</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Remarks / Description</label>
+            <input type="text" id="apDesc" placeholder="e.g. Account clearance">
+        </div>
+        <div class="modal-actions">
+            <button class="btn" onclick="closeAddPaymentModal()">Cancel</button>
+            <button class="btn btn-primary" id="btnSavePayment" onclick="saveVendorPayment()" style="background: #10b981;">Save Payment</button>
         </div>
     </div>
 </div>
@@ -337,6 +399,12 @@
         return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     }
 
+    // Return today's date formatted for HTML date inputs (YYYY-MM-DD)
+    function getTodayString() {
+        const today = new Date();
+        return today.toISOString().split('T')[0];
+    }
+
     async function fetchVendors() {
         const { data } = await supabaseClient.from('vendors').select('*').order('name', { ascending: true });
         vendors = data || [];
@@ -366,6 +434,7 @@
         renderVendors();
         document.getElementById('ledgerTitle').innerText = v.name;
         document.getElementById('btnEditVendor').style.display = 'block';
+        document.getElementById('vendorActionButtons').style.display = 'flex';
         document.getElementById('ledgerStats').style.display = 'grid';
         
         const container = document.getElementById('ledgerTableContainer');
@@ -402,7 +471,12 @@
             if (purchases) {
                 purchases.forEach(p => {
                     let cost = parseFloat(p.vendor_cost) || 0;
-                    activeVendorLedger.push({ id: p.id, jobNo: p.jobNo, date: p.date, ref: `Job: ${p.jobNo} - ${p.problemDesc}`, type: 'Purchase', amount: cost });
+                    // Format manual bills beautifully vs normal jobs
+                    let refText = (p.jobNo && p.jobNo.startsWith('MB-')) 
+                        ? p.problemDesc 
+                        : `Job: ${p.jobNo} - ${p.problemDesc}`;
+
+                    activeVendorLedger.push({ id: p.id, jobNo: p.jobNo, date: p.date, ref: refText, type: 'Purchase', amount: cost });
                 });
             }
             if (cashPayments) {
@@ -629,6 +703,121 @@
         } finally {
             btn.disabled = false;
             btn.innerText = 'Save Updated Cost';
+        }
+    }
+
+    // Modal: Add Manual Bill (Piggybacks on repairOrders to avoid DB schema changes)
+    window.openAddBillModal = function() {
+        if (!activeVendor) return;
+        document.getElementById('abDate').value = getTodayString();
+        document.getElementById('abAmount').value = '';
+        document.getElementById('abDesc').value = '';
+        document.getElementById('addBillModal').style.display = 'flex';
+    }
+
+    window.closeAddBillModal = function() {
+        document.getElementById('addBillModal').style.display = 'none';
+    }
+
+    window.saveManualBill = async function() {
+        const date = document.getElementById('abDate').value;
+        const amount = parseFloat(document.getElementById('abAmount').value) || 0;
+        const desc = document.getElementById('abDesc').value.trim() || 'Manual Vendor Bill';
+        const btn = document.getElementById('btnSaveBill');
+
+        if (!date || amount <= 0) return alert("Please enter a valid date and amount.");
+
+        btn.disabled = true;
+        btn.innerText = 'Saving...';
+
+        // Format a unique pseudo-JobNo for the manual bill 
+        const mbJobNo = 'MB-' + Date.now().toString().slice(-6);
+
+        try {
+            const { error } = await supabaseClient.from('repairOrders').insert({
+                jobNo: mbJobNo,
+                date: date,
+                customer_name: 'Vendor Bill',
+                contact_number: activeVendor.phone || '0000000000',
+                device_model: 'Manual Bill',
+                problemDesc: `Manual Bill: ${desc}`,
+                status: 'Goods Delivered',
+                vendor_name: activeVendor.name,
+                vendor_cost: amount,
+                repair_cost: 0,
+                is_deleted: false,
+                received_by: document.getElementById('userNameDisplay').innerText || 'Admin'
+            });
+
+            if (error) throw error;
+            
+            closeAddBillModal();
+            if (activeVendor) selectVendor(activeVendor);
+
+        } catch (e) {
+            alert("Error adding bill: " + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = 'Save Bill';
+        }
+    }
+
+    // Modal: Add Vendor Payment (Uses Cashbook or UPI tables)
+    window.openAddPaymentModal = function() {
+        if (!activeVendor) return;
+        document.getElementById('apDate').value = getTodayString();
+        document.getElementById('apAmount').value = '';
+        document.getElementById('apMethod').value = 'Cash';
+        document.getElementById('apDesc').value = '';
+        document.getElementById('addPaymentModal').style.display = 'flex';
+    }
+
+    window.closeAddPaymentModal = function() {
+        document.getElementById('addPaymentModal').style.display = 'none';
+    }
+
+    window.saveVendorPayment = async function() {
+        const date = document.getElementById('apDate').value;
+        const amount = parseFloat(document.getElementById('apAmount').value) || 0;
+        const method = document.getElementById('apMethod').value;
+        const desc = document.getElementById('apDesc').value.trim() || 'Vendor Payment';
+        const btn = document.getElementById('btnSavePayment');
+
+        if (!date || amount <= 0) return alert("Please enter a valid date and amount.");
+
+        btn.disabled = true;
+        btn.innerText = 'Saving...';
+
+        try {
+            if (method === 'Cash') {
+                const { error } = await supabaseClient.from('cashbook_entries').insert({
+                    date: date,
+                    amount: amount,
+                    description: desc,
+                    category: 'Vendor Payment',
+                    type: 'out',
+                    vendor_name: activeVendor.name
+                });
+                if (error) throw error;
+            } else {
+                const { error } = await supabaseClient.from('upi_entries').insert({
+                    date: date,
+                    upi_payment: amount,
+                    description: desc,
+                    category: 'Vendor Payment',
+                    vendor_name: activeVendor.name
+                });
+                if (error) throw error;
+            }
+
+            closeAddPaymentModal();
+            if (activeVendor) selectVendor(activeVendor);
+
+        } catch (e) {
+            alert("Error adding payment: " + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = 'Save Payment';
         }
     }
 
