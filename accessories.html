@@ -71,6 +71,8 @@
         .segmented-input .pay-btn.active { background: #111827; color: white; }
         .segmented-input .pay-btn.credit { color: #ef4444; }
         .segmented-input .pay-btn.credit.active { background: #ef4444; color: white; }
+        .segmented-input .pay-btn.split { color: #d97706; }
+        .segmented-input .pay-btn.split.active { background: #d97706; color: white; }
 
         .table-card { background: white; border-radius: 8px; border: 1px solid var(--border-color); padding: 0; overflow-x: auto; margin-bottom: 50px; }
         table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;}
@@ -82,6 +84,8 @@
         .pill-cash { background: #dcfce7; color: #166534; }
         .pill-upi { background: #e0e7ff; color: #3730a3; }
         .pill-credit { background: #fee2e2; color: #991b1b; }
+        .pill-split { background: #fef08a; color: #854d0e; }
+        
         .btn-icon { background: transparent; border: 1px solid var(--border-color); padding: 6px 10px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 0.8rem;}
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; align-items: flex-start; justify-content: center; z-index: 100; overflow: hidden;}
@@ -209,8 +213,30 @@
                             <button type="button" class="pay-btn active" id="payCash" onclick="setPaymentMode('Cash')">Cash</button>
                             <button type="button" class="pay-btn" id="payUPI" onclick="setPaymentMode('UPI')">UPI</button>
                             <button type="button" class="pay-btn credit" id="payCredit" onclick="setPaymentMode('Credit')">Credit</button>
+                            <button type="button" class="pay-btn split" id="paySplit" onclick="setPaymentMode('Split')">Split</button>
                         </div>
                     </div>
+
+                    <!-- Split Payment Inputs -->
+                    <div id="splitInputsGroup" style="display: none; grid-column: 1 / -1; background: #fffbeb; padding: 15px; border-radius: 8px; border: 1px dashed #fcd34d; margin-top: 5px;">
+                        <label style="color: #b45309; font-weight: bold; margin-bottom: 10px; display: block;">Enter Split Amounts (Total must equal Grand Total)</label>
+                        <div style="display: flex; gap: 15px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label>Cash Amount (₹)</label>
+                                <input type="number" id="splitCashAmt" placeholder="0" oninput="updateSplitRemaining()">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label>UPI Amount (₹)</label>
+                                <input type="number" id="splitUpiAmt" placeholder="0" oninput="updateSplitRemaining()">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label>Credit Amount (₹)</label>
+                                <input type="number" id="splitCreditAmt" placeholder="0" oninput="updateSplitRemaining()">
+                            </div>
+                        </div>
+                        <div style="margin-top: 10px; font-size: 0.85rem; font-weight: bold;" id="splitStatusText">Remaining to allocate: ₹0.00</div>
+                    </div>
+
                     <div class="form-group">
                         <label>Date</label>
                         <input type="date" id="inv-date">
@@ -465,12 +491,43 @@
             }
         }
 
+        window.updateSplitRemaining = function() {
+            let total = 0;
+            document.querySelectorAll('.item-total').forEach(input => {
+                total += parseFloat(input.value) || 0;
+            });
+            let c = parseFloat(document.getElementById('splitCashAmt').value) || 0;
+            let u = parseFloat(document.getElementById('splitUpiAmt').value) || 0;
+            let cr = parseFloat(document.getElementById('splitCreditAmt').value) || 0;
+            let diff = total - (c + u + cr);
+            let status = document.getElementById('splitStatusText');
+            
+            if (diff === 0 && total > 0) {
+                status.innerHTML = `<span style="color: green;">Balanced (₹0.00 remaining)</span>`;
+            } else if (diff > 0) {
+                status.innerHTML = `<span style="color: #d97706;">Remaining to allocate: ₹${diff.toFixed(2)}</span>`;
+            } else {
+                status.innerHTML = `<span style="color: red;">Excess amount allocated: ₹${Math.abs(diff).toFixed(2)}</span>`;
+            }
+
+            // show/hide upi notes if upi > 0
+            if (u > 0) document.getElementById('upiNotesGroup').style.display = 'flex';
+            else document.getElementById('upiNotesGroup').style.display = 'none';
+        }
+
         window.setPaymentMode = function(mode) {
             selectedPaymentMode = mode;
             document.getElementById('payCash').className = mode === 'Cash' ? 'pay-btn active' : 'pay-btn';
             document.getElementById('payUPI').className = mode === 'UPI' ? 'pay-btn active' : 'pay-btn';
             document.getElementById('payCredit').className = mode === 'Credit' ? 'pay-btn credit active' : 'pay-btn credit';
-            document.getElementById('upiNotesGroup').style.display = mode === 'UPI' ? 'flex' : 'none';
+            document.getElementById('paySplit').className = mode === 'Split' ? 'pay-btn split active' : 'pay-btn split';
+
+            document.getElementById('upiNotesGroup').style.display = (mode === 'UPI') ? 'flex' : 'none';
+            document.getElementById('splitInputsGroup').style.display = (mode === 'Split') ? 'block' : 'none';
+
+            if (mode === 'Split') {
+                updateSplitRemaining();
+            }
         }
 
         // ==========================================
@@ -490,7 +547,7 @@
             let desc = existingData ? existingData.desc : '';
             let catId = existingData ? (existingData.catalogId || '') : '';
             let serial = existingData ? (existingData.serial || '') : '';
-            let price = existingData ? (existingData.price || existingData.total_amt) : ''; // fallback for old data without qty
+            let price = existingData ? (existingData.price || existingData.total_amt) : ''; 
             let qty = existingData ? (existingData.qty || 1) : 1;
             let total = existingData ? existingData.total_amt : '';
 
@@ -570,6 +627,10 @@
                 total += parseFloat(input.value) || 0;
             });
             document.getElementById('uiGrandTotal').innerText = `₹${total.toFixed(2)}`;
+            
+            if (selectedPaymentMode === 'Split') {
+                updateSplitRemaining();
+            }
         }
 
         document.addEventListener('click', function(e) {
@@ -635,11 +696,9 @@
                 let total = parseFloat(row.querySelector('.item-total').value) || 0;
 
                 if (desc && qty > 0) {
-                    // Auto Add to Catalog Logic
                     if (!catId) {
                         let finalName = desc;
                         let counter = 1;
-                        // Avoid duplicates: if name exists, append counter
                         while(catalogItems.some(c => c.description.toLowerCase() === finalName.toLowerCase())) {
                             finalName = `${desc} ${counter}`;
                             counter++;
@@ -648,8 +707,8 @@
                         const {data: newCat, error} = await db.from('accessories_catalog').insert([{description: finalName, amount: price}]).select();
                         if (!error && newCat && newCat.length > 0) {
                             catId = newCat[0].id;
-                            desc = finalName; // update name for invoice JSON
-                            catalogItems.push(newCat[0]); // update cache locally
+                            desc = finalName; 
+                            catalogItems.push(newCat[0]); 
                             needsCatalogRefresh = true;
                         }
                     }
@@ -660,7 +719,21 @@
             }
 
             if (itemsArray.length === 0) return alert("Please add at least one valid item with a price and quantity.");
-            if (needsCatalogRefresh) fetchCatalog(); // background refresh UI catalog table
+            if (needsCatalogRefresh) fetchCatalog(); 
+
+            let savePaymentMode = selectedPaymentMode;
+            let cAmt = 0, uAmt = 0, crAmt = 0;
+
+            if (selectedPaymentMode === 'Split') {
+                cAmt = parseFloat(document.getElementById('splitCashAmt').value) || 0;
+                uAmt = parseFloat(document.getElementById('splitUpiAmt').value) || 0;
+                crAmt = parseFloat(document.getElementById('splitCreditAmt').value) || 0;
+                
+                if (Math.abs(grandTotal - (cAmt + uAmt + crAmt)) > 0.01) {
+                    return alert("Split amounts must equal the Grand Total exactly.");
+                }
+                savePaymentMode = `Split|${cAmt}|${uAmt}|${crAmt}`;
+            }
 
             // Build Invoice Core Payload
             const summaryDesc = itemsArray.map(i => i.desc).join(', ');
@@ -686,9 +759,8 @@
                 items: itemsArray,      
                 serial_no: itemsArray[0].serial,
                 total_amt: grandTotal,
-                payment_mode: selectedPaymentMode,
-                date: date,
-                // Time and CreatedBy only set on creation, not edit
+                payment_mode: savePaymentMode,
+                date: date
             };
             if (!editingInvoice) {
                 invData.time = time;
@@ -697,7 +769,8 @@
 
             let currentDate = new Date().toISOString().split('T')[0];
             let currentTime = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute:'2-digit' });
-            let baseDesc = `Acc. Invoice #${invoiceNoStr} - ${custName} (${selectedPaymentMode})`;
+            let baseDesc = `Acc. Invoice #${invoiceNoStr} - ${custName}`;
+            let upiNotes = document.getElementById('upiAccountNotes').value.trim();
 
             try {
                 // --- ROLLBACK LOGIC IF EDITING ---
@@ -706,10 +779,16 @@
                     await db.from('cashbook_entries').delete().ilike('description', searchStr);
                     await db.from('upi_entries').delete().ilike('description', searchStr);
                     
-                    if (editingInvoice.payment_mode === 'Credit') {
+                    let oldCredit = 0;
+                    if (editingInvoice.payment_mode === 'Credit') oldCredit = editingInvoice.total_amt;
+                    else if (editingInvoice.payment_mode.startsWith('Split')) {
+                        oldCredit = parseFloat(editingInvoice.payment_mode.split('|')[3]) || 0;
+                    }
+
+                    if (oldCredit > 0) {
                         const { data: oldCust } = await db.from('customers').select('id, credit_balance').eq('mobile', editingInvoice.mobile).single();
                         if (oldCust) {
-                            let newBal = (oldCust.credit_balance || 0) - editingInvoice.total_amt;
+                            let newBal = (oldCust.credit_balance || 0) - oldCredit;
                             await db.from('customers').update({ credit_balance: Math.max(0, newBal) }).eq('id', oldCust.id);
                         }
                     }
@@ -729,16 +808,35 @@
                     }
                 } else if (selectedPaymentMode === 'Cash') {
                     await db.from('cashbook_entries').insert([{
-                        description: baseDesc, category: 'Accessories', amount: grandTotal, type: 'in', 
+                        description: `${baseDesc} (Cash)`, category: 'Accessories', amount: grandTotal, type: 'in', 
                         date: date, created_by: currentUserDisplay
                     }]);
                 } else if (selectedPaymentMode === 'UPI') {
-                    let upiNotes = document.getElementById('upiAccountNotes').value.trim();
-                    let finalDesc = upiNotes ? `${baseDesc} - Acct: ${upiNotes}` : baseDesc;
+                    let finalDesc = upiNotes ? `${baseDesc} (UPI) - Acct: ${upiNotes}` : `${baseDesc} (UPI)`;
                     await db.from('upi_entries').insert([{
                         date: date, time: currentTime, description: finalDesc, category: 'Accessories', 
                         upi_amount: grandTotal, card_amount: 0, created_by: currentUserDisplay
                     }]);
+                } else if (selectedPaymentMode === 'Split') {
+                    if (crAmt > 0) {
+                        const { data: custData } = await db.from('customers').select('credit_balance').eq('id', custId).single();
+                        if (custData) {
+                            await db.from('customers').update({ credit_balance: (custData.credit_balance || 0) + crAmt }).eq('id', custId);
+                        }
+                    }
+                    if (cAmt > 0) {
+                        await db.from('cashbook_entries').insert([{
+                            description: `${baseDesc} (Split - Cash Part)`, category: 'Accessories', amount: cAmt, type: 'in', 
+                            date: date, created_by: currentUserDisplay
+                        }]);
+                    }
+                    if (uAmt > 0) {
+                        let finalDesc = upiNotes ? `${baseDesc} (Split - UPI Part) - Acct: ${upiNotes}` : `${baseDesc} (Split - UPI Part)`;
+                        await db.from('upi_entries').insert([{
+                            date: date, time: currentTime, description: finalDesc, category: 'Accessories', 
+                            upi_amount: uAmt, card_amount: 0, created_by: currentUserDisplay
+                        }]);
+                    }
                 }
 
                 alert(`Invoice ${editingInvoice ? 'Updated' : 'Saved'} successfully!`);
@@ -771,12 +869,21 @@
             else document.getElementById('custSearchInput').value = `${inv.customer_name} (${inv.mobile})`; // fallback
             
             document.getElementById('inv-date').value = inv.date;
-            setPaymentMode(inv.payment_mode);
+
+            // Handle Payment mode restoration
+            if (inv.payment_mode && inv.payment_mode.startsWith('Split')) {
+                let parts = inv.payment_mode.split('|');
+                document.getElementById('splitCashAmt').value = parseFloat(parts[1]) || 0;
+                document.getElementById('splitUpiAmt').value = parseFloat(parts[2]) || 0;
+                document.getElementById('splitCreditAmt').value = parseFloat(parts[3]) || 0;
+                setPaymentMode('Split');
+            } else {
+                setPaymentMode(inv.payment_mode || 'Cash');
+            }
             
             document.getElementById('invoiceItemsContainer').innerHTML = '';
             
             let itemsToLoad = inv.items;
-            // Handle legacy data structure gracefully
             if (!itemsToLoad || itemsToLoad.length === 0) {
                 itemsToLoad = [{ desc: inv.item_desc, price: inv.total_amt, qty: 1, total_amt: inv.total_amt, serial: inv.serial_no }];
             }
@@ -799,6 +906,11 @@
             document.getElementById('newCustMobile').value = '';
             document.getElementById('invoiceItemsContainer').innerHTML = '';
             document.getElementById('upiAccountNotes').value = '';
+            
+            document.getElementById('splitCashAmt').value = '';
+            document.getElementById('splitUpiAmt').value = '';
+            document.getElementById('splitCreditAmt').value = '';
+
             addInvoiceItem(); 
             setPaymentMode('Cash');
             document.getElementById('inv-date').value = new Date().toISOString().split('T')[0];
@@ -824,7 +936,6 @@
             filterCatalogTable();
         }
 
-        // ... catalog save/edit/delete logic remains same ...
         window.toggleCatalogForm = function() {
             const form = document.getElementById('catalogFormDropdown');
             if (form.style.display === 'none' || form.style.display === '') {
@@ -895,8 +1006,22 @@
             const paginatedItems = filteredInvoices.slice(start, start + rowsPerPage);
 
             paginatedItems.forEach(inv => {
-                let pillClass = inv.payment_mode === 'Cash' ? 'pill-cash' : (inv.payment_mode === 'UPI' ? 'pill-upi' : 'pill-credit');
-                
+                let formattedMode = inv.payment_mode || 'Cash';
+                let pillClass = 'pill-cash';
+
+                if (formattedMode === 'Cash') pillClass = 'pill-cash';
+                else if (formattedMode === 'UPI') pillClass = 'pill-upi';
+                else if (formattedMode === 'Credit') pillClass = 'pill-credit';
+                else if (formattedMode.startsWith('Split')) {
+                    pillClass = 'pill-split';
+                    let parts = formattedMode.split('|');
+                    let str = [];
+                    if (parseFloat(parts[1]) > 0) str.push(`C:₹${parts[1]}`);
+                    if (parseFloat(parts[2]) > 0) str.push(`U:₹${parts[2]}`);
+                    if (parseFloat(parts[3]) > 0) str.push(`Cr:₹${parts[3]}`);
+                    formattedMode = `SPLIT (${str.join(', ')})`;
+                }
+
                 // Safe JSON serialization for buttons
                 let invBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(inv))));
                 
@@ -917,7 +1042,7 @@
                         <td>${inv.mobile}</td>
                         <td style="color:#4b5563;">${summaryDesc}</td>
                         <td style="font-weight:bold; color:black;">₹${inv.total_amt.toFixed(2)}</td>
-                        <td><span class="pill ${pillClass}">${inv.payment_mode.toUpperCase()}</span></td>
+                        <td><span class="pill ${pillClass}">${formattedMode.toUpperCase()}</span></td>
                         <td style="display:flex; gap:8px; justify-content:center;">${actionBtns}</td>
                     </tr>`;
             });
@@ -933,13 +1058,23 @@
                 const searchString = `Acc. Invoice #${invoiceNoStr}%`;
                 await db.from('cashbook_entries').delete().ilike('description', searchString);
                 await db.from('upi_entries').delete().ilike('description', searchString);
+
+                let creditToRollback = 0;
                 if (paymentMode === 'Credit') {
+                    creditToRollback = amount;
+                } else if (paymentMode && paymentMode.startsWith('Split')) {
+                    let parts = paymentMode.split('|');
+                    creditToRollback = parseFloat(parts[3]) || 0;
+                }
+
+                if (creditToRollback > 0) {
                     const { data: custDataArr } = await db.from('customers').select('id, credit_balance').eq('mobile', mobile).limit(1);
                     if (custDataArr && custDataArr.length > 0) {
-                        let newBal = (parseFloat(custDataArr[0].credit_balance) || 0) - amount;
+                        let newBal = (parseFloat(custDataArr[0].credit_balance) || 0) - creditToRollback;
                         await db.from('customers').update({ credit_balance: Math.max(0, newBal) }).eq('id', custDataArr[0].id);
                     }
                 }
+                
                 await db.from('accessories_invoices').delete().eq('id', id);
                 fetchInvoices();
             } catch (err) { alert("Error deleting invoice: " + err.message); }
@@ -957,6 +1092,11 @@
             const exportData = [];
             filtered.forEach(inv => {
                 let itemsList = inv.items || [{ desc: inv.item_desc, qty: 1, total_amt: inv.total_amt }];
+                let fmtMode = inv.payment_mode;
+                if(fmtMode && fmtMode.startsWith('Split')){
+                    let parts = fmtMode.split('|');
+                    fmtMode = `Split (Cash:${parts[1]}, UPI:${parts[2]}, Credit:${parts[3]})`;
+                }
                 itemsList.forEach(item => {
                     exportData.push({
                         "Invoice Number": inv.invoice_no,
@@ -968,7 +1108,7 @@
                         "Qty": item.qty || 1,
                         "Line Item Value (Total)": parseFloat(item.total_amt.toFixed(2)),
                         "Invoice Grand Total": parseFloat(inv.total_amt.toFixed(2)),
-                        "Payment Mode": inv.payment_mode
+                        "Payment Mode": fmtMode
                     });
                 });
             });
@@ -1014,6 +1154,23 @@
 
             const dateStr = inv.time ? `${inv.date} &nbsp;&nbsp;|&nbsp;&nbsp; ${inv.time}` : inv.date;
 
+            let printModeStr = inv.payment_mode || 'CASH';
+            let printPaymentPillText = printModeStr === 'Credit' ? '⏱ PENDING: CREDIT' : '✓ ' + printModeStr.toUpperCase() + ' PAID';
+            let borderColor = printModeStr === 'Credit' ? '#dc2626' : '#16a34a';
+
+            if (printModeStr.startsWith('Split')) {
+                let parts = printModeStr.split('|');
+                let str = [];
+                if (parseFloat(parts[1]) > 0) str.push(`CASH: ₹${parts[1]}`);
+                if (parseFloat(parts[2]) > 0) str.push(`UPI: ₹${parts[2]}`);
+                if (parseFloat(parts[3]) > 0) str.push(`CREDIT: ₹${parts[3]}`);
+                printModeStr = `SPLIT (${str.join(', ')})`;
+                printPaymentPillText = `✓ SPLIT PAYMENT`;
+                borderColor = '#d97706';
+            } else {
+                printModeStr = printModeStr.toUpperCase();
+            }
+
             const printWindow = window.open('', '_blank');
             printWindow.document.write(`
             <html>
@@ -1044,7 +1201,7 @@
                     .totals-row { display: flex; justify-content: space-between; padding: 8px 15px; border-bottom: 1px solid #e2e8f0; border-left: 1px solid #e2e8f0;}
                     .totals-row.grand { background: #1e293b; color: white; font-weight: bold; font-size: 14px;}
                     .footer { padding: 20px 40px; display: flex; justify-content: space-between; align-items: flex-end; margin-top: 20px;}
-                    .pill { border: 1px solid ${inv.payment_mode === 'Credit' ? '#dc2626' : '#16a34a'}; color: ${inv.payment_mode === 'Credit' ? '#dc2626' : '#16a34a'}; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 10px; display: inline-flex; align-items: center; gap: 5px;}
+                    .pill { border: 1px solid ${borderColor}; color: ${borderColor}; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 10px; display: inline-flex; align-items: center; gap: 5px;}
                     .sign-box { text-align: right; font-size: 10px; }
                     .bottom-text { text-align: center; font-size: 9px; color: #64748b; margin-top: 50px; }
                 </style>
@@ -1075,7 +1232,7 @@
                 <div class="box">
                     <div class="box-title">PAYMENT</div>
                     <div class="box-content">
-                        <strong>${inv.payment_mode.toUpperCase()}</strong><br><br>Total Due<br>
+                        <strong>${printModeStr}</strong><br><br>Total Due<br>
                         <strong style="font-size:16px;">₹${inv.total_amt.toFixed(2)}</strong>
                     </div>
                 </div>
@@ -1103,8 +1260,8 @@
             </div>
             <div class="footer">
                 <div>
-                    <div style="font-size:9px; color:gray; margin-bottom:5px; text-transform:uppercase;">PAYMENT MODE</div>
-                    <div class="pill">${inv.payment_mode === 'Credit' ? '⏱ PENDING: CREDIT' : '✓ ' + inv.payment_mode.toUpperCase() + ' PAID'}</div>
+                    <div style="font-size:9px; color:gray; margin-bottom:5px; text-transform:uppercase;">PAYMENT STATUS</div>
+                    <div class="pill">${printPaymentPillText}</div>
                 </div>
                 <div class="sign-box">
                     <strong>For GSM SOLUTIONS</strong><br><br><br><br>
