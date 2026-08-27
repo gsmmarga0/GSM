@@ -1538,6 +1538,17 @@
         btn.innerText = "Processing...";
 
         try {
+            // --- CONCURRENCY CHECK ---
+            const { data: checkData, error: checkErr } = await supabaseClient.from('repairOrders').select('status').eq('id', billingOrderId).single();
+            if (checkErr) throw checkErr;
+            if (checkData.status !== 'Pending') {
+                alert(`Action aborted: This order was already updated to '${checkData.status}' by another user or device. Refreshing...`);
+                closeBillingModal();
+                fetchOrders();
+                return;
+            }
+            // -------------------------
+
             const { error: updateError } = await supabaseClient.from('repairOrders').update({ 
                 status: 'Repair Completed', 
                 estimateAmount: estimateAmount, 
@@ -1577,6 +1588,17 @@
         btn.innerText = "Processing...";
 
         try {
+            // --- CONCURRENCY CHECK ---
+            const { data: checkData, error: checkErr } = await supabaseClient.from('repairOrders').select('status').eq('id', billingOrderId).single();
+            if (checkErr) throw checkErr;
+            if (checkData.status !== 'Pending') {
+                alert(`Action aborted: This order was already updated to '${checkData.status}' by another user or device. Refreshing...`);
+                closeBillingModal();
+                fetchOrders();
+                return;
+            }
+            // -------------------------
+
             const { error: updateError } = await supabaseClient.from('repairOrders').update({ 
                 status: 'Repair Refusal', 
                 repairNotes: notes,
@@ -1695,6 +1717,17 @@
         btn.innerText = "Processing...";
 
         try {
+            // --- CONCURRENCY CHECK ---
+            const { data: checkData, error: checkErr } = await supabaseClient.from('repairOrders').select('status').eq('id', deliveryOrderId).single();
+            if (checkErr) throw checkErr;
+            if (checkData.status === 'Goods Delivered' || checkData.status === 'Delivered (Refused)') {
+                alert(`Action aborted: This order was already delivered by another user or device. Refreshing...`);
+                closeDeliveryModal();
+                fetchOrders();
+                return;
+            }
+            // -------------------------
+
             const { error: updateError } = await supabaseClient.from('repairOrders').update({ 
                 status: newStatus, 
                 finalAmount: finalAmount, 
