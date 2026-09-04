@@ -1218,9 +1218,9 @@
             } else if (order.status === 'Repair Completed') {
                 displayAmount = order.estimateAmount || order.approxEstimate || 0;
                 displayAmountHtml = `<span style="font-weight:bold; color:#059669;">₹${displayAmount}</span>`;
-                if (isAdmin) {
-                    displayAmountHtml += `<span onclick="promptUpdateEstimate('${orderIdSafe}', 'Repair Completed', ${displayAmount})">${pencilSVG}</span>`;
-                }
+                // REMOVED isAdmin check here so all users can update estimate on Repair Complete tab
+                displayAmountHtml += `<span onclick="promptUpdateEstimate('${orderIdSafe}', 'Repair Completed', ${displayAmount})">${pencilSVG}</span>`;
+                
                 actionHtml = `<button class="btn-bill" style="background:#2563eb; margin-bottom:5px;" onclick="openDeliveryModal('${orderIdSafe}', '${jobNoSafe}', ${displayAmount}, '${customerNameSafe}', '${contactNoSafe}', '${order.status}')">Deliver Goods 📦</button>
                 <button class="btn" style="font-size: 0.7rem; padding: 4px 8px; color: #d97706; border-color: #fde68a; background: #fffbeb;" onclick="revertToPending('${orderIdSafe}', '${jobNoSafe}')">⏪ Revert to Pending</button>`;
             
