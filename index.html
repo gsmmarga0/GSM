@@ -66,6 +66,7 @@
         .tab-btn.active#tab-Repair-Completed::after { background: #3b82f6; }
         .tab-btn.active#tab-Goods-Delivered::after { background: #22c55e; }
         .tab-btn.active#tab-Repair-Refusal::after { background: #ef4444; }
+        .tab-btn.active#tab-Delivered-Refused::after { background: #b91c1c; }
         .tab-btn.active#tab-Deleted-Orders::after { background: #6b7280; }
 
         .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
@@ -73,6 +74,7 @@
         .dot-completed { background: #3b82f6; }
         .dot-delivered { background: #22c55e; }
         .dot-refusal { background: #ef4444; }
+        .dot-delrefused { background: #b91c1c; }
         .dot-deleted { background: #6b7280; }
 
         .tab-badge { background: #f3f4f6; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; color: #4b5563; }
@@ -235,6 +237,9 @@
             </button>
             <button class="tab-btn" id="tab-Repair-Refusal" onclick="switchTab('Repair Refusal')">
                 <span class="dot dot-refusal"></span> Repair Refusal <span class="tab-badge" id="badge-Refusal">0</span>
+            </button>
+            <button class="tab-btn" id="tab-Delivered-Refused" onclick="switchTab('Delivered (Refused)')">
+                <span class="dot dot-delrefused"></span> Returned (Refused) <span class="tab-badge" id="badge-Delivered-Refused">0</span>
             </button>
             <button class="tab-btn admin-only" id="tab-Deleted-Orders" onclick="switchTab('Deleted Orders')" style="display: none;">
                 <span class="dot dot-deleted"></span> Deleted Orders <span class="tab-badge" id="badge-Deleted">0</span>
@@ -668,7 +673,8 @@
                 let statusColor = '#3b82f6'; 
                 if (job.status === 'Repair Completed') statusColor = '#f59e0b'; 
                 else if (job.status === 'Repair Refusal') statusColor = '#ef4444'; 
-                else if (job.status === 'Goods Delivered' || job.status === 'Delivered (Refused)') statusColor = '#10b981'; 
+                else if (job.status === 'Goods Delivered') statusColor = '#10b981'; 
+                else if (job.status === 'Delivered (Refused)') statusColor = '#b91c1c'; 
 
                 resultsList.innerHTML += `
                     <li>
@@ -685,7 +691,6 @@
     }
 
     function jumpToOrder(status, jobNo) {
-        if (status === 'Delivered (Refused)') status = 'Goods Delivered';
         switchTab(status || 'Pending'); 
         document.getElementById('searchInput').value = jobNo;
         applyFilters();
@@ -878,7 +883,7 @@
     function switchTab(tabName) {
         currentTab = tabName;
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        const tabId = 'tab-' + tabName.replace(' ', '-');
+        const tabId = 'tab-' + tabName.replace(/\s+/g, '-').replace(/[()]/g, '');
         const element = document.getElementById(tabId);
         if(element) element.classList.add('active');
         
@@ -899,7 +904,11 @@
             thEstimate.innerText = "Total Amount (₹)";
             if (isAdmin) thVendor.innerText = "Part Vendor (Cost)";
         } else if (tabName === 'Repair Refusal') {
-            desc.innerText = "Showing orders marked as refused or cancelled.";
+            desc.innerText = "Showing orders marked as refused or cancelled awaiting delivery/collection.";
+            thEstimate.innerText = "Inspection Charges (₹)";
+            if (isAdmin) thVendor.innerText = "Part Vendor (Cost)";
+        } else if (tabName === 'Delivered (Refused)') {
+            desc.innerText = "Showing history of un-repaired/refused orders that have been handed back to customers.";
             thEstimate.innerText = "Inspection Charges (₹)";
             if (isAdmin) thVendor.innerText = "Part Vendor (Cost)";
         } else if (tabName === 'Deleted Orders') {
@@ -922,15 +931,11 @@
 
             if (allMatches.length > 0) {
                 const matchesInCurrentTab = allMatches.some(order => {
-                    return currentTab === 'Goods Delivered' 
-                        ? (order.status === 'Goods Delivered' || order.status === 'Delivered (Refused)') 
-                        : (order.status || 'Pending') === currentTab;
+                    return (order.status || 'Pending') === currentTab;
                 });
 
                 if (!matchesInCurrentTab) {
                     let newTab = allMatches[0].status;
-                    if (newTab === 'Delivered (Refused)') newTab = 'Goods Delivered';
-                    
                     if (newTab && newTab !== currentTab) {
                         switchTab(newTab);
                         return; 
@@ -949,19 +954,14 @@
                 matchesTab = (order.is_deleted === true);
             } else {
                 if (order.is_deleted === true) return false; 
-                
-                if (currentTab === 'Goods Delivered') {
-                    matchesTab = (order.status === 'Goods Delivered' || order.status === 'Delivered (Refused)');
-                } else {
-                    matchesTab = (order.status || 'Pending') === currentTab;
-                }
+                matchesTab = (order.status || 'Pending') === currentTab;
             }
                 
             return matchesSearch && matchesTab;
         });
 
         filteredOrdersData.sort((a, b) => {
-            if (currentTab === 'Goods Delivered' || currentTab === 'Deleted Orders') {
+            if (currentTab === 'Goods Delivered' || currentTab === 'Delivered (Refused)' || currentTab === 'Deleted Orders') {
                 const timeA = a.gd_timestamp ? new Date(a.gd_timestamp).getTime() : new Date(a.created_at || 0).getTime();
                 const timeB = b.gd_timestamp ? new Date(b.gd_timestamp).getTime() : new Date(b.created_at || 0).getTime();
                 return timeB - timeA;
@@ -1039,7 +1039,7 @@
     }
 
     function updateStats(data) {
-        let pending = 0; let completed = 0; let delivered = 0; let refusal = 0; let deleted = 0;
+        let pending = 0; let completed = 0; let delivered = 0; let refusal = 0; let delRefused = 0; let deleted = 0;
         data.forEach(order => {
             if (order.is_deleted === true) {
                 deleted++;
@@ -1047,8 +1047,9 @@
             }
             if(order.status === 'Pending') pending++;
             if(order.status === 'Repair Completed') completed++;
-            if(order.status === 'Goods Delivered' || order.status === 'Delivered (Refused)') delivered++;
+            if(order.status === 'Goods Delivered') delivered++;
             if(order.status === 'Repair Refusal') refusal++;
+            if(order.status === 'Delivered (Refused)') delRefused++;
         });
         
         document.getElementById('pendingCount').innerText = pending;
@@ -1060,6 +1061,9 @@
         document.getElementById('badge-Completed').innerText = completed;
         document.getElementById('badge-Delivered').innerText = delivered;
         document.getElementById('badge-Refusal').innerText = refusal;
+        
+        const badgeDelRefused = document.getElementById('badge-Delivered-Refused');
+        if (badgeDelRefused) badgeDelRefused.innerText = delRefused;
         
         if (isAdmin) {
             const badgeDeleted = document.getElementById('badge-Deleted');
@@ -1218,7 +1222,6 @@
             } else if (order.status === 'Repair Completed') {
                 displayAmount = order.estimateAmount || order.approxEstimate || 0;
                 displayAmountHtml = `<span style="font-weight:bold; color:#059669;">₹${displayAmount}</span>`;
-                // REMOVED isAdmin check here so all users can update estimate on Repair Complete tab
                 displayAmountHtml += `<span onclick="promptUpdateEstimate('${orderIdSafe}', 'Repair Completed', ${displayAmount})">${pencilSVG}</span>`;
                 
                 actionHtml = `<button class="btn-bill" style="background:#2563eb; margin-bottom:5px;" onclick="openDeliveryModal('${orderIdSafe}', '${jobNoSafe}', ${displayAmount}, '${customerNameSafe}', '${contactNoSafe}', '${order.status}')">Deliver Goods 📦</button>
@@ -1244,8 +1247,12 @@
                 displayAmountHtml = `<span style="font-weight:bold; color:#059669;">₹${displayAmount}</span>`;
                 
                 actionHtml = `<div style="display:flex; flex-direction:column; gap:8px; align-items:center;">`;
-                actionHtml += `<span class="status-badge" style="background:#fca5a5; color:#7f1d1d;">Returned (Refused)</span>`;
+                actionHtml += `<span class="status-badge" style="background:#fca5a5; color:#7f1d1d;">Returned (${order.paymentMethod || 'Cash'})</span>`;
                 
+                if (isAdmin && displayAmount > 0) {
+                    actionHtml += `<button class="btn" style="font-size: 0.7rem; padding: 4px 8px;" onclick="openEditPaymentModal('${orderIdSafe}', '${jobNoSafe}', ${displayAmount}, '${customerNameSafe}', '${contactNoSafe}', '${order.paymentMethod}')">✏️ Edit Payment</button>`;
+                }
+
                 actionHtml += `<button class="btn" style="font-size: 0.7rem; padding: 4px 8px; color: #d97706; border-color: #fde68a; background: #fffbeb;" onclick="revertToRepairCompleted('${orderIdSafe}', '${jobNoSafe}', '${order.paymentMethod}', ${displayAmount}, '${contactNoSafe}', 'Repair Refusal')">⏪ Revert Status</button>`;
                 actionHtml += `</div>`;
                 rowStyle = 'background-color: #fef2f2;';
@@ -1776,7 +1783,7 @@
             }
             closeDeliveryModal();
             await fetchOrders(); 
-            switchTab('Goods Delivered'); 
+            switchTab(newStatus); 
         } catch (err) { 
             alert("Error updating order: " + err.message); 
         } finally {
@@ -1958,7 +1965,7 @@
                     const jobNoVal = `GSM${String(attemptNum).padStart(2, '0')}`;
                     const orderData = { 
                         customerName: custName, 
-                        contactNo: contactNo,
+                        contactNo: contactNo, 
                         altContactNo: altContactNo, 
                         jobNo: jobNoVal, 
                         problemDesc: dev.problemDesc, 
