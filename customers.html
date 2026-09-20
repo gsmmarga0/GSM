@@ -91,7 +91,17 @@
         .b-cred { background: #fee2e2; color: #991b1b; }
         .b-settle { background: #dcfce7; color: #166534; }
         .b-disc { background: #f3e8ff; color: #4338ca; }
+
+        /* New buttons for Link/PDF */
+        .btn-action-sm { background: white; border: 1px solid #cbd5e1; color: #334155; font-size: 0.85rem; font-weight: 600; padding: 6px 12px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s; }
+        .btn-action-sm:hover { background: #f1f5f9; }
+
+        /* Public Guest Container Mode */
+        .public-view-body { background: #f8fafc; height: 100vh; overflow-y: auto; display: flex; justify-content: center; padding: 25px 15px; }
+        .public-card { background: white; width: 100%; max-width: 900px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px rgba(0,0,0,0.05); padding: 30px; height: fit-content; }
     </style>
+    <!-- HTML2PDF library for PDF downloads -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
@@ -121,7 +131,7 @@
 </div>    
 <div class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">⋮</div>
 
-<div class="main-content">
+<div class="main-content" id="mainDashboardContent">
     <div class="header">
         <div class="header-left" style="display: flex; gap: 40px; align-items: center;">
             <div>
@@ -167,7 +177,51 @@
     </div>
 </div>
 
-<!-- FULL CUSTOMER LEDGER MODAL -->
+<!-- PUBLIC GUEST CONTAINER (Used strictly when viewing via share link) -->
+<div id="publicLedgerViewContainer" style="display: none; width: 100%;" class="public-view-body">
+    <div class="public-card" id="publicLedgerCardContent">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 20px;">
+            <div style="display:flex; align-items:center; gap: 10px;">
+                <div class="logo-icon" style="font-size: 1.1rem; padding: 6px 12px; background:black; color:white; border-radius:4px; font-weight:bold;">GSM</div>
+                <div>
+                    <h2 style="margin: 0; font-size: 1.3rem;">GSM SOLUTIONS</h2>
+                    <p style="margin: 0; font-size: 0.8rem; color: #64748b;">Customer Account Statement</p>
+                </div>
+            </div>
+            <button class="btn-action-sm" onclick="downloadLedgerPDF('public')">📥 Download PDF</button>
+        </div>
+
+        <div id="publicPrintableArea">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+                <div>
+                    <h3 style="margin: 0 0 4px 0; font-size: 1.25rem;" id="pubCustName">Customer</h3>
+                    <p style="margin: 0; color: #64748b; font-size: 0.9rem;" id="pubCustMobile">+91-XXXXXXXXXX</p>
+                </div>
+                <div style="text-align: right; background: #fef2f2; border: 1px solid #fecaca; padding: 12px 20px; border-radius: 8px;">
+                    <span style="font-size: 0.75rem; color: #991b1b; font-weight: bold; text-transform: uppercase;">Outstanding Balance</span><br>
+                    <span id="pubDueAmount" style="font-size: 1.6rem; font-weight: bold; color: #ef4444;">₹0.00</span>
+                </div>
+            </div>
+
+            <div class="table-card" style="box-shadow: none; border: 1px solid #e2e8f0; margin-bottom: 0;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="padding: 12px;">Date</th>
+                            <th style="padding: 12px;">Type</th>
+                            <th style="padding: 12px;">Description / Job</th>
+                            <th style="padding: 12px; text-align: right;">Amount (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="publicLedgerTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <p style="text-align: center; color: #94a3b8; font-size: 0.8rem; margin-top: 25px;">This is an automatically generated electronic statement by GSM Solutions.</p>
+    </div>
+</div>
+
+<!-- FULL CUSTOMER LEDGER MODAL (ADMIN / STAFF VIEW) -->
 <div class="modal-overlay" id="modalLedger">
     <div class="modal-container" style="width: 850px; max-width: 95%;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
@@ -175,32 +229,38 @@
                 <h2 class="modal-title">📖 Customer Ledger & Transactions</h2>
                 <p class="modal-subtitle" id="ledgerSubtitle" style="margin-bottom: 0; padding-bottom: 0; border: none;">Loading...</p>
             </div>
-            <button class="btn" onclick="closeLedgerModal()" style="font-size: 1.2rem; padding: 2px 10px; border:none; background:transparent;">✖</button>
-        </div>
-        
-        <div class="ledger-header-box">
-            <div>
-                <span style="font-size: 0.85rem; color: #64748b; font-weight: bold; text-transform: uppercase;">Outstanding Due</span><br>
-                <span id="ledgerDueAmount" style="font-size: 1.8rem; font-weight: bold; color: #ef4444;">₹0.00</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <button class="btn-action-sm" onclick="copyPermanentLink()" title="Copy Permanent Link for Customer">🔗 Copy Link</button>
+                <button class="btn-action-sm" onclick="downloadLedgerPDF('modal')" title="Export Ledger as PDF">📥 Download PDF</button>
+                <button class="btn" onclick="closeLedgerModal()" style="font-size: 1.2rem; padding: 2px 10px; border:none; background:transparent;">✖</button>
             </div>
-            <button id="ledgerSettleBtn" class="btn-settle" style="display: none; padding: 12px 24px; font-size: 1rem;" onclick="openSettleFromLedger()">Settle Dues Now</button>
         </div>
         
-        <div class="table-card" style="max-height: 400px; overflow-y: auto; margin-bottom: 0; box-shadow: none; border: 1px solid #e5e7eb;">
-            <table style="margin-bottom: 0;">
-                <thead style="position: sticky; top: 0; z-index: 10;">
-                    <tr>
-                        <th style="padding: 12px; width: 15%;">Date</th>
-                        <th style="padding: 12px; width: 15%;">Type</th>
-                        <th style="padding: 12px; width: 40%;">Description / Job</th>
-                        <th style="padding: 12px; width: 20%; text-align: right;">Amount (₹)</th>
-                        <th style="padding: 12px; width: 10%; text-align: center;" class="admin-col admin-hidden">Del</th>
-                    </tr>
-                </thead>
-                <tbody id="ledgerTableBody">
-                    <!-- Ledger Injected Here -->
-                </tbody>
-            </table>
+        <div id="modalPrintableArea">
+            <div class="ledger-header-box">
+                <div>
+                    <span style="font-size: 0.85rem; color: #64748b; font-weight: bold; text-transform: uppercase;">Outstanding Due</span><br>
+                    <span id="ledgerDueAmount" style="font-size: 1.8rem; font-weight: bold; color: #ef4444;">₹0.00</span>
+                </div>
+                <button id="ledgerSettleBtn" class="btn-settle" style="display: none; padding: 12px 24px; font-size: 1rem;" onclick="openSettleFromLedger()">Settle Dues Now</button>
+            </div>
+            
+            <div class="table-card" style="max-height: 400px; overflow-y: auto; margin-bottom: 0; box-shadow: none; border: 1px solid #e5e7eb;">
+                <table style="margin-bottom: 0;">
+                    <thead style="position: sticky; top: 0; z-index: 10;">
+                        <tr>
+                            <th style="padding: 12px; width: 15%;">Date</th>
+                            <th style="padding: 12px; width: 15%;">Type</th>
+                            <th style="padding: 12px; width: 40%;">Description / Job</th>
+                            <th style="padding: 12px; width: 20%; text-align: right;">Amount (₹)</th>
+                            <th style="padding: 12px; width: 10%; text-align: center;" class="admin-col admin-hidden">Del</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ledgerTableBody">
+                        <!-- Ledger Injected Here -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -362,6 +422,7 @@
     let settleCustId = null;
     let settleCustName = '';
     let settleCustMobile = '';
+    let activeLedgerData = null; // Stores state for PDF and link generation
     
     let currentPage = 1;
     const rowsPerPage = 10;
@@ -371,7 +432,7 @@
         return String(str).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, " ");
     };
     
-    const sanitizeMob = (mob) => (mob || '').replace(/\s+/g, ''); // Ensure whitespace doesn't break calculations
+    const sanitizeMob = (mob) => (mob || '').replace(/\s+/g, '');
 
     let sidebarTimer;
     window.resetSidebarTimer = function() {
@@ -394,7 +455,7 @@
     }
 
     // ==========================================
-    // DYNAMIC AUTHENTICATION CHECK
+    // AUTHENTICATION CHECK
     // ==========================================
     async function checkAuth() {
         const { data: sessionData } = await supabaseClient.auth.getSession();
@@ -423,7 +484,6 @@
             document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
             document.querySelectorAll('.admin-col').forEach(el => el.classList.remove('admin-hidden'));
         }
-        // NO KICK LOGIC because Customers is a shared page.
     }
 
     async function logOut() { await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
@@ -668,6 +728,7 @@
 
     // --- FULL LEDGER LOGIC ---
     window.openLedger = async function(id, name, mobile, due) {
+        activeLedgerData = { id, name, mobile, due };
         document.getElementById('ledgerSubtitle').innerText = `${name} | ${mobile}`;
         document.getElementById('ledgerDueAmount').innerText = `₹${due.toFixed(2)}`;
         
@@ -738,7 +799,7 @@
                         rawDate: new Date(c.created_at || c.date),
                         dateStr: new Date(c.created_at || c.date).toLocaleDateString('en-GB'),
                         type: c.type,
-                        desc: c.job_no || 'Manual Entry', // Displays what is safely stored in the short job_no column
+                        desc: c.job_no || 'Manual Entry',
                         amount: parseFloat(c.amount),
                         method: c.type,
                         isCredit: true,
@@ -749,6 +810,7 @@
             }
 
             ledgerItems.sort((a, b) => b.rawDate - a.rawDate);
+            activeLedgerData.items = ledgerItems;
 
             tbody.innerHTML = '';
             if (ledgerItems.length === 0) {
@@ -794,6 +856,243 @@
 
     window.closeLedgerModal = function() {
         document.getElementById('modalLedger').style.display = 'none';
+    }
+
+    // --- SHARE LINK & PDF GENERATION LOGIC ---
+    window.copyPermanentLink = function() {
+        if (!activeLedgerData || !activeLedgerData.mobile) return alert("Customer details not loaded.");
+        const base = window.location.origin + window.location.pathname;
+        const permanentUrl = `${base}?view=ledger&mobile=${encodeURIComponent(activeLedgerData.mobile)}`;
+        
+        navigator.clipboard.writeText(permanentUrl).then(() => {
+            alert(`✅ Permanent Ledger Link copied to clipboard!\n\nYou can send this link directly to the customer. They can view their updated ledger anytime without requiring a login.`);
+        }).catch(err => {
+            prompt("Copy this permanent ledger link:", permanentUrl);
+        });
+    }
+
+    window.downloadLedgerPDF = function(source = 'modal') {
+        const custName = (activeLedgerData && activeLedgerData.name) || document.getElementById('pubCustName').innerText;
+        const custMobile = (activeLedgerData && activeLedgerData.mobile) || document.getElementById('pubCustMobile').innerText;
+        const totalDue = (activeLedgerData && activeLedgerData.due !== undefined) 
+            ? activeLedgerData.due.toFixed(2) 
+            : document.getElementById('pubDueAmount').innerText.replace('₹','');
+
+        const rows = (source === 'public') 
+            ? document.querySelectorAll('#publicLedgerTableBody tr') 
+            : document.querySelectorAll('#ledgerTableBody tr');
+
+        let tableRowsHtml = '';
+        rows.forEach(r => {
+            const cols = r.querySelectorAll('td');
+            if (cols.length >= 4) {
+                tableRowsHtml += `
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <td style="padding: 10px; font-size: 12px;">${cols[0].innerText}</td>
+                        <td style="padding: 10px; font-size: 12px;">${cols[1].innerText}</td>
+                        <td style="padding: 10px; font-size: 12px;">${cols[2].innerText.replace(/\n/g, ' ')}</td>
+                        <td style="padding: 10px; font-size: 12px; text-align: right; font-weight: bold;">${cols[3].innerText}</td>
+                    </tr>
+                `;
+            }
+        });
+
+        const printTemplate = document.createElement('div');
+        printTemplate.style.padding = '30px';
+        printTemplate.style.fontFamily = 'Arial, sans-serif';
+        printTemplate.style.color = '#1e293b';
+
+        printTemplate.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px;">
+                <div>
+                    <h1 style="margin:0; font-size: 24px; color:#0f172a; letter-spacing: 1px;">GSM SOLUTIONS</h1>
+                    <p style="margin:3px 0 0 0; font-size: 12px; color: #64748b;">Customer Account Statement</p>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 11px; color:#64748b;">Statement Date:</div>
+                    <div style="font-size: 13px; font-weight: bold;">${new Date().toLocaleDateString('en-GB')}</div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                <div>
+                    <span style="font-size: 11px; color: #64748b; font-weight: bold; text-transform: uppercase;">Customer Information</span>
+                    <h3 style="margin: 4px 0 2px 0; font-size: 16px;">${custName}</h3>
+                    <p style="margin: 0; color: #475569; font-size: 13px;">${custMobile}</p>
+                </div>
+                <div style="text-align: right;">
+                    <span style="font-size: 11px; color: #991b1b; font-weight: bold; text-transform: uppercase;">Total Outstanding Due</span>
+                    <div style="font-size: 22px; font-weight: bold; color: #ef4444;">₹${totalDue}</div>
+                </div>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; text-align: left; margin-top: 10px;">
+                <thead>
+                    <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+                        <th style="padding: 10px; font-size: 12px;">Date</th>
+                        <th style="padding: 10px; font-size: 12px;">Type</th>
+                        <th style="padding: 10px; font-size: 12px;">Description</th>
+                        <th style="padding: 10px; font-size: 12px; text-align: right;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tableRowsHtml}
+                </tbody>
+            </table>
+
+            <div style="margin-top: 30px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 15px; font-size: 11px; color: #94a3b8;">
+                Thank you for your business! For any ledger disputes, please contact GSM Solutions support directly.
+            </div>
+        `;
+
+        const opt = {
+            margin: 10,
+            filename: `Statement_${custName.replace(/\s+/g, '_')}_${custMobile}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().from(printTemplate).set(opt).save();
+    }
+
+
+    // --- PUBLIC LEDGER LOADER (No Login Required) ---
+    async function initPublicCustomerView(mobileParam) {
+        document.getElementById('sidebar').style.display = 'none';
+        document.getElementById('sidebarToggle').style.display = 'none';
+        document.getElementById('mainDashboardContent').style.display = 'none';
+        
+        const container = document.getElementById('publicLedgerViewContainer');
+        container.style.display = 'flex';
+        document.body.style.overflow = 'auto';
+
+        const sanitizedMob = sanitizeMob(mobileParam);
+        
+        const { data: customer } = await supabaseClient.from('customers').select('*').eq('mobile', sanitizedMob).maybeSingle();
+        
+        const custName = customer ? customer.name : 'Customer';
+        document.getElementById('pubCustName').innerText = custName;
+        document.getElementById('pubCustMobile').innerText = sanitizedMob;
+
+        const [repRes, accRes, credRes] = await Promise.all([
+            supabaseClient.from('repairOrders').select('*').eq('contactNo', sanitizedMob),
+            supabaseClient.from('accessories_invoices').select('*').eq('mobile', sanitizedMob),
+            supabaseClient.from('customer_credits').select('*').eq('mobile', sanitizedMob)
+        ]);
+
+        let ledgerItems = [];
+        let runningDue = 0;
+        const fullCreditInvoices = new Set();
+
+        if (repRes.data) {
+            repRes.data.forEach(r => {
+                let amt = r.finalAmount || r.estimateAmount || r.approxEstimate || 0;
+                if (r.paymentMethod === 'Credit') {
+                    if (!(r.status || '').toLowerCase().includes('refusal')) runningDue += parseFloat(amt);
+                    if (r.jobNo) fullCreditInvoices.add(sanitizeMob(r.jobNo));
+                }
+                ledgerItems.push({
+                    rawDate: new Date(r.created_at),
+                    dateStr: new Date(r.created_at).toLocaleDateString('en-GB'),
+                    type: 'Repair',
+                    desc: `Job: ${r.jobNo} (${r.problemDesc || 'Device'})`,
+                    amount: amt,
+                    method: r.paymentMethod || r.status,
+                    isCredit: false
+                });
+            });
+        }
+
+        if (accRes.data) {
+            accRes.data.forEach(a => {
+                if (a.payment_mode === 'Credit') {
+                    runningDue += parseFloat(a.total_amt);
+                    if (a.invoice_no) fullCreditInvoices.add(sanitizeMob(a.invoice_no));
+                }
+                ledgerItems.push({
+                    rawDate: new Date(a.created_at),
+                    dateStr: new Date(a.created_at).toLocaleDateString('en-GB'),
+                    type: 'Accessory',
+                    desc: `Inv: ${a.invoice_no} (${a.item_desc})`,
+                    amount: a.total_amt,
+                    method: a.payment_mode,
+                    isCredit: false
+                });
+            });
+        }
+
+        if (credRes.data) {
+            credRes.data.forEach(c => {
+                const cType = (c.type || '').trim().toLowerCase();
+                const amt = parseFloat(c.amount) || 0;
+                
+                if (cType === 'given') {
+                    if (!c.job_no || !fullCreditInvoices.has(sanitizeMob(c.job_no))) {
+                        runningDue += amt;
+                    }
+                } else if (cType === 'settled' || cType === 'discount' || cType === 'payment') {
+                    runningDue -= amt;
+                }
+
+                if (cType === 'given' && c.job_no && fullCreditInvoices.has(sanitizeMob(c.job_no))) return;
+
+                ledgerItems.push({
+                    rawDate: new Date(c.created_at || c.date),
+                    dateStr: new Date(c.created_at || c.date).toLocaleDateString('en-GB'),
+                    type: c.type,
+                    desc: c.job_no || 'Manual Entry',
+                    amount: amt,
+                    method: c.type,
+                    isCredit: true
+                });
+            });
+        }
+
+        if (runningDue < 0.01) runningDue = 0;
+        document.getElementById('pubDueAmount').innerText = `₹${runningDue.toFixed(2)}`;
+
+        ledgerItems.sort((a, b) => b.rawDate - a.rawDate);
+        
+        activeLedgerData = {
+            name: custName,
+            mobile: sanitizedMob,
+            due: runningDue,
+            items: ledgerItems
+        };
+
+        const tbody = document.getElementById('publicLedgerTableBody');
+        tbody.innerHTML = '';
+
+        if (ledgerItems.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px; color: gray;">No transactions found for this account.</td></tr>`;
+            return;
+        }
+
+        ledgerItems.forEach(item => {
+            let badgeHtml = '';
+            let colorSign = '';
+            let amtColor = '#111827';
+            
+            const iType = (item.type || '').trim().toLowerCase();
+            
+            if (iType === 'repair') badgeHtml = `<span class="badge b-repair">REPAIR</span>`;
+            else if (iType === 'accessory') badgeHtml = `<span class="badge b-acc">ACC INVOICE</span>`;
+            else if (iType === 'given') { badgeHtml = `<span class="badge b-cred">CREDIT DUE</span>`; colorSign = '+'; amtColor = '#ef4444'; }
+            else if (iType === 'settled' || iType === 'payment') { badgeHtml = `<span class="badge b-settle">PAID</span>`; colorSign = '-'; amtColor = '#10b981'; }
+            else if (iType === 'discount') { badgeHtml = `<span class="badge b-disc">DISCOUNT</span>`; colorSign = '-'; amtColor = '#4338ca'; }
+
+            let extraMethod = item.isCredit ? '' : `<br><span style="font-size:0.75rem; color:gray;">[Paid via: ${item.method}]</span>`;
+
+            tbody.innerHTML += `
+                <tr>
+                    <td style="font-size:0.85rem; padding: 12px;">${item.dateStr}</td>
+                    <td style="padding: 12px;">${badgeHtml}</td>
+                    <td style="font-size:0.85rem; padding: 12px;">${item.desc} ${extraMethod}</td>
+                    <td style="text-align: right; font-weight:bold; color:${amtColor}; padding: 12px;">${colorSign}₹${item.amount.toFixed(2)}</td>
+                </tr>
+            `;
+        });
     }
 
 
@@ -993,29 +1292,25 @@
         if (totalClearing > currentDue && currentDue > 0) return alert("Total clearing amount cannot exceed the current due.");
 
         try {
-            document.querySelector('.btn-confirm').innerText = "Processing...";
+            document.querySelector('#modalSettle .btn-confirm').innerText = "Processing...";
             
             let currentDate = new Date().toISOString().split('T')[0];
             let currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             
             let jobRef = null; 
 
-            // Safely parse the bill number if one was selected
             if (selectedBillStr) {
                 const parts = selectedBillStr.split('|');
                 jobRef = parts[2];
             }
 
-            // 1. Create a detailed string for Cashbook/UPI (they allow long text)
             let ledgerDesc = mode === 'UPI' && upiNote ? `Settled - ${settleCustName} (${mode} - ${upiNote})` : `Settled - ${settleCustName} (${mode})`;
             if (jobRef) ledgerDesc = `Settled for ${jobRef} - ${settleCustName} (${mode})`;
 
-            // 2. Create a STRICTLY SHORT string for 'customer_credits' (MUST be under 50 chars)
             let shortRef = jobRef ? `Settled: ${jobRef}` : `Direct Settle`;
             if (mode === 'UPI') shortRef += ` (UPI)`;
-            shortRef = shortRef.substring(0, 48); // Absolute safety cutoff to prevent the VARCHAR(50) crash!
+            shortRef = shortRef.substring(0, 48);
 
-            // Update Credit Ledger
             if (amountPaying > 0) {
                 const { error: creditError } = await supabaseClient.from('customer_credits').insert({
                     customer_name: settleCustName, 
@@ -1023,12 +1318,11 @@
                     amount: amountPaying, 
                     date: currentDate,
                     type: 'Settled', 
-                    job_no: shortRef // Using the short string to fix the 400 error
+                    job_no: shortRef
                 });
 
                 if (creditError) throw new Error("Failed saving ledger record: " + creditError.message);
 
-                // Update Cashbook or UPI
                 if (mode === 'Cash') {
                     const { error: cashError } = await supabaseClient.from('cashbook_entries').insert({
                         description: ledgerDesc, 
@@ -1052,10 +1346,9 @@
                 }
             }
 
-            // Update Discount
             if (discount > 0) {
                 let discountRef = jobRef ? `${jobRef} Discount` : `Direct Discount`;
-                discountRef = discountRef.substring(0, 48); // Cutoff for discount too
+                discountRef = discountRef.substring(0, 48);
                 
                 const { error: discError } = await supabaseClient.from('customer_credits').insert({
                     customer_name: settleCustName, 
@@ -1069,7 +1362,7 @@
             }
 
             closeSettleModal();
-            document.querySelector('.btn-confirm').innerText = "Process Settlement";
+            document.querySelector('#modalSettle .btn-confirm').innerText = "Process Settlement";
             
             await fetchCustomers(); 
             
@@ -1080,7 +1373,7 @@
             
             alert("Settlement processed successfully! Automatically deducted from market dues.");
         } catch (err) {
-            document.querySelector('.btn-confirm').innerText = "Process Settlement";
+            document.querySelector('#modalSettle .btn-confirm').innerText = "Process Settlement";
             alert("⚠️ SYSTEM ERROR:\n" + err.message);
             console.error(err);
         }
@@ -1139,7 +1432,21 @@
         }
     }
 
+    // ==========================================
+    // INITIALIZATION & URL ROUTING
+    // ==========================================
     document.addEventListener("DOMContentLoaded", async () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const viewMode = urlParams.get('view');
+        const mobileParam = urlParams.get('mobile');
+
+        // PUBLIC ACCESS FLOW: Customers clicking permanent links
+        if (viewMode === 'ledger' && mobileParam) {
+            await initPublicCustomerView(mobileParam);
+            return;
+        }
+
+        // STANDARD STAFF / ADMIN DASHBOARD FLOW
         resetSidebarTimer();
         await checkAuth();
         fetchCustomers();
@@ -1149,8 +1456,11 @@
     // AUTO-LOGOUT AFTER 30 MINUTES OF INACTIVITY
     // ==========================================
     const setupAutoLogout = function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('view') === 'ledger') return; // Do not kick customers viewing via public link
+
         let inactivityTimer;
-        const timeoutDuration = 30 * 60 * 1000; // 30 minutes in milliseconds
+        const timeoutDuration = 30 * 60 * 1000;
 
         function resetTimer() {
             clearTimeout(inactivityTimer);
