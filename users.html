@@ -49,6 +49,10 @@
         
         .action-delete { background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold;}
         .action-delete:hover { background: #fef2f2; }
+        
+        /* New CSS for Edit/Change Password Button */
+        .action-edit { background: transparent; border: 1px solid #3b82f6; color: #3b82f6; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold; margin-right: 8px;}
+        .action-edit:hover { background: #eff6ff; }
     </style>
 </head>
 <body>
@@ -225,7 +229,10 @@
                         <td><strong>${user.fullName}</strong></td>
                         <td>${user.email}</td>
                         <td><span style="background:${roleColor}; color:white; padding:4px 8px; border-radius:4px; font-size:0.75rem; font-weight:bold;">${user.role.toUpperCase()}</span></td>
-                        <td style="text-align: center;"><button onclick="deleteUserProfile('${user.email}')" class="action-delete">Remove Role</button></td>
+                        <td style="text-align: center;">
+                            <button onclick="changePassword('${user.email}')" class="action-edit">Change Password</button>
+                            <button onclick="deleteUserProfile('${user.email}')" class="action-delete">Remove Role</button>
+                        </td>
                     </tr>
                 `;
             });
@@ -252,6 +259,30 @@
             document.getElementById('u-name').value = '';
             window.toggleForm();
             window.fetchUsers();
+        }
+
+        // New Change Password Function
+        window.changePassword = async function(email) {
+            const newPassword = prompt(`Enter new password for ${email} (Min 6 chars):`);
+            if (!newPassword) return; // User cancelled
+            
+            if (newPassword.length < 6) {
+                alert("Password must be at least 6 characters long.");
+                return;
+            }
+
+            // Calls a secure Supabase SQL Function (RPC)
+            const { data, error } = await db.rpc('admin_change_password', { 
+                user_email: email, 
+                new_password: newPassword 
+            });
+
+            if (error) {
+                console.error("Error updating password:", error);
+                alert("Failed to update password. Make sure you added the SQL function in Supabase. Error: " + error.message);
+            } else {
+                alert(`Password successfully updated for ${email}`);
+            }
         }
 
         window.deleteUserProfile = async function(email) {
